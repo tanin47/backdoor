@@ -3,7 +3,7 @@ import sbt.{ThisBuild, url}
 lazy val root = project in file(".")
 
 name := "backdoor-dev"
-ThisBuild / version := "1.0.0"
+ThisBuild / version := "1.1.0"
 
 ThisBuild / organization := "tanin.backdoor"
 
