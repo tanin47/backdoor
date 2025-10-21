@@ -82,7 +82,7 @@ public class Base {
   @BeforeEach
   void setUp() throws SQLException, URISyntaxException {
     resetDatabase();
-    server = new BackdoorServer(TARGET_DATABASE_URL, PORT, "backdoor", "test");
+    server = new BackdoorServer(TARGET_DATABASE_URL, PORT, new User[]{new User("backdoor", "test")});
     server.start();
 
     if (loggedIn) {

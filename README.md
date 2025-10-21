@@ -105,8 +105,7 @@ java -jar backdoor-1.0.0.jar \
   -url postgres://backdoor_test_user:test@127.0.0.1:5432/backdoor_test \
   -port 9999 \
   -ssl-port 0 \
-  -username backdoor \
-  -password 1234
+  -user user1,pass1234,user2,pass5678
 ```
 
 FAQ

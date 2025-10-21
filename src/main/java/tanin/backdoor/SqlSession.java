@@ -12,23 +12,25 @@ import java.util.logging.Logger;
 public class SqlSession implements AutoCloseable {
   private static final Logger logger = Logger.getLogger(SqlSession.class.getName());
   private final Connection connection;
+  private final String user;
 
-  SqlSession(String url) throws SQLException, URISyntaxException {
+  SqlSession(String url, String user) throws SQLException, URISyntaxException {
     this.connection = makeConnection(url);
+    this.user = user;
   }
 
   public ResultSet executeQuery(String sql) throws SQLException {
-    logger.info("Executing query: " + sql.replaceAll("[\\s\n]+", " "));
+    logger.info("[" + user + "] Executing query: " + sql.replaceAll("[\\s\n]+", " "));
     return connection.createStatement().executeQuery(sql);
   }
 
   public void execute(String sql) throws SQLException {
-    logger.info("Executing: " + sql.replaceAll("[\\s\n]+", " "));
+    logger.info("[" + user + "] Executing: " + sql.replaceAll("[\\s\n]+", " "));
     connection.createStatement().execute(sql);
   }
 
   public int executeUpdate(String sql) throws SQLException {
-    logger.info("Executing upate: " + sql.replaceAll("[\\s\n]+", " "));
+    logger.info("[" + user + "] Executing upate: " + sql.replaceAll("[\\s\n]+", " "));
     return connection.createStatement().executeUpdate(sql);
   }
 

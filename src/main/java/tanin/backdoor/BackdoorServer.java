@@ -54,14 +54,12 @@ public class BackdoorServer {
     String url = null;
     int port = 0;
     int sslPort = 0;
-    String username = null;
-    String password = null;
+    User[] users = null;
 
     if (MinumBuilder.getIsLocalDev()) {
       url = "postgres://backdoor_test_user:test@127.0.0.1:5432/backdoor_test";
       port = 9090;
-      username = "backdoor";
-      password = "1234";
+      users = new User[]{new User("backdoor", "1234")};
     }
 
     for (int i = 0; i < args.length; i++) {
@@ -75,11 +73,20 @@ public class BackdoorServer {
         case "-ssl-port":
           if (i + 1 < args.length) sslPort = Integer.parseInt(args[++i]);
           break;
-        case "-username":
-          if (i + 1 < args.length) username = args[++i];
-          break;
-        case "-password":
-          if (i + 1 < args.length) password = args[++i];
+        case "-user":
+          if (i + 1 < args.length) {
+            var comps = args[++i].split(",");
+            var index = 0;
+            var buffer = new ArrayList<User>();
+            while (index < comps.length) {
+              try {
+                buffer.add(new User(comps[index++], comps[index++]));
+              } catch (ArrayIndexOutOfBoundsException e) {
+                throw new RuntimeException("`-user` is not in a valid format. The numbers of usernames and passwords must match. The usernames and passwords must not contain a space nor a comma.");
+              }
+            }
+            users = buffer.toArray(new User[0]);
+          }
           break;
       }
     }
@@ -92,14 +99,11 @@ public class BackdoorServer {
       throw new RuntimeException("You must specify the port using `-port <PORT>`");
     }
 
-    if (username == null) {
-      throw new RuntimeException("You must specify the username using `-username <YOUR_USERNAME>`");
-    }
-    if (password == null) {
-      throw new RuntimeException("You must specify the password using `-password <YOUR_PASSWORD>`");
+    if (users == null || users.length == 0) {
+      throw new RuntimeException("You must specify the users using `-user <USERNAME>,<PASSWORD>,<USERNAME2>,<PASSWORD2>`");
     }
 
-    var main = new BackdoorServer(url, port, sslPort, username, password);
+    var main = new BackdoorServer(url, port, sslPort, users);
     var minum = main.start();
     minum.block();
   }
@@ -108,36 +112,35 @@ public class BackdoorServer {
   int port;
   int sslPort;
   private FullSystem minum;
-  String username;
-  String password;
+  User[] users;
   String hostName;
   boolean isLocalDev = MinumBuilder.getIsLocalDev();
+  ThreadLocal<String> loggedInUser = new ThreadLocal<>();
 
   public BackdoorServer(
     String databaseUrl,
     int port,
-    String username,
-    String password
+    User[] users
   ) {
-    this(databaseUrl, port, 0, username, password);
+    this(databaseUrl, port, 0, users);
   }
 
   public BackdoorServer(
     String databaseUrl,
     int port,
     int sslPort,
-    String username,
-    String password
+    User[] users
   ) {
     this.databaseUrl = databaseUrl;
     this.port = port;
     this.sslPort = sslPort;
 
-    this.username = username;
-    assert this.username != null && !this.username.isEmpty();
+    for (User user : users) {
+      assert user.username() != null && !user.username().isEmpty();
+      assert user.password() != null && !user.password().isEmpty();
+    }
 
-    this.password = password;
-    assert this.password != null && !this.password.isEmpty();
+    this.users = users;
 
     this.hostName = extractHost(this.databaseUrl);
   }
@@ -211,9 +214,23 @@ public class BackdoorServer {
     var credentials = new String(Base64.getDecoder().decode(base64Credentials));
     var parts = credentials.split(":", 2);
 
-    if (parts.length != 2 || !parts[0].equals(username) || !parts[1].equals(password)) {
+    if (parts.length != 2) {
       throw new EarlyExitException(authErrorResponse);
     }
+
+    var username = parts[0];
+    var password = parts[1];
+
+    var found = Arrays.stream(users)
+      .filter(u -> u.username().equals(username) && u.password().equals(password))
+      .findFirst()
+      .orElse(null);
+
+    if (found == null) {
+      throw new EarlyExitException(authErrorResponse);
+    }
+
+    loggedInUser.set(found.username());
   }
 
   ThrowingFunction<IRequest, IResponse> handleEndpoint(ThrowingFunction<IRequest, IResponse> handler) {
@@ -235,6 +252,8 @@ public class BackdoorServer {
             .add("errors", Json.array().add(e.getMessage()))
             .toString()
         );
+      } finally {
+        loggedInUser.set(null);
       }
     };
   }
@@ -264,7 +283,7 @@ public class BackdoorServer {
   }
 
   SqlSession makeSqlSession() throws SQLException, URISyntaxException {
-    return new SqlSession(databaseUrl);
+    return new SqlSession(databaseUrl, loggedInUser.get());
   }
 
   public FullSystem start() throws SQLException {
