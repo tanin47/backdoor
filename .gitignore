@@ -1,0 +1,11 @@
+target
+.idea
+.bsp
+.DS_Store
+node_modules
+logs
+.bloop
+.metals
+metals.sbt
+SYSTEM_RUNNING
+./db
