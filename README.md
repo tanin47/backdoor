@@ -68,14 +68,18 @@ Then, initialize Backdoor when your Java application starts:
 
 ```
 var server = new BackdoorServer(
-    "postgres://backdoor_test_user:test@127.0.0.1:5432/backdoor_test", // The target database URL. Either JDBC or Postgres URL works.
-    9999, // The port for Backdoor
-    0, // The SSL port for Backdoor. Specify 0 if you don't need it
-    new User[]{new User("backdoor", "passwordtest")} // Backdoor users (and their passwords)
+    "postgres://127.0.0.1:5432/backdoor_test", // The target database URL. Either JDBC or Postgres URL works.
+    9999 // The port for Backdoor
 );
 
 server.start();
 ```
+
+You can login using a Postgres user. You can manage Postgres users
+directly ([See instructions](https://www.postgresql.org/docs/16/database-roles.html)).
+
+While using Postgres users is the recommended approach, using your own username and password is also supported. Please
+see FAQ.
 
 Then, when your Java application stops, make sure to stop Backdoor with:
 
@@ -111,14 +115,44 @@ Then, you can run the command below:
 
 ```
 java -jar backdoor-1.1.0.jar \
-  -url postgres://backdoor_test_user:test@127.0.0.1:5432/backdoor_test \
-  -port 9999 \
-  -ssl-port 0 \
-  -user user1,pass1234,user2,pass5678
+  -url postgres://127.0.0.1:5432/backdoor_test \
+  -port 9999
 ```
+
+You can visit http://localhost:999 and login using a Postgres user. You can manage Postgres users
+directly ([See instructions](https://www.postgresql.org/docs/16/database-roles.html)).
+
+While using Postgres users is the recommended approach, using your own username and password is also supported. Please
+see FAQ.
 
 FAQ
 -----
+
+### How to setup custom users?
+
+Render.com supports creating a new user but Heroku Postgres doesn't. Setting up custom users is supported as shown
+below:
+
+```
+var server = new BackdoorServer(
+    "postgres://backdoor_test_user:test@127.0.0.1:5432/backdoor_test", // The target database URL. Either JDBC or Postgres URL works.
+    9999, // The port for Backdoor
+    new User[] { new User("someuser", "pass1234") }
+);
+```
+
+Or you can specify the arguments through command-line:
+
+```
+java -jar backdoor-1.1.0.jar \
+  -url postgres://backdoor_test_user:test@127.0.0.1:5432/backdoor_test \
+  -port 9999
+  -user someuser,pass1234,someotheruser,pass4567
+```
+
+Notice that the database URL must contain a valid Postgres username and password.
+
+Then, you can visit http://localhost:9999 and login with the username: `someuser` and the password: `pass1234`.
 
 ### How to configure the loggers?
 

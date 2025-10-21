@@ -8,6 +8,7 @@ import com.renomad.minum.templating.TemplateProcessor;
 import com.renomad.minum.web.*;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.postgresql.Driver;
+import org.postgresql.util.PSQLException;
 import tanin.ejwf.MinumBuilder;
 
 import java.io.IOException;
@@ -27,6 +28,7 @@ public class BackdoorServer {
 
   private enum SqlType {
     SELECT,
+    ADMINISTRATIVE,
     EXPLAIN,
     MODIFY
   }
@@ -49,17 +51,14 @@ public class BackdoorServer {
   }
 
   public static void main(String[] args) throws SQLException, URISyntaxException {
-    logger.info("Detected command-line arguments: " + Arrays.toString(args));
-
     String url = null;
     int port = 0;
     int sslPort = 0;
     User[] users = null;
 
     if (MinumBuilder.getIsLocalDev()) {
-      url = "postgres://backdoor_test_user:test@127.0.0.1:5432/backdoor_test";
+      url = "postgres://127.0.0.1:5432/backdoor_test";
       port = 9090;
-      users = new User[]{new User("backdoor", "1234")};
     }
 
     for (int i = 0; i < args.length; i++) {
@@ -99,10 +98,6 @@ public class BackdoorServer {
       throw new RuntimeException("You must specify the port using `-port <PORT>`");
     }
 
-    if (users == null || users.length == 0) {
-      throw new RuntimeException("You must specify the users using `-user <USERNAME>,<PASSWORD>,<USERNAME2>,<PASSWORD2>`");
-    }
-
     var main = new BackdoorServer(url, port, sslPort, users);
     var minum = main.start();
     minum.block();
@@ -115,7 +110,14 @@ public class BackdoorServer {
   User[] users;
   String hostName;
   boolean isLocalDev = MinumBuilder.getIsLocalDev();
-  ThreadLocal<String> loggedInUser = new ThreadLocal<>();
+  ThreadLocal<User> loggedInUser = new ThreadLocal<>();
+
+  public BackdoorServer(
+    String databaseUrl,
+    int port
+  ) {
+    this(databaseUrl, port, 0, new User[0]);
+  }
 
   public BackdoorServer(
     String databaseUrl,
@@ -135,12 +137,16 @@ public class BackdoorServer {
     this.port = port;
     this.sslPort = sslPort;
 
-    for (User user : users) {
-      assert user.username() != null && !user.username().isEmpty();
-      assert user.password() != null && !user.password().isEmpty();
-    }
+    if (users != null) {
+      for (User user : users) {
+        assert user.username() != null && !user.username().isEmpty();
+        assert user.password() != null && !user.password().isEmpty();
+      }
 
-    this.users = users;
+      this.users = users;
+    } else {
+      this.users = new User[0];
+    }
 
     this.hostName = extractHost(this.databaseUrl);
   }
@@ -193,7 +199,7 @@ public class BackdoorServer {
     );
   }
 
-  void checkAuth(IRequest req) {
+  void checkAuth(IRequest req) throws Exception {
     var authErrorResponse = Response.buildResponse(
       StatusLine.StatusCode.CODE_401_UNAUTHORIZED,
       Map.of(
@@ -221,16 +227,37 @@ public class BackdoorServer {
     var username = parts[0];
     var password = parts[1];
 
-    var found = Arrays.stream(users)
-      .filter(u -> u.username().equals(username) && u.password().equals(password))
-      .findFirst()
-      .orElse(null);
+    User found = null;
 
-    if (found == null) {
-      throw new EarlyExitException(authErrorResponse);
+    if (users != null) {
+      found = Arrays.stream(users)
+        .filter(u -> u.username().equals(username) && u.password().equals(password))
+        .findFirst()
+        .orElse(null);
     }
 
-    loggedInUser.set(found.username());
+    if (found == null) {
+      var potentialPgUser = new User(username, password, true);
+      try (var session = new SqlSession(this.databaseUrl, potentialPgUser)) {
+        var rs = session.executeQuery("SELECT 123");
+        rs.next();
+        if (rs.getInt(1) == 123) {
+          // Ok
+        } else {
+          throw new EarlyExitException(authErrorResponse);
+        }
+
+        found = potentialPgUser;
+      } catch (PSQLException e) {
+        if (e.getSQLState().equals("28000")) {
+          throw new EarlyExitException(authErrorResponse);
+        } else {
+          throw e;
+        }
+      }
+    }
+
+    loggedInUser.set(found);
   }
 
   ThrowingFunction<IRequest, IResponse> handleEndpoint(ThrowingFunction<IRequest, IResponse> handler) {
@@ -238,9 +265,7 @@ public class BackdoorServer {
       try {
         checkAuth(req);
         return handler.apply(req);
-      } catch (EarlyExitException e) {
-        return e.response;
-      } catch (SQLException e) {
+      } catch (IllegalArgumentException | SQLException e) {
         logger.log(Level.WARNING, e.getMessage(), e);
 
         return Response.buildResponse(
@@ -252,34 +277,12 @@ public class BackdoorServer {
             .add("errors", Json.array().add(e.getMessage()))
             .toString()
         );
+      } catch (EarlyExitException e) {
+        return e.response;
       } finally {
         loggedInUser.set(null);
       }
     };
-  }
-
-  public static Connection makeConnection(String url) throws SQLException, URISyntaxException {
-    if (url.startsWith("jdbc:postgresql://")) {
-      return DriverManager.getConnection(url);
-    } else if (url.startsWith("postgresql://") || url.startsWith("postgres://")) {
-      var uri = new URI(url);
-      var userAndPassword = uri.getUserInfo().split(":");
-      var user = userAndPassword[0];
-      var password = userAndPassword[1];
-      var host = uri.getHost();
-      var port = uri.getPort();
-      var database = uri.getPath().substring(1);
-
-      var props = new Properties();
-      props.setProperty("user", user);
-      props.setProperty("password", password);
-
-      var connUrl = "jdbc:postgresql://" + host + ":" + port + "/" + database;
-
-      return DriverManager.getConnection(connUrl, props);
-    } else {
-      throw new IllegalArgumentException("PostgreSQL or JDBC URL is invalid");
-    }
   }
 
   SqlSession makeSqlSession() throws SQLException, URISyntaxException {
@@ -487,7 +490,7 @@ public class BackdoorServer {
             rs = executeQueryWithParams(session, sql, filters, sorts, offset, 100);
           } else if (sqlType == SqlType.EXPLAIN) {
             rs = session.executeQuery(sql);
-          } else if (sqlType == SqlType.MODIFY) {
+          } else if (sqlType == SqlType.MODIFY || sqlType == SqlType.ADMINISTRATIVE) {
             rs = null;
             modifyCount = session.executeUpdate(sql);
           }
@@ -627,8 +630,19 @@ public class BackdoorServer {
   }
 
   private SqlType getSqlType(SqlSession session, String sql) throws SQLException {
-    if (sql.toLowerCase().startsWith("explain")) {
+    var sanitized = sql.toLowerCase().trim();
+    if (sanitized.startsWith("explain")) {
       return SqlType.EXPLAIN;
+    }
+
+    if (
+      !sanitized.startsWith("with") &&
+        !sanitized.startsWith("select") &&
+        !sanitized.startsWith("insert") &&
+        !sanitized.startsWith("update") &&
+        !sanitized.startsWith("delete")
+    ) {
+      return SqlType.ADMINISTRATIVE;
     }
 
     var rs = session.executeQuery("explain (format json) " + sql);
@@ -660,20 +674,6 @@ public class BackdoorServer {
     } else {
       return makeSqlLiteral(value);
     }
-  }
-
-  private JsonValue[][] fetchTableRows(
-    SqlSession session,
-    ArrayList<Column> columns,
-    String sql,
-    Filter[] filters,
-    Sort[] sorts,
-    int offset,
-    int limit
-  ) throws SQLException {
-
-    var rs = executeQueryWithParams(session, sql, filters, sorts, offset, limit);
-    return readRows(columns, rs);
   }
 
   private JsonValue[][] readRows(ArrayList<Column> columns, ResultSet rs) throws SQLException {
@@ -769,17 +769,19 @@ public class BackdoorServer {
 
     var timestampLength = Instant.now().toString().length();
 
-    return switch (column.type.toLowerCase()) {
+    var len = switch (column.type.toLowerCase()) {
       case "integer", "serial", "bigint", "smallint" -> ("" + value.asLong()).length();
       case "numeric", "decimal", "real", "double precision" -> ("" + value.asDouble()).length();
       case "boolean" -> ("" + value.asBoolean()).length();
       case "timestamp without time zone", "timestamp with time zone" -> timestampLength;
       case "date" -> timestampLength;
       case "time without time zone", "time with time zone" -> timestampLength;
-      case "json", "jsonb", "vector" -> Math.min(value.asString().length(), 60);
+      case "json", "jsonb", "vector" -> value.asString().length();
       default ->
         Arrays.stream(value.asString().split("\n")).max(Comparator.comparingInt(String::length)).get().length();
     };
+
+    return Math.min(len, 60);
   }
 
   private JsonValue getJsonValue(ResultSet rs, int columnIndex, Column column) throws SQLException {

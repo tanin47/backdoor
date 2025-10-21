@@ -27,7 +27,7 @@ public class Base {
   WebDriver webDriver;
   BackdoorServer server;
   Connection conn;
-  boolean loggedIn = true;
+  boolean shouldLoggedIn = true;
 
   @BeforeAll
   void setUpAll() throws SQLException, URISyntaxException, InterruptedException {
@@ -46,7 +46,7 @@ public class Base {
 
     webDriver = new ChromeDriver(options);
 
-    conn = BackdoorServer.makeConnection(TARGET_DATABASE_URL);
+    conn = SqlSession.makeConnection(TARGET_DATABASE_URL, null);
   }
 
   void resetDatabase() throws SQLException {
@@ -85,7 +85,7 @@ public class Base {
     server = new BackdoorServer(TARGET_DATABASE_URL, PORT, new User[]{new User("backdoor", "test")});
     server.start();
 
-    if (loggedIn) {
+    if (shouldLoggedIn) {
       ((HasAuthentication) webDriver).register(UsernameAndPassword.of("backdoor", "test"));
     }
   }
