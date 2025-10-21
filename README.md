@@ -3,11 +3,9 @@
 Modern and Embeddable Postgres Data Querying and Editing Tool
 ==============================================================
 
-Backdoor is a small Java-based data querying and editing tool for Postgres and embeddable into your Java
-application.
-
-Its JAR is <2MB and doesn't have transitive dependencies (to avoid a dependency conflict). No need for a separate
-instance nor deployment.
+Backdoor is a Java-based data querying and editing tool for Postgres. It is small and suitable for embedding it into
+your Java application. Its JAR is <2MB and doesn't have transitive dependencies (to avoid a dependency conflict). No
+need for a separate instance nor deployment.
 
 If you have a JVM-based website (using SpringBoot, PlayFramework, or others),
 you can embed Backdoor and open up another port for it with just a few lines of code.
