@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+    "strict": true,
+    "jsx": "preserve",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "types": ["svelte"],
+    "verbatimModuleSyntax": true
+  },
+  "exclude": ["node_modules", "target"]
+}

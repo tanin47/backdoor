@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+@plugin "daisyui" {
+  themes: dracula;
+}
+
+html, body, #app {
+  min-height: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+code {
+  @apply rounded text-xs bg-base-300 p-1;
+}
+
+.CodeMirror {
+  height: 100% !important;
+}
+
+.CodeMirror-empty {
+  color: #666 !important;
+  -khtml-user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.modal2 {
+  /*
+    This somehow fixes the modal issue where the empty vertical scrollbar is added for some unknown reason.
+    The empty scrollbar would make the whole page flicker when the modal shows.
+   */
+  @apply modal
+}

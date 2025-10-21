@@ -1,0 +1,75 @@
+<script lang="ts">
+
+import {Sheet} from "./common/models"
+import {type FetchError, post} from "./common/form"
+import Button from './common/_button.svelte'
+import ErrorPanel from "./common/form/_error_panel.svelte"
+
+export let sheet: Sheet
+export let onDropped: () => void
+
+let modal: HTMLDialogElement;
+
+let useCascade: boolean = false
+
+let isLoading = false
+let errors: string[] = []
+
+export function open(): void {
+  isLoading = false
+  errors = []
+
+  modal.showModal()
+}
+
+export function close(): void {
+  if (isLoading) {
+    return
+  }
+  modal.close()
+}
+
+async function submit(): Promise<void> {
+  isLoading = true
+
+  try {
+    const json = await post('/api/drop-table', {table: sheet.name, useCascade})
+
+    modal.close()
+    onDropped()
+  } catch (e) {
+    isLoading = false
+    errors = (e as FetchError).messages
+  }
+}
+
+</script>
+
+<dialog bind:this={modal} class="modal2">
+  <div class="modal-box !min-w-[480px] !w-auto !max-w-none flex flex-col gap-4">
+    <div>Are you sure you want to delete this database table?</div>
+    <div class="text-sm">
+      Table: <code>{sheet.name}</code>
+    </div>
+    <div class="flex gap-2 items-center text-sm">
+      <label class="flex gap-2 items-center cursor-pointer">
+        <input
+          type="checkbox"
+          class="checkbox checkbox-xs"
+          bind:checked={useCascade}
+          disabled={isLoading}
+        />
+        <span>Use <code>CASCADE</code></span>
+      </label>
+    </div>
+    <ErrorPanel {errors}/>
+    <div class="flex items-center justify-end gap-2">
+      <Button {isLoading} class="btn btn-error" onClick={async () => {submit()}} dataTestId="submit-button">
+        Drop table
+      </Button>
+      <button type="button" class="btn btn-neutral" disabled={isLoading} onclick={close}>Cancel</button>
+    </div>
+  </div>
+  <div class="modal-backdrop" onclick={close}>
+  </div>
+</dialog>
