@@ -18,6 +18,18 @@ arbitrary SQL for more advanced needs of database administration.
 
 Try it out today and let me know if it fits what you need!
 
+Features
+---------
+
+* Support multi-users with logging per user
+* Edit a field, delete a row, sort, and filter
+* Rename and drop table
+* Run arbitrary SQLs
+* [Pro] Activity history
+* [Pro] Access control policy (e.g. what can be edited vs. cannot be edit)
+
+Please contact us if you are interested in the pro features.
+
 
 Compared to the alternatives
 -----------------------------
