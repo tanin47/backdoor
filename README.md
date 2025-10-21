@@ -50,7 +50,7 @@ Add the dependency to your project:
 <dependency>
     <groupId>io.github.tanin47</groupId>
     <artifactId>backdoor</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
 </dependency>
 ```
 
@@ -61,8 +61,7 @@ var server = new BackdoorServer(
     "postgres://backdoor_test_user:test@127.0.0.1:5432/backdoor_test", // The target database URL. Either JDBC or Postgres URL works.
     9999, // The port for Backdoor
     0, // The SSL port for Backdoor. Specify 0 if you don't need it
-    "backdoor", // The username for accessing Backdoor
-    "1234" // The password for accessing Backddor
+    new User[]{new User("backdoor", "passwordtest")} // Backdoor users (and their passwords)
 );
 
 server.start();
@@ -101,7 +100,7 @@ repository: https://central.sonatype.com/artifact/io.github.tanin47/backdoor/ove
 Then, you can run the command below:
 
 ```
-java -jar backdoor-1.0.0.jar \
+java -jar backdoor-1.1.0.jar \
   -url postgres://backdoor_test_user:test@127.0.0.1:5432/backdoor_test \
   -port 9999 \
   -ssl-port 0 \
