@@ -11,7 +11,7 @@ If you have a JVM-based website (using SpringBoot, PlayFramework, or others),
 you can embed Backdoor and open up another port for it with just a few lines of code.
 
 If you cannot serve it on another port, you can add a few more lines of code to proxy requests from a designated path to
-Backdoor (See the "How to use" section).
+Backdoor (See the "How to use" section). This option also allows you to bring your own authentication.
 
 Backdoor can handle large datasets with the use of virtual lists and infinite scrolling. It also supports running an
 arbitrary SQL for more advanced needs of database administration.
@@ -25,23 +25,18 @@ Features
 * Edit a field, delete a row, sort, and filter
 * Rename and drop table
 * Run arbitrary SQLs
-* [Pro] Activity history
-* [Pro] Access control policy (e.g. what can be edited vs. cannot be edit)
-
-Please contact us if you are interested in the pro features.
-
+* Activity history (through regular logs).
+* [Not built yet] Access control policy (e.g. which column can be edited or can be seen by which user)
 
 Compared to the alternatives
 -----------------------------
 
-* Desktop apps like pgadmin and dbeaver require sharing the database credentials to everyone who wants to access the
-  database. No activity history. No access control.
-* Deployed apps like phpmyadmin and cloudbeaver require separate deployments and are huge/clunky.
+* Desktop apps like pgadmin and dbeaver require sharing the direct database credentials to everyone who wants to access
+  the database. In the case of Heroku Postgres, creating an individual user isn't allowed. No activity history.
+* Deployed apps like phpmyadmin and cloudbeaver require separate deployments and are huge.
 
-Backdoor supports multiple users, activity history (pro feature), and access control (pro feature). It is small (<2MB)
-and embeddable into your Java application. No separate deployment. No separate instance.
-
-Please contact us if you are interested in the pro features.
+Backdoor supports multiple users (masking your Postgres users), activity history, and (future) finer-grained access
+control. It is small (<2MB) and embeddable into your Java application. No separate deployment. No separate instance.
 
 How to use
 -----------
