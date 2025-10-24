@@ -74,7 +74,7 @@ const config = {
   resolve: {
     extensions: ['.mjs', '.js', '.svelte', '.ts'],
     mainFields: ['svelte', 'browser', 'module', 'main'],
-    conditionNames: ['svelte', 'browser', 'tippy.js']
+    conditionNames: ['svelte', 'browser']
   },
   module: {
     rules: [
@@ -83,7 +83,7 @@ const config = {
         use: {
           loader: 'svelte-loader',
           options: {
-            emitCss: true,
+            emitCss: false,
             preprocess: sveltePreprocess({}),
             compilerOptions: {
               dev: false,

@@ -1,7 +1,8 @@
 <script lang="ts">
 import ErrorPanel from "./common/form/_error_panel.svelte";
 import type {Sheet, Sort, SortDirection} from "./common/models";
-import VirtualList from './common/_virtual_list.svelte';
+import VirtualTable from 'svelte-virtual-table-by-tanin';
+import {type Item} from 'svelte-virtual-table-by-tanin';
 import EditModal from './_edit_modal.svelte';
 import DeleteModal from './_delete_modal.svelte';
 import DropTableModal from './_drop_table_modal.svelte';
@@ -32,6 +33,8 @@ let MIN_NUMBER_COLUMN_WIDTH = 24; // 2 characters
 let numberColumnWidth: number = 0;
 let columnWidths: number[] = []
 
+let virtualTableItems: Item[] = []
+
 $: if (sheet) {
   resetColumnWidths()
   for (let index = 0;index < sheet.columns.length; index++) {
@@ -46,9 +49,16 @@ $: if (sheet) {
 
   setNumberColumnWidth(sheet.numberColumnWidth === 0 ? MIN_NUMBER_COLUMN_WIDTH : sheet.numberColumnWidth)
 
+  virtualTableItems.length = sheet.rows.length
   for (let index = 0; index < sheet.rows.length; index++) {
     sheet.setRowHeight(index, getRowHeight(sheet.rows[index]));
+
+    virtualTableItems[index] = {
+      rowHeight: sheet.getRowHeight(index),
+      values: [...sheet.rows[index]]
+    }
   }
+  virtualTableItems = virtualTableItems;
 
   virtualListUpdate++
 }
@@ -153,6 +163,7 @@ async function loadMore(): Promise<void> {
     })
 
     sheet.load(json.sheet, true)
+    console.log(sheet.scrollTop);
     sheet = sheet
   } catch (e) {
 
@@ -290,35 +301,25 @@ function handleResize(event: MouseEvent) {
     {@const primaryKeyColumnIndex = sheet.getPrimaryKeyColumnIndex()}
     {@const totalWidth = columnWidths.reduce((sum, width) => sum + width, numberColumnWidth)}
     {#key virtualListUpdate}
-      <VirtualList
+      <VirtualTable
         let:item
         let:index
-        items={sheet.rows}
+        items={virtualTableItems}
         initialScrollLeft={sheet.scrollLeft}
         initialScrollTop={sheet.scrollTop}
-        getItemHeight={(index) => {
-          if (!sheet) { return 0 }
-
-          let h = sheet.getRowHeight(index)
-
-          if (!h) {
-            sheet.setRowHeight(index, getRowHeight(sheet.rows[index]));
-            h = sheet.getRowHeight(index)
-          }
-
-          return h
+        onBottomReached={() => {
+          void loadMore()
         }}
-        onBottomReached={() => {void loadMore()}}
         onScrolled={(scrollLeft, scrollTop) => {
           if (!sheet) return
           sheet.setScrollLeft(scrollLeft)
           sheet.setScrollTop(scrollTop)
         }}
       >
-        {@const isDeleted = primaryKeyColumnIndex !== null ? sheet.deletedKeys.has(item[primaryKeyColumnIndex]) : false}
+        {@const isDeleted = primaryKeyColumnIndex !== null ? sheet.deletedKeys.has(item.values[primaryKeyColumnIndex]) : false}
         <div
           slot="header"
-          class="sticky top-0 z-20 flex items-stretch font-mono text-xs bg-base-300"
+          class="flex items-stretch font-mono text-xs bg-base-300"
           style="width: {totalWidth}px;min-width: {totalWidth}px;max-width: {totalWidth}px;"
         >
           <div
@@ -371,9 +372,9 @@ function handleResize(event: MouseEvent) {
         </div>
         <div
           class="group inline-flex items-stretch font-mono text-xs box-border border-b border-neutral text-gray-300 hover:text-gray-50 hover:bg-info-content"
-          style="height: {sheet.getRowHeight(index)}px;min-height:  {sheet.getRowHeight(index)}px;max-height:  {sheet.getRowHeight(index)}px;"
+          style="height: {item.rowHeight}px;min-height: {item.rowHeight}px;max-height: {item.rowHeight}px;"
           data-test-id="sheet-view-row"
-          data-test-value={primaryKeyColumnIndex === null ? '' : item[primaryKeyColumnIndex]}
+          data-test-value={primaryKeyColumnIndex === null ? '' : item.values[primaryKeyColumnIndex]}
         >
           <div
             class="p-1 box-border border-e border-neutral flex items-baseline justify-end sticky left-0 bg-base-300 z-10"
@@ -398,7 +399,7 @@ function handleResize(event: MouseEvent) {
               ></i>
             {/if}
           </div>
-          {#each item as value, index (index)}
+          {#each item.values as value, index (index)}
             <div
               class="p-1 box-border border-e border-neutral flex items-baseline gap-1 whitespace-pre {isDeleted ? 'text-error line-through' : ''}"
               style="width: {columnWidths[index]}px; min-width: {columnWidths[index]}px; max-width: {columnWidths[index]}px;"
@@ -424,7 +425,7 @@ function handleResize(event: MouseEvent) {
             </div>
           {/each}
         </div>
-      </VirtualList>
+      </VirtualTable>
     {/key}
   {/if}
 </div>
