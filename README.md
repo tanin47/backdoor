@@ -3,6 +3,8 @@
 Modern and Embeddable Postgres Data Querying and Editing Tool
 ==============================================================
 
+[![Sonatype Central](https://maven-badges.sml.io/sonatype-central/io.github.tanin47/backdoor/badge.png?8cb1875)](https://central.sonatype.com/artifact/io.github.tanin47/backdoor)
+
 Backdoor is a Java-based data querying and editing tool for Postgres. It is small and suitable for embedding it into
 your Java application. Its JAR is <2MB and doesn't have transitive dependencies (to avoid a dependency conflict). No
 need for a separate instance nor deployment.
