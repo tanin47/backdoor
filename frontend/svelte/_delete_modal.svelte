@@ -21,9 +21,7 @@ export function open(values: any[]): void {
   errors = []
 
   primaryKeyColumnIndex = sheet.getPrimaryKeyColumnIndex()
-  console.log(primaryKeyColumnIndex, values)
   primaryKeyValue = primaryKeyColumnIndex !== null ? values[primaryKeyColumnIndex] : null
-  console.log(primaryKeyValue)
 
   modal.showModal()
 }

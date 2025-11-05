@@ -11,6 +11,8 @@ import org.openqa.selenium.logging.LoggingPreferences;
 import java.net.URISyntaxException;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Level;
@@ -28,6 +30,7 @@ public class Base {
   BackdoorServer server;
   Connection conn;
   boolean shouldLoggedIn = true;
+  User loggedInUser = new User("backdoor", "test");
 
   @BeforeAll
   void setUpAll() throws SQLException, URISyntaxException, InterruptedException {
@@ -87,10 +90,9 @@ public class Base {
   }
 
   @BeforeEach
-  void setUp() throws SQLException, URISyntaxException {
+  void setUp() throws Exception {
     resetDatabase();
-    var user = new User("backdoor", "test");
-    server = new BackdoorServer(TARGET_DATABASE_URL, PORT, new User[]{user});
+    server = new BackdoorServer(TARGET_DATABASE_URL, PORT, new User[]{loggedInUser});
     server.start();
 
     go("/");
@@ -98,7 +100,7 @@ public class Base {
     if (shouldLoggedIn) {
       webDriver.manage().addCookie(new Cookie(
         "backdoor",
-        BackdoorServer.makeCookieValueForUser(user)
+        BackdoorServer.makeCookieValueForUser(loggedInUser, server.secretKey, Instant.now().plus(1, ChronoUnit.DAYS))
       ));
     }
   }
