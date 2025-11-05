@@ -16,12 +16,14 @@ let primaryKeyColumnIndex: number | null = null;
 let isLoading = false
 let errors: string[] = []
 
-export function open(values: any): void {
+export function open(values: any[]): void {
   isLoading = false
   errors = []
 
   primaryKeyColumnIndex = sheet.getPrimaryKeyColumnIndex()
+  console.log(primaryKeyColumnIndex, values)
   primaryKeyValue = primaryKeyColumnIndex !== null ? values[primaryKeyColumnIndex] : null
+  console.log(primaryKeyValue)
 
   modal.showModal()
 }
@@ -67,7 +69,7 @@ async function submit(): Promise<void> {
       <div class="flex items-center justify-end gap-2">
         <button type="button" class="btn btn-neutral" onclick={close}>Close</button>
       </div>
-    {:else if primaryKeyColumnIndex === null}
+    {:else if primaryKeyValue === null || primaryKeyColumnIndex === null}
       <div>Unable to delete the row</div>
       <div class="text-sm">
         Because the Table doesn't have a primary key column.

@@ -388,7 +388,7 @@ function handleResize(event: MouseEvent) {
               {#if sheet.type === 'table'}
                 <i
                   class="ph ph-trash cursor-pointer pt-[2px] hidden group-hover:inline-block"
-                  onclick={() => deleteModal.open(item)}
+                  onclick={() => deleteModal.open(item.values)}
                   data-test-id="delete-row-button"
                 ></i>
               {/if}
@@ -412,7 +412,7 @@ function handleResize(event: MouseEvent) {
                   class="ph ph-pencil-simple {isDeleted ? '' : 'cursor-pointer hover:text-white'} pt-[2px]"
                   onclick={() => {
                       if (!isDeleted && sheet) {
-                        editModal.open(value, sheet.columns[index], item)
+                        editModal.open(value, sheet.columns[index], item.values)
                       }
                     }}
                 ></i>

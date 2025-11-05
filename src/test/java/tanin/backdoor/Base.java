@@ -89,11 +89,17 @@ public class Base {
   @BeforeEach
   void setUp() throws SQLException, URISyntaxException {
     resetDatabase();
-    server = new BackdoorServer(TARGET_DATABASE_URL, PORT, new User[]{new User("backdoor", "test")});
+    var user = new User("backdoor", "test");
+    server = new BackdoorServer(TARGET_DATABASE_URL, PORT, new User[]{user});
     server.start();
 
+    go("/");
+    webDriver.manage().deleteAllCookies();
     if (shouldLoggedIn) {
-      ((HasAuthentication) webDriver).register(UsernameAndPassword.of("backdoor", "test"));
+      webDriver.manage().addCookie(new Cookie(
+        "backdoor",
+        BackdoorServer.makeCookieValueForUser(user)
+      ));
     }
   }
 
@@ -112,6 +118,10 @@ public class Base {
 
   void go(String path) {
     webDriver.get("http://localhost:" + PORT + path);
+  }
+
+  String getCurrentPath() {
+    return webDriver.getCurrentUrl().substring(("http://localhost:" + PORT).length());
   }
 
   String tid(String... args) {
@@ -267,5 +277,11 @@ public class Base {
       expectedValue,
       elems(tid("sheet-column-value", columnName)).get(rowIndex).getText().trim()
     );
+  }
+
+  void checkErrorPanel(String... errors) throws InterruptedException {
+    var actualErrors = elems(tid("error-panel") + " p").stream().map(p -> p.getText().trim());
+
+    assertArrayEquals(errors, actualErrors.toArray());
   }
 }

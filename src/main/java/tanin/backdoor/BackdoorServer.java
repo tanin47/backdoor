@@ -18,6 +18,7 @@ import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
@@ -59,7 +60,7 @@ public class BackdoorServer {
     int sslPort = 0;
     User[] users = null;
 
-    if (MinumBuilder.getIsLocalDev()) {
+    if (MinumBuilder.IS_LOCAL_DEV) {
       url = "postgres://127.0.0.1:5432/backdoor_test";
       port = 9090;
     }
@@ -112,7 +113,6 @@ public class BackdoorServer {
   private FullSystem minum;
   User[] users;
   String hostName;
-  boolean isLocalDev = MinumBuilder.getIsLocalDev();
   ThreadLocal<User> loggedInUser = new ThreadLocal<>();
 
   public BackdoorServer(
@@ -197,7 +197,7 @@ public class BackdoorServer {
         "content", targetHtml.renderTemplate(propsMap),
         "TARGET_HOSTNAME", this.hostName,
         "TARGET_HOSTNAME_JSON", Json.value(this.hostName).toString(),
-        "IS_LOCAL_DEV_JSON", Json.value(this.isLocalDev).toString()
+        "IS_LOCAL_DEV_JSON", Json.value(MinumBuilder.IS_LOCAL_DEV).toString()
       )
     );
   }
@@ -251,9 +251,12 @@ public class BackdoorServer {
 
   private static final String authCookieKey = "backdoor";
 
-  private String makeSetCookieForUser(User user) {
-    var value = Base64.getEncoder().encodeToString((user.username() + ":" + user.password()).getBytes(StandardCharsets.UTF_8));
-    return authCookieKey + "=" + value;
+  public static String makeCookieValueForUser(User user) {
+    return Base64.getEncoder().encodeToString((user.username() + ":" + user.password()).getBytes(StandardCharsets.UTF_8));
+  }
+
+  public static String makeSetCookieForUser(User user) {
+    return authCookieKey + "=" + makeCookieValueForUser(user);
   }
 
   private String[] extractUsernameAndPasswordFromCookie(List<String> cookies) {
@@ -371,6 +374,9 @@ public class BackdoorServer {
         req -> {
           var options = new Altcha.ChallengeOptions();
           options.secureRandomNumber = true;
+          options.maxNumber = 1_000_000L;
+          options.saltLength = 12L;
+          options.expires = Instant.now().plus(1, ChronoUnit.MINUTES).toEpochMilli();
           options.hmacKey = ALTCHA_HMAC_KEY;
           var challenge = Altcha.createChallenge(options);
           return Response.buildResponse(
@@ -432,7 +438,7 @@ public class BackdoorServer {
               Map.of("Content-Type", "application/json"),
               Json
                 .object()
-                .add("errors", Json.array().add("The username or password is invalid"))
+                .add("errors", Json.array().add("The username or password is invalid."))
                 .toString()
             );
           }

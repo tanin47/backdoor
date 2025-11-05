@@ -126,8 +126,9 @@ see FAQ.
 Secure your Backdoor instance
 ------------------------------
 
-While Backdoor comes with strong security implementing limited session length and Captcha
-through [altcha](https://github.com/altcha-org/altcha), you can add more layers of security. Here are 2 more ways:
+While Backdoor comes with strong security limiting the session lengths and deterring brute-force attacks through a
+Proof-of-Work Captcha through [altcha](https://github.com/altcha-org/altcha), you can add more layers of security.
+Here are 2 more ways:
 
 ### 1. SSH tunneling
 
