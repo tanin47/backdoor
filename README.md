@@ -37,7 +37,8 @@ Compared to the alternatives
   the database. In the case of Heroku Postgres, creating an individual user isn't allowed. No activity history.
 * Deployed apps like phpmyadmin and cloudbeaver require separate deployments and are huge.
 
-Backdoor supports multiple users (masking your Postgres users), activity history, and (future) finer-grained access
+Backdoor supports multiple users (masking your Postgres users or use Postgres users), activity history, and (future)
+finer-grained access
 control. It is small (<2MB) and embeddable into your Java application. No separate deployment. No separate instance.
 
 How to use
@@ -121,6 +122,28 @@ directly ([See instructions](https://www.postgresql.org/docs/16/database-roles.h
 
 While using Postgres users is the recommended approach, using your own username and password is also supported. Please
 see FAQ.
+
+Secure your Backdoor instance
+------------------------------
+
+While Backdoor comes with strong security implementing limited session length and Captcha
+through [altcha](https://github.com/altcha-org/altcha), you can add more layers of security. Here are 2 more ways:
+
+### 1. SSH tunneling
+
+You can block your port using a firewall and use SSH tunneling to allow you to connect to a Backdoor instance.
+
+You can run: `ssh -L <local_port>:<remote_backdoor_host>:<remote_backdoor_port> <user>@<ssh_server>` and visit:
+`http://localhost:<local_port>` to access Backdoor.
+
+### 2. VPN
+
+Your company might already use VPN. It's a great option to connect to a server that hosts a Backdoor instance.
+
+The setup might be complicated and overkilled, so I'd recommend using this option if your company already have a
+VPN.
+
+[Tailscale](https://tailscale.com/) is one example.
 
 FAQ
 -----
