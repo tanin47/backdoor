@@ -11,6 +11,9 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executors;
@@ -39,14 +42,10 @@ public class MinumBuilder {
     };
   }
 
-  private static final boolean isLocalDev = MinumBuilder.class.getResourceAsStream("/local_dev_marker.ejwf") != null;
-
-  public static boolean getIsLocalDev() {
-    return isLocalDev;
-  }
+  public static final boolean IS_LOCAL_DEV = Files.exists(Path.of("./local_dev_marker.ejwf"));
 
   public static FullSystem start(int port, int sslPort) {
-    if (isLocalDev) {
+    if (IS_LOCAL_DEV) {
       logger.info("Running in the local development mode. Hot-Reload Module is enabled. `npm run hmr` must be running in a separate terminal");
     } else {
       logger.info("Running in the production mode.");
@@ -84,7 +83,7 @@ public class MinumBuilder {
     minum.start();
     var wf = minum.getWebFramework();
 
-    if (isLocalDev) {
+    if (IS_LOCAL_DEV) {
       wf.registerPartialPath(
         GET,
         "__webpack_hmr",

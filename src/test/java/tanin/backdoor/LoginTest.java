@@ -19,11 +19,33 @@ public class LoginTest extends Base {
   }
 
   @Test
-  void useCustomUser() throws InterruptedException {
-    initializeWebDriver();
-    ((HasAuthentication) webDriver).register(UsernameAndPassword.of("backdoor", "test"));
-
+  void didNotClickCaptcha() throws InterruptedException {
     go("/");
+    waitUntil(() -> assertEquals("/login", getCurrentPath()));
+
+    fill(tid("username"), "backdoor");
+    fill(tid("password"), "test");
+    click(tid("submit-button"));
+
+    checkErrorPanel("The captcha is invalid. Please check \"I'm not a robot\" again.");
+    assertEquals("false", elem(".altcha-checkbox input[type='checkbox']").getDomProperty("checked"));
+  }
+
+  @Test
+  void useCustomUser() throws InterruptedException {
+    go("/");
+    waitUntil(() -> assertEquals("/login", getCurrentPath()));
+
+    fill(tid("username"), "backdoor");
+    fill(tid("password"), "test");
+    click(".altcha-checkbox input[type='checkbox']");
+    waitUntil(() -> {
+      assertEquals("true", elem(".altcha-checkbox input[type='checkbox']").getDomProperty("checked"));
+    });
+    click(tid("submit-button"));
+
+    waitUntil(() -> assertEquals("/", getCurrentPath()));
+
     click(".CodeMirror");
     sendKeys("select current_user");
     click(tid("run-sql-button"));
@@ -35,14 +57,18 @@ public class LoginTest extends Base {
 
   @Test
   void incorrectCustomUser() throws InterruptedException {
-    initializeWebDriver();
-    ((HasAuthentication) webDriver).register(UsernameAndPassword.of("backdoor", "incorrect_password"));
-
     go("/");
-    Thread.sleep(1000);
+    waitUntil(() -> assertEquals("/login", getCurrentPath()));
 
-    // Since the credential is invalid, Chrome will be stuck in a redirection loop.
-    assertContains(elem("body").getText(), "ERR_TOO_MANY_RETRIES");
+    fill(tid("username"), "backdoor");
+    fill(tid("password"), "test123");
+    click(".altcha-checkbox input[type='checkbox']");
+    waitUntil(() -> {
+      assertEquals("true", elem(".altcha-checkbox input[type='checkbox']").getDomProperty("checked"));
+    });
+    click(tid("submit-button"));
+    checkErrorPanel("The username or password is invalid.");
+    assertEquals("false", elem(".altcha-checkbox input[type='checkbox']").getDomProperty("checked"));
   }
 
   @Test
@@ -52,10 +78,19 @@ public class LoginTest extends Base {
     server = new BackdoorServer("postgres://127.0.0.1:5432/" + DATABASE_NAME, PORT);
     server.start();
 
-    initializeWebDriver();
-    ((HasAuthentication) webDriver).register(UsernameAndPassword.of("backdoor_test_user", "test"));
-
     go("/");
+    waitUntil(() -> assertEquals("/login", getCurrentPath()));
+
+    fill(tid("username"), "backdoor_test_user");
+    fill(tid("password"), "test");
+    click(".altcha-checkbox input[type='checkbox']");
+    waitUntil(() -> {
+      assertEquals("true", elem(".altcha-checkbox input[type='checkbox']").getDomProperty("checked"));
+    });
+    click(tid("submit-button"));
+
+    waitUntil(() -> assertEquals("/", getCurrentPath()));
+
     click(".CodeMirror");
     sendKeys("select current_user");
     click(tid("run-sql-button"));
@@ -73,13 +108,16 @@ public class LoginTest extends Base {
     server = new BackdoorServer("postgres://127.0.0.1:5432/" + DATABASE_NAME, PORT);
     server.start();
 
-    initializeWebDriver();
-    ((HasAuthentication) webDriver).register(UsernameAndPassword.of("random_user", "test"));
-
     go("/");
-    Thread.sleep(1000);
 
-    // Since the credential is invalid, Chrome will be stuck in a redirection loop.
-    assertContains(elem("body").getText(), "ERR_TOO_MANY_RETRIES");
+    fill(tid("username"), "random_user");
+    fill(tid("password"), "test123");
+    click(".altcha-checkbox input[type='checkbox']");
+    waitUntil(() -> {
+      assertEquals("true", elem(".altcha-checkbox input[type='checkbox']").getDomProperty("checked"));
+    });
+    click(tid("submit-button"));
+    checkErrorPanel("The username or password is invalid.");
+    assertEquals("false", elem(".altcha-checkbox input[type='checkbox']").getDomProperty("checked"));
   }
 }

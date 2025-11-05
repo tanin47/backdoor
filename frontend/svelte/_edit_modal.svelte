@@ -27,7 +27,7 @@ $: if (!setToNull) {
   }
 }
 
-export function open(value: any, column: Column, rowValues: any): void {
+export function open(value: any, column: Column, rowValues: any[]): void {
   isLoading = false
   errors = []
 

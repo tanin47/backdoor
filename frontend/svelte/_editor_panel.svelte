@@ -47,7 +47,7 @@ $: if (editorTextarea && codeMirrorInstance === null) {
         'Ctrl-/': 'toggleComment',
         'Cmd-/': 'toggleComment'
       }
-    }
+    },
   );
 }
 

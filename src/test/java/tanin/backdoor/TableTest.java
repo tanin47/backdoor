@@ -277,13 +277,13 @@ public class TableTest extends Base {
 
     ((JavascriptExecutor) webDriver).executeScript(
       "arguments[0].scrollTo(0, arguments[0].scrollHeight)",
-      elem("svelte-virtual-list-viewport")
+      elem(".virtual-table")
     );
 
     waitUntil(() -> assertEquals("Count: 247 (Show 200 rows)", elem(tid("sheet-stats")).getText()));
     ((JavascriptExecutor) webDriver).executeScript(
       "arguments[0].scrollBy(0, 30)",
-      elem("svelte-virtual-list-viewport")
+      elem(".virtual-table")
     );
     assertContains(
       elem(tid("sheet-view-content")).getText(),
@@ -294,14 +294,14 @@ public class TableTest extends Base {
     );
     ((JavascriptExecutor) webDriver).executeScript(
       "arguments[0].scrollTo(0, arguments[0].scrollHeight)",
-      elem("svelte-virtual-list-viewport")
+      elem(".virtual-table")
     );
 
     waitUntil(() -> assertEquals("Count: 247 (Show all)", elem(tid("sheet-stats")).getText()));
 
     ((JavascriptExecutor) webDriver).executeScript(
       "arguments[0].scrollTo(0, arguments[0].scrollHeight)",
-      elem("svelte-virtual-list-viewport")
+      elem(".virtual-table")
     );
     assertContains(
       elem(tid("sheet-view-content")).getText(),
