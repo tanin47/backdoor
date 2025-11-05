@@ -143,18 +143,26 @@ export async function runSql(sql: string): Promise<void> {
           await sheetPanel.openQuery(query)
         }}
       />
-      <a
-        href="https://github.com/tanin47/backdoor"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="flex flex-row items-center p-2 gap-1 bg-black  text-gray-400 text-[11px]"
-      >
-        {#if IS_LOCAL_DEV}
-          <div class="text-accent">[dev]</div>
-        {/if}
-        <i class="ph ph-door-open"></i>
-        <div class="whitespace-nowrap overflow-hidden text-ellipsis">Powered by Backdoor</div>
-      </a>
+      <div class="flex flex-col">
+        <a
+          href="/logout"
+          class="flex flex-row items-center justify-center p-2 gap-1 bg-base-300  text-gray-400 text-sm"
+        >
+          Log out
+        </a>
+        <a
+          href="https://github.com/tanin47/backdoor"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="flex flex-row items-center p-2 gap-1 bg-black  text-gray-400 text-[11px]"
+        >
+          {#if IS_LOCAL_DEV}
+            <div class="text-accent">[dev]</div>
+          {/if}
+          <i class="ph ph-door-open"></i>
+          <div class="whitespace-nowrap overflow-hidden text-ellipsis">Powered by Backdoor</div>
+        </a>
+      </div>
     </div>
     <div class="flex flex-col items-stretch h-full w-full overflow-hidden">
       <SheetPanel

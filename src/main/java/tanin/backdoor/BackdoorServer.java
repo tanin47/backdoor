@@ -6,6 +6,7 @@ import com.eclipsesource.json.JsonObject;
 import com.eclipsesource.json.JsonValue;
 import com.renomad.minum.templating.TemplateProcessor;
 import com.renomad.minum.web.*;
+import org.altcha.altcha.Altcha;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.postgresql.Driver;
 import org.postgresql.util.PSQLException;
@@ -14,12 +15,14 @@ import tanin.ejwf.MinumBuilder;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.time.Instant;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
+import java.security.SecureRandom;
 
 import static com.renomad.minum.web.RequestLine.Method.GET;
 import static com.renomad.minum.web.RequestLine.Method.POST;
@@ -199,34 +202,82 @@ public class BackdoorServer {
     );
   }
 
-  void checkAuth(IRequest req) throws Exception {
-    var authErrorResponse = Response.buildResponse(
-      StatusLine.StatusCode.CODE_401_UNAUTHORIZED,
-      Map.of(
-        "WWW-Authenticate", "Basic realm=\"Backdoor\"",
-        "Content-Type", "text/plain"
-      ),
-      "Require correct username and password. Please contact your administrator."
-    );
+  private static final IResponse redirectAuthResp = Response.buildResponse(
+    StatusLine.StatusCode.CODE_302_FOUND,
+    Map.of(
+      "Location", "/login"
+    ),
+    ""
+  );
+  private static final IResponse postAuthResp = Response.buildResponse(
+    StatusLine.StatusCode.CODE_401_UNAUTHORIZED,
+    Map.of(
+      "Content-Type", "application/json"
+    ),
+    "{}"
+  );
 
-    var authHeaders = req.getHeaders().valueByKey("Authorization");
-    if (authHeaders == null || authHeaders.isEmpty() || !authHeaders.getFirst().startsWith("Basic ")) {
-      throw new EarlyExitException(authErrorResponse);
+  IResponse decideAuthError(IRequest req) {
+    if (req.getRequestLine().getMethod() == RequestLine.Method.GET) {
+      return redirectAuthResp;
+    } else {
+      return postAuthResp;
+    }
+  }
+
+  void checkAuth(IRequest req) throws Exception {
+    var authException = new EarlyExitException(decideAuthError(req));
+    var cookieHeaders = req.getHeaders().valueByKey("Cookie");
+    if (cookieHeaders == null || cookieHeaders.isEmpty()) {
+      throw authException;
     }
 
-    var authHeader = authHeaders.getFirst();
-
-    var base64Credentials = authHeader.substring("Basic ".length()).trim();
-    var credentials = new String(Base64.getDecoder().decode(base64Credentials));
-    var parts = credentials.split(":", 2);
-
-    if (parts.length != 2) {
-      throw new EarlyExitException(authErrorResponse);
+    var parts = extractUsernameAndPasswordFromCookie(cookieHeaders);
+    if (parts == null) {
+      throw authException;
     }
 
     var username = parts[0];
     var password = parts[1];
 
+    User found = getUser(username, password);
+
+    if (found == null) {
+      throw authException;
+    }
+
+    loggedInUser.set(found);
+  }
+
+  private static final String authCookieKey = "backdoor";
+
+  private String makeSetCookieForUser(User user) {
+    var value = Base64.getEncoder().encodeToString((user.username() + ":" + user.password()).getBytes(StandardCharsets.UTF_8));
+    return authCookieKey + "=" + value;
+  }
+
+  private String[] extractUsernameAndPasswordFromCookie(List<String> cookies) {
+    var cookie = Arrays.stream(cookies.getFirst().split(";"))
+      .filter(s -> s.trim().startsWith(authCookieKey + "="))
+      .findFirst()
+      .orElse(null);
+
+    if (cookie == null) {
+      return null;
+    }
+
+    var base64Credentials = cookie.trim().substring((authCookieKey + "=").length()).trim();
+    var credentials = new String(Base64.getDecoder().decode(base64Credentials));
+    var parts = credentials.split(":", 2);
+
+    if (parts.length == 2) {
+      return parts;
+    } else {
+      return null;
+    }
+  }
+
+  private User getUser(String username, String password) throws Exception {
     User found = null;
 
     if (users != null) {
@@ -242,28 +293,27 @@ public class BackdoorServer {
         var rs = session.executeQuery("SELECT 123");
         rs.next();
         if (rs.getInt(1) == 123) {
-          // Ok
-        } else {
-          throw new EarlyExitException(authErrorResponse);
+          found = potentialPgUser;
         }
 
-        found = potentialPgUser;
       } catch (PSQLException e) {
         if (e.getSQLState().equals("28000")) {
-          throw new EarlyExitException(authErrorResponse);
+          found = null;
         } else {
           throw e;
         }
       }
     }
 
-    loggedInUser.set(found);
+    return found;
   }
 
-  ThrowingFunction<IRequest, IResponse> handleEndpoint(ThrowingFunction<IRequest, IResponse> handler) {
+  ThrowingFunction<IRequest, IResponse> handleEndpoint(Boolean requireAuth, ThrowingFunction<IRequest, IResponse> handler) {
     return req -> {
       try {
-        checkAuth(req);
+        if (requireAuth) {
+          checkAuth(req);
+        }
         return handler.apply(req);
       } catch (IllegalArgumentException | SQLException e) {
         logger.log(Level.WARNING, e.getMessage(), e);
@@ -285,8 +335,26 @@ public class BackdoorServer {
     };
   }
 
+  ThrowingFunction<IRequest, IResponse> handleEndpoint(ThrowingFunction<IRequest, IResponse> handler) {
+    return handleEndpoint(true, handler);
+  }
+
   SqlSession makeSqlSession() throws SQLException, URISyntaxException {
     return new SqlSession(databaseUrl, loggedInUser.get());
+  }
+
+  // TODO: Allow users to configure it in order to support multiple instances.
+  private static final String ALTCHA_HMAC_KEY = generateRandomString(32);
+
+  private static String generateRandomString(int length) {
+    String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    SecureRandom random = new SecureRandom();
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < length; i++) {
+      int randomIndex = random.nextInt(chars.length());
+      sb.append(chars.charAt(randomIndex));
+    }
+    return sb.toString();
   }
 
   public FullSystem start() throws SQLException {
@@ -294,6 +362,102 @@ public class BackdoorServer {
     var wf = minum.getWebFramework();
 
     DriverManager.registerDriver(new Driver());
+
+    wf.registerPath(
+      GET,
+      "altcha",
+      handleEndpoint(
+        false,
+        req -> {
+          var options = new Altcha.ChallengeOptions();
+          options.secureRandomNumber = true;
+          options.hmacKey = ALTCHA_HMAC_KEY;
+          var challenge = Altcha.createChallenge(options);
+          return Response.buildResponse(
+            StatusLine.StatusCode.CODE_200_OK,
+            Map.of(
+              "Content-Type", "application/json"
+            ),
+            Json
+              .object()
+              .add("algorithm", challenge.algorithm)
+              .add("challenge", challenge.challenge)
+              .add("maxnumber", challenge.maxnumber)
+              .add("salt", challenge.salt)
+              .add("signature", challenge.signature)
+              .toString()
+          );
+        }
+      )
+    );
+
+    wf.registerPath(
+      GET,
+      "login",
+      handleEndpoint(
+        false,
+        req -> {
+          return Response.htmlOk(makeHtml("login.html"));
+        }
+      )
+    );
+
+    wf.registerPath(
+      POST,
+      "login",
+      handleEndpoint(
+        false,
+        req -> {
+          var json = Json.parse(req.getBody().asString());
+          var username = json.asObject().get("username").asString();
+          var password = json.asObject().get("password").asString();
+          var altcha = json.asObject().get("altcha").asString();
+
+          checkAltcha(altcha);
+
+          var user = getUser(username, password);
+
+          if (user != null) {
+            return Response.buildResponse(
+              StatusLine.StatusCode.CODE_200_OK,
+              Map.of(
+                "Content-Type", "application/json",
+                "Set-Cookie", makeSetCookieForUser(user) + "; Max-Age=86400; Secure; HttpOnly"
+              ),
+              Json.object().toString()
+            );
+          } else {
+            return Response.buildResponse(
+              StatusLine.StatusCode.CODE_400_BAD_REQUEST,
+              Map.of("Content-Type", "application/json"),
+              Json
+                .object()
+                .add("errors", Json.array().add("The username or password is invalid"))
+                .toString()
+            );
+          }
+        }
+      )
+    );
+
+
+    wf.registerPath(
+      GET,
+      "logout",
+      handleEndpoint(
+        false,
+        req -> {
+          return Response.buildResponse(
+            StatusLine.StatusCode.CODE_302_FOUND,
+            Map.of(
+              "Set-Cookie", makeSetCookieForUser(new User("", "")) + "; Max-Age=0; Secure; HttpOnly",
+              "Location", "/login"
+            ),
+            ""
+          );
+        }
+      )
+    );
 
     wf.registerPath(
       GET,
@@ -634,6 +798,27 @@ public class BackdoorServer {
     );
 
     return minum;
+  }
+
+  private void checkAltcha(String altcha) {
+    var isValid = false;
+
+    try {
+      isValid = Altcha.verifySolution(altcha, ALTCHA_HMAC_KEY, true);
+    } catch (Exception e) {
+      logger.info("Altcha raised an exception while verifying the captcha.");
+    }
+
+    if (!isValid) {
+      throw new EarlyExitException(Response.buildResponse(
+        StatusLine.StatusCode.CODE_400_BAD_REQUEST,
+        Map.of("Content-Type", "application/json"),
+        Json
+          .object()
+          .add("errors", Json.array().add("The captcha is invalid. Please check \"I'm not a robot\" again."))
+          .toString()
+      ));
+    }
   }
 
   private SqlType getSqlType(SqlSession session, String sql) throws SQLException {

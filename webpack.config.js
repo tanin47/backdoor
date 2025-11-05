@@ -74,7 +74,7 @@ const config = {
   resolve: {
     extensions: ['.mjs', '.js', '.svelte', '.ts'],
     mainFields: ['svelte', 'browser', 'module', 'main'],
-    conditionNames: ['svelte', 'browser']
+    conditionNames: ['svelte', 'browser', 'import']
   },
   module: {
     rules: [

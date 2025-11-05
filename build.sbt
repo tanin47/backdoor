@@ -3,7 +3,7 @@ import sbt.{ThisBuild, url}
 lazy val root = project in file(".")
 
 name := "backdoor-dev"
-ThisBuild / version := "1.1.1"
+ThisBuild / version := "1.2.0-rc1"
 
 ThisBuild / organization := "tanin.backdoor"
 
@@ -14,6 +14,7 @@ libraryDependencies ++= Seq(
   "com.renomad" % "minum" % "8.2.0",
   "org.postgresql" % "postgresql" % "42.7.8",
   "com.eclipsesource.minimal-json" % "minimal-json" % "0.9.5",
+  "org.altcha" % "altcha" % "1.2.0",
   "org.junit.jupiter" % "junit-jupiter" % "6.0.0" % Test,
   "org.seleniumhq.selenium" % "selenium-java" % "4.36.0" % Test,
   "com.github.sbt.junit" % "jupiter-interface" % JupiterKeys.jupiterVersion.value % Test
