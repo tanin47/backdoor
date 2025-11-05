@@ -12,10 +12,13 @@ import org.postgresql.Driver;
 import org.postgresql.util.PSQLException;
 import tanin.ejwf.MinumBuilder;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
 import java.sql.*;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -27,6 +30,7 @@ import java.security.SecureRandom;
 
 import static com.renomad.minum.web.RequestLine.Method.GET;
 import static com.renomad.minum.web.RequestLine.Method.POST;
+import static tanin.backdoor.EncryptionHelper.generateRandomString;
 
 public class BackdoorServer {
 
@@ -114,6 +118,8 @@ public class BackdoorServer {
   User[] users;
   String hostName;
   ThreadLocal<User> loggedInUser = new ThreadLocal<>();
+  // TODO: Support configuring the secret key
+  String secretKey = generateRandomString(32);
 
   public BackdoorServer(
     String databaseUrl,
@@ -232,13 +238,20 @@ public class BackdoorServer {
       throw authException;
     }
 
-    var parts = extractUsernameAndPasswordFromCookie(cookieHeaders);
+    String[] parts = extractUsernamePasswordAndExpiresFromCookie(cookieHeaders);
+
     if (parts == null) {
       throw authException;
     }
 
     var username = parts[0];
     var password = parts[1];
+    var expires = Instant.ofEpochMilli(Long.parseLong(parts[2]));
+
+    if (expires.isBefore(Instant.now())) {
+      // The encrypted credential expires. Requires another login.
+      throw authException;
+    }
 
     User found = getUser(username, password);
 
@@ -251,15 +264,18 @@ public class BackdoorServer {
 
   private static final String authCookieKey = "backdoor";
 
-  public static String makeCookieValueForUser(User user) {
-    return Base64.getEncoder().encodeToString((user.username() + ":" + user.password()).getBytes(StandardCharsets.UTF_8));
+  public static String makeCookieValueForUser(User user, String secretKey, Instant expires) throws Exception {
+    return EncryptionHelper.encryptText(
+      user.username() + ":" + user.password() + ":" + expires.toEpochMilli(),
+      secretKey
+    );
   }
 
-  public static String makeSetCookieForUser(User user) {
-    return authCookieKey + "=" + makeCookieValueForUser(user);
+  public static String makeSetCookieForUser(User user, String secretKey, Instant expires) throws Exception {
+    return authCookieKey + "=" + makeCookieValueForUser(user, secretKey, expires);
   }
 
-  private String[] extractUsernameAndPasswordFromCookie(List<String> cookies) {
+  private String[] extractUsernamePasswordAndExpiresFromCookie(List<String> cookies) throws Exception {
     var cookie = Arrays.stream(cookies.getFirst().split(";"))
       .filter(s -> s.trim().startsWith(authCookieKey + "="))
       .findFirst()
@@ -270,12 +286,16 @@ public class BackdoorServer {
     }
 
     var base64Credentials = cookie.trim().substring((authCookieKey + "=").length()).trim();
-    var credentials = new String(Base64.getDecoder().decode(base64Credentials));
-    var parts = credentials.split(":", 2);
+    try {
+      var credentials = EncryptionHelper.decryptText(base64Credentials, secretKey);
+      var parts = credentials.split(":", 3);
 
-    if (parts.length == 2) {
-      return parts;
-    } else {
+      if (parts.length == 3) {
+        return parts;
+      } else {
+        return null;
+      }
+    } catch (IllegalArgumentException | IllegalBlockSizeException | BadPaddingException | InvalidKeyException e) {
       return null;
     }
   }
@@ -346,20 +366,6 @@ public class BackdoorServer {
     return new SqlSession(databaseUrl, loggedInUser.get());
   }
 
-  // TODO: Allow users to configure it in order to support multiple instances.
-  private static final String ALTCHA_HMAC_KEY = generateRandomString(32);
-
-  private static String generateRandomString(int length) {
-    String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    SecureRandom random = new SecureRandom();
-    StringBuilder sb = new StringBuilder();
-    for (int i = 0; i < length; i++) {
-      int randomIndex = random.nextInt(chars.length());
-      sb.append(chars.charAt(randomIndex));
-    }
-    return sb.toString();
-  }
-
   public FullSystem start() throws SQLException {
     minum = MinumBuilder.start(this.port, this.sslPort);
     var wf = minum.getWebFramework();
@@ -377,7 +383,7 @@ public class BackdoorServer {
           options.maxNumber = 1_000_000L;
           options.saltLength = 12L;
           options.expires = Instant.now().plus(1, ChronoUnit.MINUTES).toEpochMilli();
-          options.hmacKey = ALTCHA_HMAC_KEY;
+          options.hmacKey = secretKey;
           var challenge = Altcha.createChallenge(options);
           return Response.buildResponse(
             StatusLine.StatusCode.CODE_200_OK,
@@ -428,7 +434,7 @@ public class BackdoorServer {
               StatusLine.StatusCode.CODE_200_OK,
               Map.of(
                 "Content-Type", "application/json",
-                "Set-Cookie", makeSetCookieForUser(user) + "; Max-Age=86400; Secure; HttpOnly"
+                "Set-Cookie", makeSetCookieForUser(user, secretKey, Instant.now().plus(1, ChronoUnit.DAYS)) + "; Max-Age=86400; Secure; HttpOnly"
               ),
               Json.object().toString()
             );
@@ -456,7 +462,7 @@ public class BackdoorServer {
           return Response.buildResponse(
             StatusLine.StatusCode.CODE_302_FOUND,
             Map.of(
-              "Set-Cookie", makeSetCookieForUser(new User("", "")) + "; Max-Age=0; Secure; HttpOnly",
+              "Set-Cookie", makeSetCookieForUser(new User("", ""), "dontcare", Instant.now()) + "; Max-Age=0; Secure; HttpOnly",
               "Location", "/login"
             ),
             ""
@@ -810,7 +816,7 @@ public class BackdoorServer {
     var isValid = false;
 
     try {
-      isValid = Altcha.verifySolution(altcha, ALTCHA_HMAC_KEY, true);
+      isValid = Altcha.verifySolution(altcha, secretKey, true);
     } catch (Exception e) {
       logger.info("Altcha raised an exception while verifying the captcha.");
     }

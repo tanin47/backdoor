@@ -147,6 +147,7 @@ export async function runSql(sql: string): Promise<void> {
         <a
           href="/logout"
           class="flex flex-row items-center justify-center p-2 gap-1 bg-base-300  text-gray-400 text-sm"
+          data-test-id="logout-button"
         >
           Log out
         </a>

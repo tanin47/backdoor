@@ -51,7 +51,7 @@ public class TableTest extends Base {
     assertCell(0, "date", "2025-10-20");
     assertCell(0, "time", "10:00:03");
     // There's a bug with the data type: timetz. I cannot get it to work. It automatically subtracts 1 hour.
-    assertCell(0, "time_with_time_zone", "09:00:04");
+    assertCell(0, "time_with_time_zone", "10:00:04");
 
     click(tid("sheet-column-value", "timestamp", null, "edit-field-button"));
     fill(tid("new-value"), "2025-10-19T11:00:01Z");

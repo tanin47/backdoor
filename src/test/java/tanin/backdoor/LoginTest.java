@@ -32,7 +32,7 @@ public class LoginTest extends Base {
   }
 
   @Test
-  void useCustomUser() throws InterruptedException {
+  void useCustomUserAndLogout() throws InterruptedException {
     go("/");
     waitUntil(() -> assertEquals("/login", getCurrentPath()));
 
@@ -53,6 +53,11 @@ public class LoginTest extends Base {
     waitUntil(() -> assertTrue(hasElem(tid("sheet-tab"))));
 
     assertColumnValues("current_user", "backdoor_test_user");
+
+    click(tid("logout-button"));
+    waitUntil(() -> assertEquals("/login", getCurrentPath()));
+    go("/");
+    waitUntil(() -> assertEquals("/login", getCurrentPath()));
   }
 
   @Test
