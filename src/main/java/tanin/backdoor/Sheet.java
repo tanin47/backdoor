@@ -6,6 +6,8 @@ import com.eclipsesource.json.JsonValue;
 
 public class Sheet {
 
+  public String database;
+  // TODO: Rename to table
   public String name;
   public String sql;
   public String type;
@@ -15,7 +17,8 @@ public class Sheet {
   public Stats stats;
   public JsonValue[][] rows;
 
-  Sheet(String name, String sql, String type, Column[] columns, Filter[] filters, Sort[] sorts, Stats stats, JsonValue[][] rows) {
+  Sheet(String database, String name, String sql, String type, Column[] columns, Filter[] filters, Sort[] sorts, Stats stats, JsonValue[][] rows) {
+    this.database = database;
     this.name = name;
     this.sql = sql;
     this.type = type;
@@ -57,6 +60,7 @@ public class Sheet {
     }
 
     return Json.object()
+      .add("database", database)
       .add("name", name)
       .add("sql", sql)
       .add("type", type)

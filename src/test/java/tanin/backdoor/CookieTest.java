@@ -16,10 +16,9 @@ public class CookieTest extends Base {
     webDriver.manage().addCookie(new Cookie(
       "backdoor",
       BackdoorServer.makeCookieValueForUser(
-        loggedInUser,
+        new User[]{loggedInUser},
         server.secretKey,
-        Instant.now().plus(10, ChronoUnit.SECONDS
-        ))
+        Instant.now().plus(10, ChronoUnit.SECONDS))
     ));
 
     webDriver.navigate().refresh();

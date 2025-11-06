@@ -6,22 +6,32 @@ import Button from './common/_button.svelte'
 import ErrorPanel from "./common/form/_error_panel.svelte"
 
 export let sheet: Sheet
-export let onDeleted: (primaryKeyValue: string) => void
+export let onDeleted: (rowIndex: number) => void
 
 let modal: HTMLDialogElement;
 
-let primaryKeyValue: any
-let primaryKeyColumnIndex: number | null = null;
+let primaryKeys: Array<{ name: string, value: any }> = []
+let rowIndex_: number | null = null
 
 let isLoading = false
 let errors: string[] = []
 
-export function open(values: any[]): void {
+export function open(rowValues: any[], rowIndex: number): void {
   isLoading = false
   errors = []
 
-  primaryKeyColumnIndex = sheet.getPrimaryKeyColumnIndex()
-  primaryKeyValue = primaryKeyColumnIndex !== null ? values[primaryKeyColumnIndex] : null
+  rowIndex_ = rowIndex
+  primaryKeys = sheet.columns
+    .map((column, index) => {
+      if (column.isPrimaryKey) {
+        const value = rowValues[index];
+        return {name: column.name, value: value === null ? null : ('' + value)}
+      } else {
+        return null
+      }
+    })
+    .filter(s => s !== null)
+
 
   modal.showModal()
 }
@@ -34,7 +44,7 @@ export function close(): void {
 }
 
 async function submit(): Promise<void> {
-  if (primaryKeyColumnIndex === null) {
+  if (primaryKeys.length === 0 || rowIndex_ === null) {
     return
   }
 
@@ -42,13 +52,13 @@ async function submit(): Promise<void> {
 
   try {
     const json = await post('/api/delete-row', {
+      database: sheet.database,
       table: sheet.name,
-      primaryKeyColumn: sheet.columns[primaryKeyColumnIndex].name,
-      primaryKeyValue: '' + primaryKeyValue,
+      primaryKeys
     })
 
     modal.close()
-    onDeleted(primaryKeyValue)
+    onDeleted(rowIndex_)
   } catch (e) {
     isLoading = false
     errors = (e as FetchError).messages
@@ -67,7 +77,7 @@ async function submit(): Promise<void> {
       <div class="flex items-center justify-end gap-2">
         <button type="button" class="btn btn-neutral" onclick={close}>Close</button>
       </div>
-    {:else if primaryKeyValue === null || primaryKeyColumnIndex === null}
+    {:else if primaryKeys.length === 0}
       <div>Unable to delete the row</div>
       <div class="text-sm">
         Because the Table doesn't have a primary key column.
@@ -77,11 +87,13 @@ async function submit(): Promise<void> {
       </div>
     {:else}
       <div>Are you sure you want to delete this row?</div>
-      <div class="text-sm">
-        Primary key:
-        <code>
-          {sheet.columns[primaryKeyColumnIndex].name} = {primaryKeyValue}
-        </code>
+      <div class="text-sm flex gap-2 items-center flex-wrap max-w-[600px]">
+        <span>Primary key:</span>
+        {#each primaryKeys as pair (pair.name)}
+          <code>
+            {pair.name} = {pair.value ?? 'NULL'}
+          </code>
+        {/each}
       </div>
       <ErrorPanel {errors}/>
       <div class="flex items-center justify-end gap-2">

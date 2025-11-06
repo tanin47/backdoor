@@ -1,49 +1,51 @@
-package tanin.backdoor;
+package tanin.backdoor.postgres;
 
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.JavascriptExecutor;
-
-import java.sql.SQLException;
+import tanin.backdoor.Base;
+import tanin.backdoor.engine.Engine;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class TableTest extends Base {
   @Test
-  void dateTimeColumn() throws InterruptedException, SQLException {
-    conn.createStatement().execute("""
-          CREATE TABLE "date_time" (
-            id INT PRIMARY KEY,
-            timestamp TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-            timestamp_with_time_zone TIMESTAMP WITH TIME ZONE NOT NULL,
-            date DATE NOT NULL,
-            time TIME WITHOUT TIME ZONE NOT NULL,
-            time_with_time_zone TIME WITH TIME ZONE NOT NULL
-          )
-      """);
+  void dateTimeColumn() throws Exception {
+    try (var engine = Engine.createEngine(postgresConfig, null)) {
+      engine.connection.createStatement().execute("""
+            CREATE TABLE "date_time" (
+              id INT PRIMARY KEY,
+              timestamp TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+              timestamp_with_time_zone TIMESTAMP WITH TIME ZONE NOT NULL,
+              date DATE NOT NULL,
+              time TIME WITHOUT TIME ZONE NOT NULL,
+              time_with_time_zone TIME WITH TIME ZONE NOT NULL
+            )
+        """);
 
-    conn.createStatement().execute(
-      """
-        INSERT INTO "date_time" (
-          id,
-          timestamp,
-          timestamp_with_time_zone,
-          date,
-          time,
-          time_with_time_zone
-        ) VALUES (
-          '1',
-          TIMESTAMP '2025-10-19T10:00:01.000000Z' AT TIME ZONE 'UTC',
-          TIMESTAMP '2025-10-19T10:00:02.000000Z' AT TIME ZONE 'UTC',
-          '2025-10-20',
-          '10:00:03',
-          '10:00:04'
-        )
+      engine.connection.createStatement().execute(
         """
-    );
+          
+             INSERT INTO "date_time" (
+             id,
+             timestamp,
+             timestamp_with_time_zone,
+             date,
+             time,
+             time_with_time_zone
+           ) VALUES (
+             '1',
+             TIMESTAMP '2025-10-19T10:00:01.000000Z' AT TIME ZONE 'UTC',
+             TIMESTAMP '2025-10-19T10:00:02.000000Z' AT TIME ZONE 'UTC',
+             '2025-10-20',
+             '10:00:03',
+             '10:00:04'
+           )
+          """
+      );
+    }
     go("/");
 
-    waitUntil(() -> hasElem(tid("menu-item-table")));
-    click(tid("menu-item-table", "date_time"));
+    click(tid("menu-items", "postgres", null, "menu-item-table", "date_time"));
 
     waitUntil(() -> hasElem(tid("sheet-tab", "date_time")));
     assertCell(0, "timestamp", "2025-10-19T10:00:01Z");
@@ -81,36 +83,38 @@ public class TableTest extends Base {
   }
 
   @Test
-  void jsonAndPgvectorColumn() throws InterruptedException, SQLException {
-    conn.createStatement().execute("CREATE EXTENSION vector;");
-    conn.createStatement().execute("""
-          CREATE TABLE "json_pgvector" (
-            id INT PRIMARY KEY,
-            data_jsonb JSONB NOT NULL,
-            data_json JSON NOT NULL,
-            data_vector vector(3) NOT NULL
-          )
-      """);
+  void jsonAndPgvectorColumn() throws Exception {
+    try (var engine = Engine.createEngine(postgresConfig, null)) {
+      engine.connection.createStatement().execute("CREATE EXTENSION vector;");
+      engine.connection.createStatement().execute("""
+            CREATE TABLE "json_pgvector" (
+              id INT PRIMARY KEY,
+              data_jsonb JSONB NOT NULL,
+              data_json JSON NOT NULL,
+              data_vector vector(3) NOT NULL
+            )
+        """);
 
-    conn.createStatement().execute(
-      """
-        INSERT INTO "json_pgvector" (
-          id,
-          data_jsonb,
-          data_json,
-          data_vector
-        ) VALUES (
-          '1',
-          '{"a": "c"}'::jsonb,
-          '{"b": "d"}'::json,
-          '[1, 2, 3]'
-        )
+      engine.connection.createStatement().execute(
         """
-    );
+          INSERT INTO "json_pgvector" (
+            id,
+            data_jsonb,
+            data_json,
+            data_vector
+          ) VALUES (
+            '1',
+            '{"a": "c"}'::jsonb,
+            '{"b": "d"}'::json,
+            '[1, 2, 3]'
+          )
+          """
+      );
+    }
+
     go("/");
 
-    waitUntil(() -> hasElem(tid("menu-item-table")));
-    click(tid("menu-item-table", "json_pgvector"));
+    click(tid("menu-items", "postgres", null, "menu-item-table", "json_pgvector"));
 
     waitUntil(() -> hasElem(tid("sheet-tab", "json_pgvector")));
     assertCell(0, "data_jsonb", "{\"a\": \"c\"}");
@@ -137,8 +141,7 @@ public class TableTest extends Base {
   void createUpdateDropTable() throws InterruptedException {
     go("/");
 
-    waitUntil(() -> hasElem(tid("menu-item-table")));
-    click(tid("menu-item-table", "user"));
+    click(tid("menu-items", "postgres", null, "menu-item-table", "user"));
 
     waitUntil(() -> hasElem(tid("sheet-tab", "user")));
     assertColumnValues("username", "test_user_1", "test_user_2", "test_user_3", "test_user_4");
@@ -150,21 +153,20 @@ public class TableTest extends Base {
     click(tid("submit-button"));
 
     waitUntil(() -> hasElem(tid("sheet-tab", "user_new_name")));
-    waitUntil(() -> hasElem(tid("menu-item-table", "user_new_name")));
+    waitUntil(() -> hasElem(tid("menu-items", "postgres", null, "menu-item-table", "user_new_name")));
 
     click(tid("drop-table-button"));
     click(tid("submit-button"));
 
     waitUntil(() -> assertTrue(hasElem(tid("sheet-tab", "user_new_name"))));
-    waitUntil(() -> assertFalse(hasElem(tid("menu-item-table", "user_new_name"))));
+    waitUntil(() -> assertFalse(hasElem(tid("menu-items", "postgres", null, "menu-item-table", "user_new_name"))));
   }
 
   @Test
   void editField() throws InterruptedException {
     go("/");
 
-    waitUntil(() -> hasElem(tid("menu-item-table")));
-    click(tid("menu-item-table", "user"));
+    click(tid("menu-items", "postgres", null, "menu-item-table", "user"));
 
     waitUntil(() -> hasElem(tid("sheet-tab", "user")));
     click(tid("sheet-column-value", "username", null, "edit-field-button"));
@@ -179,8 +181,7 @@ public class TableTest extends Base {
   void deleteRow() throws InterruptedException {
     go("/");
 
-    waitUntil(() -> hasElem(tid("menu-item-table")));
-    click(tid("menu-item-table", "user"));
+    click(tid("menu-items", "postgres", null, "menu-item-table", "user"));
 
     waitUntil(() -> hasElem(tid("sheet-tab", "user")));
     hover(tid("sheet-column-value", "username"));
@@ -195,8 +196,7 @@ public class TableTest extends Base {
   void filterRow() throws InterruptedException {
     go("/");
 
-    waitUntil(() -> hasElem(tid("menu-item-table")));
-    click(tid("menu-item-table", "user"));
+    click(tid("menu-items", "postgres", null, "menu-item-table", "user"));
 
     waitUntil(() -> hasElem(tid("sheet-tab", "user")));
     click(tid("sheet-view-column-header", "username", null, "filter-button"));
@@ -212,8 +212,7 @@ public class TableTest extends Base {
   void sortRow() throws InterruptedException {
     go("/");
 
-    waitUntil(() -> hasElem(tid("menu-item-table")));
-    click(tid("menu-item-table", "user"));
+    click(tid("menu-items", "postgres", null, "menu-item-table", "user"));
 
     waitUntil(() -> hasElem(tid("sheet-tab", "user")));
     assertEquals(
@@ -260,18 +259,19 @@ public class TableTest extends Base {
   }
 
   @Test
-  void loadMore() throws InterruptedException, SQLException {
-    for (int i = 5; i <= 247; i++) {
-      conn.createStatement().execute(String.format(
-        "INSERT INTO \"user\" (id, username, password) VALUES ('%d', 'test_user_%d', 'password%d')",
-        i, i, i
-      ));
+  void loadMore() throws Exception {
+    try (var engine = Engine.createEngine(postgresConfig, null)) {
+      for (int i = 5; i <= 247; i++) {
+        engine.connection.createStatement().execute(String.format(
+          "INSERT INTO \"user\" (id, username, password) VALUES ('%d', 'test_user_%d', 'password%d')",
+          i, i, i
+        ));
+      }
     }
 
     go("/");
 
-    waitUntil(() -> hasElem(tid("menu-item-table")));
-    click(tid("menu-item-table", "user"));
+    click(tid("menu-items", "postgres", null, "menu-item-table", "user"));
 
     assertEquals("Count: 247 (Show 100 rows)", elem(tid("sheet-stats")).getText());
 

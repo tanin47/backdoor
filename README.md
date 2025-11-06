@@ -205,7 +205,14 @@ How to develop
 How to run tests
 -----------------
 
-1. Run `./setup/setup_db.sh` in order to set a test database.
+1. Run `./setup/setup_db.sh` in order to set the postgres database.
+2. Set up the ClickHouse instance as follows:
+
+- The HTTP port is 8123
+- The database `backdoor_test` is created.
+- The username is `backdoor_test`.
+- The password is `test_ch`
+
 1. Run `npm install` to install all dependencies.
 3. On a separate terminal, run `npm run hmr`.
 2. Run `sbt test` in order to run all the tests.

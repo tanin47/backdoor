@@ -1,6 +1,18 @@
+export interface Database {
+  name: string;
+  requireLogin: boolean;
+  tables: string[];
+}
+
+export interface Table {
+  database: string;
+  name: string;
+}
+
 export interface Column {
   name: string;
   type: string;
+  rawType: string;
   maxCharacterLength: number;
   isPrimaryKey: boolean;
   isNullable: boolean;
@@ -11,6 +23,7 @@ export interface Stats {
 }
 
 export interface Query {
+  database: string;
   name: string;
   sql: string;
 }
@@ -30,6 +43,7 @@ export interface Filter {
 }
 
 interface BaseSheet {
+  database: string;
   name: string;
   sql: string;
   type: SheetType;
@@ -41,6 +55,7 @@ interface BaseSheet {
 }
 
 export class Sheet implements BaseSheet {
+  database: string = '';
   name: string = '';
   sql: string = '';
   type: SheetType = 'query';
@@ -54,7 +69,7 @@ export class Sheet implements BaseSheet {
   #columnWidths: number[] = [];
   #rowHeights: number[] = [];
   numberColumnWidth: number = 0;
-  deletedKeys: Set<string> = new Set();
+  deletedRowIndices: Set<number> = new Set();
   scrollLeft: number = 0;
   scrollTop: number = 0;
 
@@ -102,6 +117,7 @@ export class Sheet implements BaseSheet {
   }
 
   load(newSheet: BaseSheet, appendRows: boolean): void {
+    this.database = newSheet.database;
     this.name = newSheet.name;
     this.sql = newSheet.sql;
     this.type = newSheet.type;
@@ -114,5 +130,6 @@ export class Sheet implements BaseSheet {
     } else {
       this.rows = newSheet.rows;
     }
+    this.deletedRowIndices.clear();
   }
 }

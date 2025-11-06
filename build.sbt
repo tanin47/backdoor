@@ -13,6 +13,7 @@ autoScalaLibrary := false
 libraryDependencies ++= Seq(
   "com.renomad" % "minum" % "8.2.0",
   "org.postgresql" % "postgresql" % "42.7.8",
+  "com.clickhouse" % "jdbc-v2" % "0.9.3",
   "com.eclipsesource.minimal-json" % "minimal-json" % "0.9.5",
   "org.altcha" % "altcha" % "1.2.0",
   "org.junit.jupiter" % "junit-jupiter" % "6.0.0" % Test,

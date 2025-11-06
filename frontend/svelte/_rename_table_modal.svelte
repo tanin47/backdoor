@@ -50,6 +50,7 @@ async function submit() {
 
   try {
     const json = await post('/api/rename-table', {
+      database: sheet.database,
       table: sheet.name,
       newName
     })

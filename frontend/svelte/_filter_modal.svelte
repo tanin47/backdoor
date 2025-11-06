@@ -88,6 +88,7 @@ async function submit() {
 
   try {
     const json = await post(`/api/load-${sheet.type}`, {
+      database: sheet.database,
       name: sheet.name,
       sql: sheet.sql,
       sorts: sheet.sorts,
