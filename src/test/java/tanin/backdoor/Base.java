@@ -7,9 +7,10 @@ import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.logging.LogType;
 import org.openqa.selenium.logging.LoggingPreferences;
+import org.openqa.selenium.support.ui.Select;
+import tanin.backdoor.engine.Engine;
 
 import java.net.URISyntaxException;
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -21,22 +22,22 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class Base {
-  static String DATABASE_NAME = "backdoor_test";
-  static String TARGET_DATABASE_URL = "postgres://backdoor_test_user:test@127.0.0.1:5432/" + DATABASE_NAME;
+  User loggedInUser = new User("backdoor", "test");
+  static String POSTGRES_DATABASE_URL = "postgres://127.0.0.1:5432/backdoor_test";
+  static String CLICKHOUSE_DATABASE_URL = "jdbc:ch://127.0.0.1:8123/backdoor_test";
+
+  public DatabaseConfig postgresConfig = new DatabaseConfig("postgres", POSTGRES_DATABASE_URL, "backdoor_test_user", "test");
+  public DatabaseConfig clickHouseConfig = new DatabaseConfig("clickhouse", CLICKHOUSE_DATABASE_URL, "backdoor", "test_ch");
   static int PORT = 9091;
   static boolean IS_MAC = System.getProperty("os.name").toLowerCase().contains("mac");
 
-  WebDriver webDriver;
+  public WebDriver webDriver;
   BackdoorServer server;
-  Connection conn;
   boolean shouldLoggedIn = true;
-  User loggedInUser = new User("backdoor", "test");
 
   @BeforeAll
   void setUpAll() throws SQLException, URISyntaxException, InterruptedException {
     initializeWebDriver();
-
-    conn = SqlSession.makeConnection(TARGET_DATABASE_URL, null);
   }
 
   public void initializeWebDriver() {
@@ -59,40 +60,95 @@ public class Base {
     webDriver = new ChromeDriver(options);
   }
 
-  void resetDatabase() throws SQLException {
-    conn.createStatement().execute("DROP SCHEMA IF EXISTS public CASCADE");
-    conn.createStatement().execute("CREATE SCHEMA public");
+  void resetDatabase() throws Exception {
+    try (var pg = Engine.createEngine(postgresConfig, null)) {
+      var conn = pg.connection;
+      conn.createStatement().execute("DROP SCHEMA IF EXISTS public CASCADE");
+      conn.createStatement().execute("CREATE SCHEMA public");
 
-    conn.createStatement().execute("""
+      conn.createStatement().execute(
+        """
           CREATE TABLE "user" (
             id INT PRIMARY KEY,
             username VARCHAR(255) NOT NULL UNIQUE,
             password VARCHAR(255) NOT NULL
           )
-      """);
+          """
+      );
 
-    for (int i = 1; i <= 4; i++) {
-      conn.createStatement().execute(String.format(
-        """
-          INSERT INTO "user" (
-            id,
-            username,
-            password
-          ) VALUES (
-            '%1$d',
-            'test_user_%1$d',
-            'password%1$d'
+      for (int i = 1; i <= 4; i++) {
+        conn.createStatement().execute(String.format(
+            """
+                INSERT INTO "user" (
+                  id,
+                  username,
+                  password
+                ) VALUES (
+                  '%1$d',
+                  'test_user_%1$d',
+                  'password%1$d'
+                )
+              """,
+            i
           )
-          """,
-        i
-      ));
+        );
+      }
+
+      try (var clickhouse = Engine.createEngine(clickHouseConfig, null)) {
+        conn = clickhouse.connection;
+        var tables = clickhouse.getTables();
+        for (var table : tables) {
+          conn.createStatement().execute("DROP TABLE IF EXISTS " + table);
+        }
+
+        conn.createStatement().execute(
+          """
+            CREATE TABLE project_setting
+            (
+                user_id              String,
+                project_id           String,
+                item_id              Nullable(String),
+                some_value           Int
+            )
+            ENGINE = ReplacingMergeTree()
+            ORDER BY (user_id, project_id, item_id)
+            PRIMARY KEY (user_id, project_id, item_id);
+            """
+        );
+
+        for (int i = 1; i <= 4; i++) {
+          conn.createStatement().execute(String.format(
+              """
+                  INSERT INTO "project_setting" (
+                    user_id,
+                    project_id,
+                    item_id,
+                    some_value
+                  ) VALUES (
+                    'user_%1$d',
+                    'project_%1$d',
+                    'item_%1$d',
+                    '%1$d'
+                  )
+                """,
+              i
+            )
+          );
+        }
+      }
     }
   }
 
   @BeforeEach
   void setUp() throws Exception {
     resetDatabase();
-    server = new BackdoorServer(TARGET_DATABASE_URL, PORT, new User[]{loggedInUser});
+    server = new BackdoorServer(
+      new DatabaseConfig[]{postgresConfig, clickHouseConfig},
+      PORT,
+      0,
+      new User[]{loggedInUser},
+      "fakesecretkey"
+    );
     server.start();
 
     go("/");
@@ -100,7 +156,7 @@ public class Base {
     if (shouldLoggedIn) {
       webDriver.manage().addCookie(new Cookie(
         "backdoor",
-        BackdoorServer.makeCookieValueForUser(loggedInUser, server.secretKey, Instant.now().plus(1, ChronoUnit.DAYS))
+        BackdoorServer.makeCookieValueForUser(new User[]{loggedInUser}, server.secretKey, Instant.now().plus(1, ChronoUnit.DAYS))
       ));
     }
   }
@@ -113,12 +169,11 @@ public class Base {
   }
 
   @AfterAll
-  void tearDownAll() throws SQLException {
+  void tearDownAll() {
     webDriver.close();
-    conn.close();
   }
 
-  void go(String path) {
+  public void go(String path) {
     webDriver.get("http://localhost:" + PORT + path);
   }
 
@@ -126,7 +181,7 @@ public class Base {
     return webDriver.getCurrentUrl().substring(("http://localhost:" + PORT).length());
   }
 
-  String tid(String... args) {
+  public String tid(String... args) {
     var beginning = true;
     var sb = new StringBuilder();
 
@@ -149,24 +204,29 @@ public class Base {
     return sb.toString();
   }
 
-  WebElement elem(String cssSelector) throws InterruptedException {
+  public WebElement elem(String cssSelector) throws InterruptedException {
     return elem(cssSelector, true);
   }
 
   WebElement elem(String cssSelector, boolean checkDisplay) throws InterruptedException {
-    if (checkDisplay) {
-      waitUntil(() -> assertTrue(elems(cssSelector).stream().anyMatch(WebElement::isDisplayed)));
-      return elems(cssSelector).stream().filter(WebElement::isDisplayed).findFirst().orElse(null);
-    } else {
-      return elems(cssSelector).getFirst();
+    try {
+      if (checkDisplay) {
+        waitUntil(() -> assertTrue(elems(cssSelector).stream().anyMatch(WebElement::isDisplayed)));
+        return elems(cssSelector).stream().filter(WebElement::isDisplayed).findFirst().orElse(null);
+      } else {
+        return elems(cssSelector).getFirst();
+      }
+    } catch (StaleElementReferenceException e) {
+      Thread.sleep(100);
+      return elem(cssSelector, checkDisplay);
     }
   }
 
-  boolean hasElem(String cssSelector) throws InterruptedException {
+  public boolean hasElem(String cssSelector) throws InterruptedException {
     return webDriver.findElements(new By.ByCssSelector(cssSelector)).stream().anyMatch(WebElement::isDisplayed);
   }
 
-  List<WebElement> elems(String cssSelector) throws InterruptedException {
+  public List<WebElement> elems(String cssSelector) throws InterruptedException {
     waitUntil(() -> assertFalse(webDriver.findElements(new By.ByCssSelector(cssSelector)).isEmpty()));
     return webDriver.findElements(new By.ByCssSelector(cssSelector));
   }
@@ -185,16 +245,23 @@ public class Base {
     fn.invoke();
   }
 
-  void click(String cssSelector) throws InterruptedException {
+  public void click(String cssSelector) throws InterruptedException {
     retryInteraction(() -> elem(cssSelector).click());
   }
 
-  void hover(String cssSelector) throws InterruptedException {
+  public void select(String cssSelector, String label) throws InterruptedException {
+    retryInteraction(() -> {
+      var select = new Select(elem(cssSelector));
+      select.selectByVisibleText(label);
+    });
+  }
+
+  public void hover(String cssSelector) throws InterruptedException {
     var actions = new Actions(webDriver);
     actions.moveToElement(elem(cssSelector), 2, 2).perform();
   }
 
-  void fill(String cssSelector, String text) throws InterruptedException {
+  public void fill(String cssSelector, String text) throws InterruptedException {
     retryInteraction(() -> {
       var el = elem(cssSelector);
 
@@ -206,7 +273,7 @@ public class Base {
     });
   }
 
-  void sendClearKeys() throws InterruptedException {
+  public void sendClearKeys() throws InterruptedException {
     var actions = new Actions(webDriver);
     var modifierKey = IS_MAC ? Keys.COMMAND : Keys.CONTROL;
     actions
@@ -217,25 +284,25 @@ public class Base {
       .perform();
   }
 
-  void sendKeys(String text) {
+  public void sendKeys(String text) {
     var actions = new Actions(webDriver);
     actions.sendKeys(text).perform();
   }
 
 
-  int WAIT_UNTIL_TIMEOUT_MILLIS = 5000;
+  int waitUntilTimeoutInMillis = 5000;
 
   @FunctionalInterface
-  interface InterruptibleSupplier {
+  public interface InterruptibleSupplier {
     boolean get() throws InterruptedException;
   }
 
   @FunctionalInterface
-  interface VoidFn {
+  public interface VoidFn {
     void invoke() throws InterruptedException;
   }
 
-  void waitUntil(VoidFn fn) throws InterruptedException {
+  public void waitUntil(VoidFn fn) throws InterruptedException {
     InterruptibleSupplier newFn = () -> {
       try {
         fn.invoke();
@@ -247,7 +314,7 @@ public class Base {
     };
 
     var startTime = System.currentTimeMillis();
-    while ((System.currentTimeMillis() - startTime) < WAIT_UNTIL_TIMEOUT_MILLIS) {
+    while ((System.currentTimeMillis() - startTime) < waitUntilTimeoutInMillis) {
       if (newFn.get()) return;
       Thread.sleep(500);
     }
@@ -255,22 +322,24 @@ public class Base {
     fn.invoke();
   }
 
-  void assertContains(String actual, String expectedPart) {
+  public void assertContains(String actual, String expectedPart) {
     assertTrue(actual.contains(expectedPart), () -> actual + " doesn't contain " + expectedPart);
   }
 
-  void assertColumnValues(
+  public void assertColumnValues(
     String columnName,
     String... expectedValues
   ) throws InterruptedException {
-    assertIterableEquals(
-      elems(tid("sheet-column-value", columnName)).stream().map(s -> s.getText().trim()).toList(),
-      Arrays.stream(expectedValues).toList()
-    );
+    waitUntil(() -> {
+      assertIterableEquals(
+        elems(tid("sheet-column-value", columnName)).stream().map(s -> s.getText().trim()).toList(),
+        Arrays.stream(expectedValues).toList()
+      );
+    });
   }
 
 
-  void assertCell(
+  public void assertCell(
     int rowIndex,
     String columnName,
     String expectedValue
@@ -279,6 +348,12 @@ public class Base {
       expectedValue,
       elems(tid("sheet-column-value", columnName)).get(rowIndex).getText().trim()
     );
+  }
+
+  public void assertSheetViewContent(String expectedValue) throws InterruptedException {
+    waitUntil(() -> {
+      assertEquals(expectedValue, elem(tid("sheet-view-content")).getText());
+    });
   }
 
   void checkErrorPanel(String... errors) throws InterruptedException {

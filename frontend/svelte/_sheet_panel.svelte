@@ -1,13 +1,14 @@
 <script lang="ts">
 import {post} from "./common/form";
-import {type Query, Sheet} from "./common/models";
+import {type Query, Sheet, type Table} from "./common/models";
 import SheetView from './_sheet_view.svelte'
 import {generateName} from "./common/globals";
 
-export let onTableDropped: (table: string) => void
-export let onTableRenamed: (previousName: string, newName: string) => void
-export let onQueryDropped: (queryName: string) => void
-export let onQueryRenamed: (previousName: string, newName: string) => void
+export let onSheetSelected: (sheet: Sheet) => void
+export let onTableDropped: (database: string, table: string) => void
+export let onTableRenamed: (database: string, previousName: string, newName: string) => void
+export let onQueryDropped: (sheet: Sheet) => void
+export let onQueryRenamed: (sheet: Sheet, previousName: string, newName: string) => void
 
 let sheets: Sheet[] = []
 let selectedSheet: Sheet | null = null
@@ -29,7 +30,7 @@ function triggerBlinking(sheet: Sheet): void {
 }
 
 export function addOrUpdateSheet(sheet: Sheet) {
-  const found = sheets.find(s => s.name === sheet.name && s.type === sheet.type);
+  const found = sheets.find(s => s.database === sheet.database && s.name === sheet.name && s.type === sheet.type);
 
   if (found) {
     found.load(sheet, false)
@@ -43,11 +44,11 @@ export function addOrUpdateSheet(sheet: Sheet) {
   sheets = sheets
 }
 
-export async function openTable(table: string): Promise<void> {
-  const found = sheets.find(s => s.name === table && s.type === 'table')
+export async function openTable(table: Table): Promise<void> {
+  const found = sheets.find(s => s.database === table.database && s.name === table.name && s.type === 'table')
 
   if (found) {
-    if (selectedSheet?.name === found.name) {
+    if (selectedSheet === found) {
       triggerBlinking(found)
     }
 
@@ -57,7 +58,8 @@ export async function openTable(table: string): Promise<void> {
 
   try {
     const json = await post('/api/load-table', {
-      name: table,
+      database: table.database,
+      name: table.name,
       sorts: [],
       filters: [],
       offset: 0
@@ -77,7 +79,7 @@ export async function openTable(table: string): Promise<void> {
 }
 
 export async function openQuery(query: Query): Promise<void> {
-  const found = sheets.find(s => s.name === query.name)
+  const found = sheets.find(s => s.database === query.database && s.name === query.name)
 
   if (found) {
     if (selectedSheet?.name === found.name) {
@@ -90,6 +92,7 @@ export async function openQuery(query: Query): Promise<void> {
 
   try {
     const json = await post('/api/load-query', {
+      database: query.database,
       name: query.name,
       sql: query.sql,
       sorts: [],
@@ -110,8 +113,8 @@ export async function openQuery(query: Query): Promise<void> {
   }
 }
 
-function deleteSheetByName(name: string) {
-  const foundIndex = sheets.findIndex(s => s.name === name)
+function deleteSheetByName(database: string, name: string) {
+  const foundIndex = sheets.findIndex(s => s.database === database && s.name === name)
 
   if (foundIndex > -1) {
     sheets.splice(foundIndex, 1)
@@ -143,10 +146,13 @@ function deleteSheetByName(name: string) {
           data-test-id="sheet-tab"
           data-test-value={sheet.name}
           class:blink={shouldBlinkSelectedSheet === sheet && sheet === selectedSheet}
-          onclick={() => { selectedSheet = sheet }}
+          onclick={() => {
+            selectedSheet = sheet
+            onSheetSelected(sheet)
+          }}
           onmousedown={(ev) => {
             if (ev.button === 1) {
-              void deleteSheetByName(sheet.name)
+              void deleteSheetByName(sheet.database, sheet.name)
             }
           }}
         >
@@ -162,7 +168,7 @@ function deleteSheetByName(name: string) {
             class="ph ph-x {sheet === selectedSheet ? 'text-neutral-content' : ''} hover:text-white"
             onclick={(ev) => {
               ev.stopPropagation()
-              void deleteSheetByName(sheet.name)
+              void deleteSheetByName(sheet.database, sheet.name)
             }}
           ></i>
         </div>
@@ -171,21 +177,21 @@ function deleteSheetByName(name: string) {
   {/if}
   <SheetView
     sheet={selectedSheet}
-    onTableDropped={(table) => {
-      deleteSheetByName(table)
-      onTableDropped(table)
+    onTableDropped={(database, table) => {
+      deleteSheetByName(database,table)
+      onTableDropped(database, table)
     }}
-    onTableRenamed={(previousName, newName) => {
+    onTableRenamed={(database, previousName, newName) => {
       sheets = sheets
-      onTableRenamed(previousName, newName)
+      onTableRenamed(database, previousName, newName)
     }}
-    onQueryDropped={(queryName) => {
-      deleteSheetByName(queryName)
-      onQueryDropped(queryName)
+    onQueryDropped={(sheet) => {
+      deleteSheetByName(sheet.database, sheet.name)
+      onQueryDropped(sheet)
     }}
-    onQueryRenamed={(previousName, newName) => {
+    onQueryRenamed={(sheet, previousName, newName) => {
+      onQueryRenamed(sheet, previousName, newName)
       sheets = sheets
-      onQueryRenamed(previousName, newName)
     }}
   />
 </div>

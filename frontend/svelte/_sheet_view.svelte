@@ -1,8 +1,7 @@
 <script lang="ts">
 import ErrorPanel from "./common/form/_error_panel.svelte";
 import type {Sheet, Sort, SortDirection} from "./common/models";
-import VirtualTable from 'svelte-virtual-table-by-tanin';
-import {type Item} from 'svelte-virtual-table-by-tanin';
+import VirtualTable, {type Item} from 'svelte-virtual-table-by-tanin';
 import EditModal from './_edit_modal.svelte';
 import DeleteModal from './_delete_modal.svelte';
 import DropTableModal from './_drop_table_modal.svelte';
@@ -24,10 +23,10 @@ import 'codemirror/addon/comment/comment'
 import {post} from "./common/form";
 
 export let sheet: Sheet | null
-export let onTableDropped: (table: string) => void
-export let onTableRenamed: (previousName: string, newName: string) => void
-export let onQueryDropped: (queryName: string) => void
-export let onQueryRenamed: (previousName: string, newName: string) => void
+export let onTableDropped: (database: string, table: string) => void
+export let onTableRenamed: (database: string, previousName: string, newName: string) => void
+export let onQueryDropped: (sheet: Sheet) => void
+export let onQueryRenamed: (sheet: Sheet, previousName: string, newName: string) => void
 
 let MIN_NUMBER_COLUMN_WIDTH = 24; // 2 characters
 let numberColumnWidth: number = 0;
@@ -150,11 +149,13 @@ let isLoading = false
 
 async function loadMore(): Promise<void> {
   if (!sheet) { return }
+  if (sheet.type !== 'query' && sheet.type !== 'table') { return } // not a select. Can't load more.
   if (sheet.rows.length === sheet.stats.numberOfRows) { return; } // no more items
   isLoading = true
 
   try {
     const json = await post(`/api/load-${sheet.type}`, {
+      database: sheet.database,
       name: sheet.name,
       sql: sheet.sql,
       filters: sheet.filters,
@@ -163,7 +164,6 @@ async function loadMore(): Promise<void> {
     })
 
     sheet.load(json.sheet, true)
-    console.log(sheet.scrollTop);
     sheet = sheet
   } catch (e) {
 
@@ -179,6 +179,7 @@ async function loadDataWithNewSorts(newSorts: Sort[]): Promise<void> {
 
   try {
     const json = await post(`/api/load-${sheet.type}`, {
+      database: sheet.database,
       name: sheet.name,
       sql: sheet.sql,
       filters: sheet.filters,
@@ -266,7 +267,7 @@ function handleResize(event: MouseEvent) {
     </div>
   {:else}
     <div class="flex flex-row gap-4 items-center justify-between text-xs px-2 py-1 bg-base-300 border-b border-neutral whitespace-nowrap">
-      <div class="flex gap-4 items-center">
+      <div class="flex gap-2 items-center">
         <div data-test-id="sheet-stats">
           Count: {sheet.stats.numberOfRows}
           {#if sheet.rows.length === sheet.stats.numberOfRows}
@@ -277,6 +278,7 @@ function handleResize(event: MouseEvent) {
         </div>
       </div>
       <div class="flex gap-4 items-center">
+        <div>[{sheet.database}]</div>
         {#if sheet.type === 'table'}
           <Button class="btn btn-xs btn-ghost text-warning p-0" onClick={async () => {renameTableModal.open()}} dataTestId="rename-table-button">Rename Table</Button>
           <Button class="btn btn-xs btn-ghost text-error p-0" onClick={async () => {dropTableModal.open()}} dataTestId="drop-table-button">Drop Table</Button>
@@ -303,7 +305,7 @@ function handleResize(event: MouseEvent) {
     {#key virtualListUpdate}
       <VirtualTable
         let:item
-        let:index
+        let:index={rowIndex}
         items={virtualTableItems}
         initialScrollLeft={sheet.scrollLeft}
         initialScrollTop={sheet.scrollTop}
@@ -316,7 +318,7 @@ function handleResize(event: MouseEvent) {
           sheet.setScrollTop(scrollTop)
         }}
       >
-        {@const isDeleted = primaryKeyColumnIndex !== null ? sheet.deletedKeys.has(item.values[primaryKeyColumnIndex]) : false}
+        {@const isDeleted = sheet.deletedRowIndices.has(rowIndex)}
         <div
           slot="header"
           class="flex items-stretch font-mono text-xs bg-base-300"
@@ -332,20 +334,20 @@ function handleResize(event: MouseEvent) {
             style="left: {numberColumnWidth-3}px"
             onmousedown={() => {startResizeNumberColumn()}}
           ></div>
-          {#each sheet.columns as column, index (column.name)}
-            {@const cumulativeWidth = columnWidths.slice(0, index + 1).reduce((sum, width) => sum + width, numberColumnWidth)}
+          {#each sheet.columns as column, colIndex (column.name)}
+            {@const cumulativeWidth = columnWidths.slice(0, colIndex + 1).reduce((sum, width) => sum + width, numberColumnWidth)}
             {@const sort = sheet.sorts.find(s => s.name === column.name)}
             <!-- the resizing bar has to be outside in order to be on top of a border -->
             <div
               class="absolute top-0 bottom-0 w-[6px] cursor-col-resize z-50"
               style="left: {cumulativeWidth-3}px"
-              onmousedown={() => {startResize(index)}}
+              onmousedown={() => {startResize(colIndex)}}
             ></div>
             <div
               class="p-1 box-border border-e border-b border-neutral flex items-center justify-between z-0"
-              style="width: {columnWidths[index]}px; min-width: {columnWidths[index]}px; max-width: {columnWidths[index]}px;"
+              style="width: {columnWidths[colIndex]}px; min-width: {columnWidths[colIndex]}px; max-width: {columnWidths[colIndex]}px;"
               data-test-id="sheet-view-column-header"
-              data-test-value={sheet.columns[index].name}
+              data-test-value={sheet.columns[colIndex].name}
             >
               <div
                 class="grow overflow-hidden text-ellipsis"
@@ -383,12 +385,12 @@ function handleResize(event: MouseEvent) {
           >
             {#if !isDeleted}
               <div class="overflow-hidden text-ellipsis {sheet.type === 'table' ? 'group-hover:hidden' : ''} text-right w-full">
-                {index + 1}
+                {rowIndex + 1}
               </div>
               {#if sheet.type === 'table'}
                 <i
                   class="ph ph-trash cursor-pointer pt-[2px] hidden group-hover:inline-block"
-                  onclick={() => deleteModal.open(item.values)}
+                  onclick={() => deleteModal.open(item.values, rowIndex)}
                   data-test-id="delete-row-button"
                 ></i>
               {/if}
@@ -399,12 +401,12 @@ function handleResize(event: MouseEvent) {
               ></i>
             {/if}
           </div>
-          {#each item.values as value, index (index)}
+          {#each item.values as value, colIndex (colIndex)}
             <div
               class="p-1 box-border border-e border-neutral flex items-baseline gap-1 whitespace-pre {isDeleted ? 'text-error line-through' : ''}"
-              style="width: {columnWidths[index]}px; min-width: {columnWidths[index]}px; max-width: {columnWidths[index]}px;"
+              style="width: {columnWidths[colIndex]}px; min-width: {columnWidths[colIndex]}px; max-width: {columnWidths[colIndex]}px;"
               data-test-id="sheet-column-value"
-              data-test-value={sheet.columns[index].name}
+              data-test-value={sheet.columns[colIndex].name}
             >
               {#if sheet.type === 'table'}
                 <i
@@ -412,7 +414,7 @@ function handleResize(event: MouseEvent) {
                   class="ph ph-pencil-simple {isDeleted ? '' : 'cursor-pointer hover:text-white'} pt-[2px]"
                   onclick={() => {
                       if (!isDeleted && sheet) {
-                        editModal.open(value, sheet.columns[index], item.values)
+                        editModal.open(value, sheet.columns[colIndex], item.values, rowIndex)
                       }
                     }}
                 ></i>
@@ -434,12 +436,9 @@ function handleResize(event: MouseEvent) {
   <EditModal
     bind:this={editModal}
     {sheet}
-    onUpdated={(column, newValue, newCharacterlength, primaryKeyValue) => {
+    onUpdated={(column, newValue, newCharacterlength, rowIndex) => {
       if (!sheet) { return }
-      const primaryKeyColumnIndex = sheet.columns.findIndex((c) => c.isPrimaryKey)
       const columnIndex = sheet.columns.findIndex((c) => c.name === column.name)
-
-      const rowIndex = sheet.rows.findIndex((r) => r[primaryKeyColumnIndex] === primaryKeyValue)
 
       if (rowIndex >= 0) {
         sheet.rows[rowIndex][columnIndex] = newValue
@@ -452,9 +451,9 @@ function handleResize(event: MouseEvent) {
   <DeleteModal
     bind:this={deleteModal}
     {sheet}
-    onDeleted={(deletedKey) => {
+    onDeleted={(rowIndex) => {
       if (!sheet) { return }
-      sheet.deletedKeys.add(deletedKey);
+      sheet.deletedRowIndices.add(rowIndex);
       virtualListUpdate++
     }}
   />
@@ -463,7 +462,7 @@ function handleResize(event: MouseEvent) {
     {sheet}
     onDropped={() => {
       if (!sheet) { return }
-      onTableDropped(sheet.name)
+      onTableDropped(sheet.database, sheet.name)
     }}
   />
   <RenameTableModal
@@ -471,7 +470,7 @@ function handleResize(event: MouseEvent) {
     {sheet}
     onRenamed={(newName) => {
       if (!sheet) { return }
-      onTableRenamed(sheet.name, newName)
+      onTableRenamed(sheet.database, sheet.name, newName)
       sheet.name = newName
     }}
   />
@@ -480,7 +479,7 @@ function handleResize(event: MouseEvent) {
     {sheet}
     onDropped={() => {
       if (!sheet) { return }
-      onQueryDropped(sheet.name)
+      onQueryDropped(sheet)
     }}
   />
   <RenameQueryModal
@@ -488,7 +487,7 @@ function handleResize(event: MouseEvent) {
     {sheet}
     onRenamed={(newName) => {
       if (!sheet) { return }
-      onQueryRenamed(sheet.name, newName)
+      onQueryRenamed(sheet, sheet.name, newName)
       sheet.name = newName
     }}
   />

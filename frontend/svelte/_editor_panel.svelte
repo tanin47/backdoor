@@ -11,13 +11,20 @@ import 'codemirror/addon/hint/show-hint.css'
 import 'codemirror/addon/hint/sql-hint'
 import 'codemirror/addon/hint/anyword-hint'
 import 'codemirror/addon/comment/comment'
-import type {Query} from "./common/models";
+import type {Database, Query} from "./common/models";
 
-export let onRunSql: (sql: string) => Promise<void>
+export let onRunSql: (database: string, sql: string) => Promise<void>
 export let onUnselectingQuery: () => void
+export let selectedDatabaseName: string | null = null
+export let databases: Database[]
 export let selectedQuery: Query | null
 
 let editorTextarea: HTMLTextAreaElement
+
+
+$: if (databases.length > 0 && selectedDatabaseName === null) {
+  selectedDatabaseName = databases[0].name
+}
 
 let isLoading: boolean = false
 
@@ -52,11 +59,16 @@ $: if (editorTextarea && codeMirrorInstance === null) {
 }
 
 async function submit(): Promise<void> {
+  const databaseName = selectedQuery?.database ?? selectedDatabaseName
+  if (!databaseName) {
+    return
+  }
+
   isLoading = true
   codeMirrorInstance!.setOption('readOnly', true)
 
   try {
-    await onRunSql(codeMirrorInstance!.getValue())
+    await onRunSql(databaseName, codeMirrorInstance!.getValue())
   } catch (e) {
     console.log(e)
   } finally {
@@ -81,7 +93,7 @@ async function submit(): Promise<void> {
     </div>
   </div>
 {/if}
-<div class="flex items-center gap-2 justify-between">
+<div class="flex items-center gap-0 justify-between">
   <div class="flex gap-2 items-center text-xs p-1">
     <Button
       {isLoading}
@@ -98,6 +110,17 @@ async function submit(): Promise<void> {
         {/if}
       </span>
     </Button>
+  </div>
+  <div class="pe-2 pb-[2px] flex items-center">
+    {#if selectedQuery}
+      <span class="text-xs">[{selectedQuery.database}]</span>
+    {:else}
+      <select class="select-sm outline-0" bind:value={selectedDatabaseName} data-test-id="run-sql-database-select">
+        {#each databases as database (database.name)}
+          <option value={database.name}>{database.name}</option>
+        {/each}
+      </select>
+    {/if}
   </div>
 </div>
 <div class="grow border-t border-neutral relative">

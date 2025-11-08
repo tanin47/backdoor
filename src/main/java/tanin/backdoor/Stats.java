@@ -5,9 +5,9 @@ import com.eclipsesource.json.JsonObject;
 
 public class Stats {
 
-  int numberOfRows;
+  public int numberOfRows;
 
-  Stats(int numberOfRows) {
+  public Stats(int numberOfRows) {
     this.numberOfRows = numberOfRows;
   }
 

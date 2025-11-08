@@ -1,21 +1,17 @@
 package tanin.backdoor;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.openqa.selenium.Alert;
-import org.openqa.selenium.HasAuthentication;
-import org.openqa.selenium.UsernameAndPassword;
-import org.openqa.selenium.support.ui.ExpectedConditions;
-import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.sql.SQLException;
-import java.time.Duration;
+import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class LoginTest extends Base {
   LoginTest() {
     shouldLoggedIn = false;
+    waitUntilTimeoutInMillis = 15000;
   }
 
   @Test
@@ -77,10 +73,20 @@ public class LoginTest extends Base {
   }
 
   @Test
-  void usePgUser() throws InterruptedException, SQLException {
+  void usePassthroughUser() throws InterruptedException, SQLException {
     server.stop();
 
-    server = new BackdoorServer("postgres://127.0.0.1:5432/" + DATABASE_NAME, PORT);
+    server = new BackdoorServer(
+      new DatabaseConfig[]{
+        new DatabaseConfig("postgres", POSTGRES_DATABASE_URL, null, null),
+        new DatabaseConfig("clickhouse", CLICKHOUSE_DATABASE_URL, null, null),
+
+      },
+      PORT,
+      0,
+      new User[0],
+      "dontcare"
+    );
     server.start();
 
     go("/");
@@ -96,21 +102,25 @@ public class LoginTest extends Base {
 
     waitUntil(() -> assertEquals("/", getCurrentPath()));
 
-    click(".CodeMirror");
-    sendKeys("select current_user");
-    click(tid("run-sql-button"));
+    assertEquals(
+      List.of("user"),
+      elems(tid("menu-items", "postgres", null, "menu-item-table")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()
+    );
 
-    waitUntil(() -> assertTrue(hasElem(tid("sheet-tab"))));
-
-    assertColumnValues("current_user", "backdoor_test_user");
+    assertTrue(hasElem(tid("database-lock-item", "clickhouse")));
   }
 
-
   @Test
-  void incorrectPgUser() throws InterruptedException, SQLException {
+  void incorrectPassthroughUser() throws InterruptedException, SQLException {
     server.stop();
 
-    server = new BackdoorServer("postgres://127.0.0.1:5432/" + DATABASE_NAME, PORT);
+    server = new BackdoorServer(
+      new DatabaseConfig[]{new DatabaseConfig("test_db", POSTGRES_DATABASE_URL, null, null)},
+      PORT,
+      0,
+      new User[0],
+      "dontcare"
+    );
     server.start();
 
     go("/");

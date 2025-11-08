@@ -33,7 +33,11 @@ async function submit(): Promise<void> {
   isLoading = true
 
   try {
-    const json = await post('/api/drop-table', {table: sheet.name, useCascade})
+    const json = await post('/api/drop-table', {
+      database: sheet.database,
+      table: sheet.name,
+      useCascade
+    })
 
     modal.close()
     onDropped()

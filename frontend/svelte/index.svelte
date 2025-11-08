@@ -4,26 +4,26 @@ import SheetPanel from "./_sheet_panel.svelte";
 import {FetchError, post} from "./common/form";
 import {onMount} from "svelte";
 import EditorPanel from "./_editor_panel.svelte";
-import {type Query, Sheet} from "./common/models";
-import {generateName, IS_LOCAL_DEV, TARGET_HOSTNAME} from "./common/globals";
+import {type Database, type Query, Sheet} from "./common/models";
+import {generateName, IS_LOCAL_DEV} from "./common/globals";
 import ErrorModal from "./common/_error_modal.svelte"
 
 let sheetPanel: SheetPanel;
 
 let selectedQuery: Query | null = null
+let selectedDatabase: Database | null = null
 
 let errorModal: ErrorModal;
 
 let isLoading = false
-let tables: string[] = []
+let databases: Database[] = []
 let queries: Query[] = []
 
-async function loadQueryables(): Promise<void> {
-  isLoading = true
+async function load(): Promise<void> {
   try {
     const json = await post('/api/get-relations', {})
 
-    tables = json.tables;
+    databases = json.databases;
   } catch (e) {
     errorModal.open(
       (e as FetchError).messages,
@@ -35,7 +35,8 @@ async function loadQueryables(): Promise<void> {
 }
 
 onMount(() => {
-  void loadQueryables()
+  isLoading = true
+  void load()
 })
 
 
@@ -68,7 +69,7 @@ function handleResize(event: MouseEvent) {
 }
 
 async function addOrUpdateQuery(query: Query) {
-  const foundIndex = queries.findIndex(v => v.name === query.name);
+  const foundIndex = queries.findIndex(v => v.database === query.database && v.name === query.name);
 
   if (foundIndex === -1) {
     queries.push(query)
@@ -81,9 +82,10 @@ async function addOrUpdateQuery(query: Query) {
   await sheetPanel.openQuery(query)
 }
 
-export async function runSql(sql: string): Promise<void> {
+export async function runSql(database: string, sql: string): Promise<void> {
   try {
     const json = await post('/api/load-query', {
+      database,
       name: selectedQuery?.name ?? generateName('q_', queries.map(v => v.name)),
       sql,
       filters: [],
@@ -92,11 +94,12 @@ export async function runSql(sql: string): Promise<void> {
     })
 
     const sheet = json.sheet;
+    console.log(sheet);
 
     sheetPanel.addOrUpdateSheet(new Sheet(json.sheet))
 
     if (sheet.type === 'query') {
-      await addOrUpdateQuery({name: json.sheet.name, sql: json.sheet.sql})
+      await addOrUpdateQuery({database: json.sheet.database, name: json.sheet.name, sql: json.sheet.sql})
     } else {
       selectedQuery = null
     }
@@ -116,7 +119,7 @@ export async function runSql(sql: string): Promise<void> {
       class="flex flex-col items-center justify-center gap-6 bg-primary-content w-full h-full"
     >
       <span class="loading loading-spinner loading-xl text-primary"></span>
-      <div class="text-primary text-xl">Loading {TARGET_HOSTNAME}...</div>
+      <div class="text-primary text-xl">Loading...</div>
     </div>
   {:else}
     <div
@@ -129,61 +132,85 @@ export async function runSql(sql: string): Promise<void> {
       >
         &nbsp;
       </span>
-      <TableMenuList
-        {tables}
-        {queries}
-        {selectedQuery}
-        onTableClicked={async (table) => {await sheetPanel.openTable(table)}}
-        onQueryClicked={async (query) => {
-          if (selectedQuery === query) {
-            selectedQuery = null;
-          } else {
-            selectedQuery = query;
-          }
-          await sheetPanel.openQuery(query)
-        }}
-      />
       <div class="flex flex-col">
-        <a
-          href="/logout"
-          class="flex flex-row items-center justify-center p-2 gap-1 bg-base-300  text-gray-400 text-sm"
-          data-test-id="logout-button"
-        >
-          Log out
-        </a>
         <a
           href="https://github.com/tanin47/backdoor"
           target="_blank"
           rel="noopener noreferrer"
-          class="flex flex-row items-center p-2 gap-1 bg-black  text-gray-400 text-[11px]"
+          class="flex flex-row items-center p-2 gap-1 bg-black  text-gray-400 text-sm"
         >
           {#if IS_LOCAL_DEV}
             <div class="text-accent">[dev]</div>
           {/if}
           <i class="ph ph-door-open"></i>
-          <div class="whitespace-nowrap overflow-hidden text-ellipsis">Powered by Backdoor</div>
+          <div class="whitespace-nowrap overflow-hidden text-ellipsis">Backdoor</div>
         </a>
+        {#each databases as database, index (index)}
+        <TableMenuList
+          {database}
+          {queries}
+          {selectedQuery}
+          onTableClicked={async (table) => {
+            selectedDatabase = database
+            await sheetPanel.openTable(table)
+          }}
+          onQueryClicked={async (query) => {
+            selectedDatabase = database
+            if (selectedQuery === query) {
+              selectedQuery = null;
+            } else {
+              selectedQuery = query;
+            }
+            await sheetPanel.openQuery(query)
+          }}
+          onLoggedIn={async () => {
+            await load();
+          }}
+        />
+        {/each}
       </div>
+      <a
+        href="/logout"
+        class="flex flex-row items-center p-2 gap-1 bg-base-300  text-gray-400 text-sm"
+        data-test-id="logout-button"
+      >
+        <i class="ph ph-sign-out"></i>
+        <span>Log out</span>
+      </a>
     </div>
     <div class="flex flex-col items-stretch h-full w-full overflow-hidden">
       <SheetPanel
         bind:this={sheetPanel}
-        onTableDropped={(droppedTable) => {
-          tables = tables.filter(v => v !== droppedTable)
+        onSheetSelected={(sheet) => {
+          selectedDatabase = databases.find(s => s.name === sheet.database) ?? null
         }}
-        onTableRenamed={(previousName, newName) => {
-          const foundIndex = tables.findIndex((t) => t === previousName)
-
-          if (foundIndex > -1) {
-            tables[foundIndex] = newName
+        onTableDropped={(databaseName, droppedTable) => {
+          for (const database of databases) {
+            if (database.name === databaseName) {
+              database.tables = database.tables.filter(v => v !== droppedTable)
+            }
           }
+           databases = databases
         }}
-        onQueryDropped={(dropped) => {
-          queries = queries.filter(v => v.name !== dropped)
-          if (selectedQuery?.name === dropped) { selectedQuery = null }
+        onTableRenamed={(databaseName, previousName, newName) => {
+           for (const database of databases) {
+            if (database.name === databaseName) {
+              const foundIndex = database.tables.findIndex((t) => t === previousName)
+
+              if (foundIndex > -1) {
+                database.tables[foundIndex] = newName
+              }
+            }
+          }
+
+           databases = databases
         }}
-        onQueryRenamed={(previousName, newName) => {
-          const found = queries.find((v) => v.name === previousName)
+        onQueryDropped={(sheet) => {
+          queries = queries.filter(v => !(v.database === sheet.database && v.name === sheet.name))
+          if (selectedQuery?.database === sheet.database && selectedQuery?.name === sheet.name) { selectedQuery = null }
+        }}
+        onQueryRenamed={(sheet, previousName, newName) => {
+          const found = queries.find((v) => v.database === sheet.database  && v.name === previousName)
 
           if (found) {
             found.name = newName
@@ -203,8 +230,10 @@ export async function runSql(sql: string): Promise<void> {
           &nbsp;
         </span>
         <EditorPanel
+          selectedDatabaseName={selectedDatabase?.name ?? null}
           {selectedQuery}
-          onRunSql={async (sql) => { await runSql(sql) }}
+          {databases}
+          onRunSql={async (database, sql) => { await runSql(database, sql) }}
           onUnselectingQuery={() => { selectedQuery = null }}
         />
       </div>

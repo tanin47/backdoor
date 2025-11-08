@@ -6,13 +6,13 @@ import Button from './common/_button.svelte'
 import ErrorPanel from "./common/form/_error_panel.svelte"
 
 export let sheet: Sheet
-export let onUpdated: (column: Column, newValue: any, newCharacterLength: number, primaryKey: any) => void
+export let onUpdated: (column: Column, newValue: any, newCharacterLength: number, rowIndex: number) => void
 
 let modal: HTMLDialogElement;
 let textarea: HTMLTextAreaElement | null
 
-let primaryKeyValue: any
-let primaryKeyColumnIndex: number | null = null
+let primaryKeys: Array<{ name: string, value: any }> = []
+let rowIndex_: number | null = null
 let currentValue: any
 let currentColumn: Column | null
 let setToNull: boolean = false
@@ -27,7 +27,7 @@ $: if (!setToNull) {
   }
 }
 
-export function open(value: any, column: Column, rowValues: any[]): void {
+export function open(value: any, column: Column, rowValues: any[], rowIndex: number): void {
   isLoading = false
   errors = []
 
@@ -40,8 +40,17 @@ export function open(value: any, column: Column, rowValues: any[]): void {
   }
   currentColumn = column
 
-  primaryKeyColumnIndex = sheet.getPrimaryKeyColumnIndex()
-  primaryKeyValue = primaryKeyColumnIndex !== null ? rowValues[primaryKeyColumnIndex] : null
+  primaryKeys = sheet.columns
+    .map((column, index) => {
+      if (column.isPrimaryKey) {
+        const value = rowValues[index];
+        return {name: column.name, value: value === null ? null : ('' + value)}
+      } else {
+        return null
+      }
+    })
+    .filter(s => s !== null)
+  rowIndex_ = rowIndex
 
   modal.showModal()
 
@@ -64,7 +73,7 @@ export function close(): void {
 }
 
 async function submit() {
-  if (primaryKeyColumnIndex === null) {
+  if (primaryKeys.length === 0 || rowIndex_ === null) {
     return
   }
 
@@ -72,16 +81,16 @@ async function submit() {
 
   try {
     const json = await post('/api/edit-field', {
+      database: sheet.database,
       table: sheet.name,
-      primaryKeyColumn: sheet.columns[primaryKeyColumnIndex].name,
-      primaryKeyValue: '' + primaryKeyValue,
+      primaryKeys,
       column: currentColumn!.name,
       value: currentValue,
       setToNull,
     })
 
     modal.close()
-    onUpdated(currentColumn!, json.newValue, json.newCharacterLength, primaryKeyValue)
+    onUpdated(currentColumn!, json.newValue, json.newCharacterLength, rowIndex_)
   } catch (e) {
     isLoading = false
     errors = (e as FetchError).messages
@@ -104,7 +113,7 @@ async function submit() {
       <div class="flex items-center justify-end gap-2">
         <button type="button" class="btn btn-neutral" onclick={close}>Close</button>
       </div>
-    {:else if primaryKeyColumnIndex === -1}
+    {:else if primaryKeys.length === 0}
       <div>Unable to edit the field</div>
       <div class="text-sm">
         Because the table doesn't have a primary key column.

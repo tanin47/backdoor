@@ -1,6 +1,7 @@
-package tanin.backdoor;
+package tanin.backdoor.postgres;
 
 import org.junit.jupiter.api.Test;
+import tanin.backdoor.Base;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -13,7 +14,7 @@ public class ExecuteTest extends Base {
     click(tid("run-sql-button"));
 
     waitUntil(() -> assertTrue(hasElem(tid("sheet-tab"))));
-    assertFalse(hasElem(tid("menu-item-query"))); // Execute isn't Query and doesn't add to the left nav.
+    assertFalse(hasElem(tid("menu-items", "postgres", null, "menu-item-query"))); // Execute isn't Query and doesn't add to the left nav.
 
     assertContains(
       elem(tid("sheet-view-content")).getText(),
@@ -41,7 +42,7 @@ public class ExecuteTest extends Base {
          1"""
     );
 
-    click(tid("menu-item-table", "user"));
+    click(tid("menu-items", "postgres", null, "menu-item-table", "user"));
     waitUntil(() -> assertTrue(hasElem(tid("sheet-tab", "user"))));
     click(tid("sheet-view-column-header", "username", null, "sort-button"));
     waitUntil(() -> assertColumnValues(
@@ -67,7 +68,7 @@ public class ExecuteTest extends Base {
          1"""
     );
 
-    click(tid("menu-item-table", "user"));
+    click(tid("menu-items", "postgres", null, "menu-item-table", "user"));
     waitUntil(() -> assertTrue(hasElem(tid("sheet-tab", "user"))));
     waitUntil(() -> assertColumnValues(
       "username", "test_user_1", "test_user_2", "test_user_4"
@@ -82,7 +83,7 @@ public class ExecuteTest extends Base {
     click(tid("run-sql-button"));
 
     waitUntil(() -> hasElem(tid("sheet-tab")));
-    waitUntil(() -> hasElem(tid("menu-item-query")));
+    waitUntil(() -> hasElem(tid("menu-items", "postgres", null, "menu-item-query")));
 
     waitUntil(() -> {
       assertEquals(

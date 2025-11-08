@@ -1,6 +1,7 @@
-package tanin.backdoor;
+package tanin.backdoor.postgres;
 
 import org.junit.jupiter.api.Test;
+import tanin.backdoor.Base;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -12,8 +13,8 @@ public class QueryTest extends Base {
     sendKeys("select * from \"user\" order by id asc limit 1");
     click(tid("run-sql-button"));
 
-    waitUntil(() -> hasElem(tid("sheet-tab")));
-    waitUntil(() -> hasElem(tid("menu-item-query")));
+    waitUntil(() -> hasElem(tid("sheet-view-colum-header-number")));
+    waitUntil(() -> hasElem(tid("menu-items", "postgres", null, "menu-item-query")));
 
     assertEquals(
       """
@@ -32,7 +33,7 @@ public class QueryTest extends Base {
     click(tid("submit-button"));
 
     waitUntil(() -> hasElem(tid("sheet-tab", "bdv_test")));
-    waitUntil(() -> hasElem(tid("menu-item-query", "bdv_test")));
+    waitUntil(() -> hasElem(tid("menu-items", "postgres", null, "menu-item-query", "bdv_test")));
 
     click(".CodeMirror");
     sendClearKeys();
@@ -55,7 +56,7 @@ public class QueryTest extends Base {
     click(tid("submit-button"));
 
     waitUntil(() -> assertFalse(hasElem(tid("sheet-tab", "bdv_test"))));
-    waitUntil(() -> assertFalse(hasElem(tid("menu-item-query", "bdv_test"))));
+    waitUntil(() -> assertFalse(hasElem(tid("menu-items", "postgres", null, "menu-item-query", "bdv_test"))));
   }
 
   @Test
@@ -65,8 +66,8 @@ public class QueryTest extends Base {
     sendKeys("select 1");
     click(tid("run-sql-button"));
 
-    waitUntil(() -> hasElem(tid("sheet-tab")));
-    waitUntil(() -> hasElem(tid("menu-item-query")));
+    waitUntil(() -> hasElem(tid("sheet-view-colum-header-number")));
+    waitUntil(() -> hasElem(tid("menu-items", "postgres", null, "menu-item-query")));
 
     waitUntil(() -> {
       assertEquals(
@@ -88,7 +89,7 @@ public class QueryTest extends Base {
     click(tid("run-sql-button"));
 
     waitUntil(() -> assertEquals(2, elems(tid("sheet-tab")).size()));
-    waitUntil(() -> assertEquals(2, elems(tid("menu-item-query")).size()));
+    waitUntil(() -> assertEquals(2, elems(tid("menu-items", "postgres", null, "menu-item-query")).size()));
 
     assertEquals(
       """

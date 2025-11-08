@@ -1,7 +1,8 @@
 package tanin.backdoor;
 
-public record User(String username, String password, boolean isPg) {
+public record User(String username, String password, String databaseNickname) {
+
   public User(String username, String password) {
-    this(username, password, false);
+    this(username, password, null);
   }
 }

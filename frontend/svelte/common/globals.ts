@@ -1,6 +1,4 @@
 // @ts-expect-error defined globally
-export const TARGET_HOSTNAME: string = window.TARGET_HOSTNAME;
-// @ts-expect-error defined globally
 export const IS_LOCAL_DEV: string = window.IS_LOCAL_DEV;
 
 

@@ -4,37 +4,40 @@ package tanin.backdoor;
 import com.eclipsesource.json.Json;
 import com.eclipsesource.json.JsonObject;
 import com.eclipsesource.json.JsonValue;
+import com.eclipsesource.json.ParseException;
 import com.renomad.minum.templating.TemplateProcessor;
 import com.renomad.minum.web.*;
 import org.altcha.altcha.Altcha;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.postgresql.Driver;
-import org.postgresql.util.PSQLException;
+import tanin.backdoor.engine.AuthCookie;
+import tanin.backdoor.engine.Engine;
 import tanin.ejwf.MinumBuilder;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import java.io.IOException;
-import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
-import java.sql.*;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
-import java.security.SecureRandom;
 
 import static com.renomad.minum.web.RequestLine.Method.GET;
 import static com.renomad.minum.web.RequestLine.Method.POST;
-import static tanin.backdoor.EncryptionHelper.generateRandomString;
 
 public class BackdoorServer {
+  public static class AuthFailureException extends Exception {
+  }
 
-  private enum SqlType {
+  public enum SqlType {
     SELECT,
     ADMINISTRATIVE,
     EXPLAIN,
@@ -50,29 +53,30 @@ public class BackdoorServer {
     } catch (IOException e) {
       logger.warning("Could not load the log config file (backdoor_default_logging.properties): " + e.getMessage());
     }
-
-    try {
-      DriverManager.registerDriver(new org.postgresql.Driver());
-    } catch (SQLException e) {
-      throw new RuntimeException(e);
-    }
   }
 
   public static void main(String[] args) throws SQLException, URISyntaxException {
-    String url = null;
+    var databaseConfigs = new ArrayList<DatabaseConfig>();
     int port = 0;
     int sslPort = 0;
-    User[] users = null;
+    var users = new ArrayList<User>();
+    var secretKey = EncryptionHelper.generateRandomString(32);
 
     if (MinumBuilder.IS_LOCAL_DEV) {
-      url = "postgres://127.0.0.1:5432/backdoor_test";
+//      databaseConfigs.add(new DatabaseConfig("postgres", "postgres://127.0.0.1:5432/backdoor_test", "backdoor_test_user", "test"));
+//      databaseConfigs.add(new DatabaseConfig("clickhouse", "jdbc:ch://localhost:8123", "abacus_dev_user", "dev"));
+      databaseConfigs.add(new DatabaseConfig("postgres", "postgres://127.0.0.1:5432/backdoor_test", null, null));
+      databaseConfigs.add(new DatabaseConfig("clickhouse", "jdbc:ch://localhost:8123", null, null));
+//      users.add(new User("backdoor_test", "1234"));
+      secretKey = "testkey";
       port = 9090;
     }
 
     for (int i = 0; i < args.length; i++) {
       switch (args[i]) {
         case "-url":
-          if (i + 1 < args.length) url = args[++i];
+          if (i + 1 < args.length)
+            databaseConfigs.add(new DatabaseConfig("database_" + databaseConfigs.size(), args[++i], null, null));
           break;
         case "-port":
           if (i + 1 < args.length) port = Integer.parseInt(args[++i]);
@@ -80,76 +84,67 @@ public class BackdoorServer {
         case "-ssl-port":
           if (i + 1 < args.length) sslPort = Integer.parseInt(args[++i]);
           break;
+        case "-secret-key":
+          if (i + 1 < args.length) secretKey = args[++i];
+          break;
         case "-user":
           if (i + 1 < args.length) {
-            var comps = args[++i].split(",");
-            var index = 0;
-            var buffer = new ArrayList<User>();
-            while (index < comps.length) {
-              try {
-                buffer.add(new User(comps[index++], comps[index++]));
-              } catch (ArrayIndexOutOfBoundsException e) {
-                throw new RuntimeException("`-user` is not in a valid format. The numbers of usernames and passwords must match. The usernames and passwords must not contain a space nor a comma.");
+            var pairs = args[++i].split(",");
+
+            for (var pair : pairs) {
+              String[] userAndPass = pair.split(":", 2);
+              if (userAndPass.length != 2) {
+                throw new IllegalArgumentException("Invalid user argument. The format should follow: `user:pass,user2:pass2`");
               }
+              users.add(new User(userAndPass[0], userAndPass[1]));
             }
-            users = buffer.toArray(new User[0]);
           }
           break;
       }
-    }
-
-    if (url == null) {
-      throw new RuntimeException("You must specify the database url using `-url <YOUR_DATABASE_URL>`");
     }
 
     if (port == 0) {
       throw new RuntimeException("You must specify the port using `-port <PORT>`");
     }
 
-    var main = new BackdoorServer(url, port, sslPort, users);
+    var main = new BackdoorServer(
+      databaseConfigs.toArray(new DatabaseConfig[0]),
+      port,
+      sslPort,
+      users.toArray(new User[0]),
+      secretKey
+    );
     var minum = main.start();
     minum.block();
   }
 
-  String databaseUrl;
+  DatabaseConfig[] databaseConfigs;
   int port;
   int sslPort;
   private FullSystem minum;
   User[] users;
-  String hostName;
-  ThreadLocal<User> loggedInUser = new ThreadLocal<>();
-  // TODO: Support configuring the secret key
-  String secretKey = generateRandomString(32);
+  String secretKey;
+  ThreadLocal<AuthCookie> auth = new ThreadLocal<>();
 
   public BackdoorServer(
-    String databaseUrl,
-    int port
-  ) {
-    this(databaseUrl, port, 0, new User[0]);
-  }
-
-  public BackdoorServer(
-    String databaseUrl,
-    int port,
-    User[] users
-  ) {
-    this(databaseUrl, port, 0, users);
-  }
-
-  public BackdoorServer(
-    String databaseUrl,
+    DatabaseConfig[] databaseConfigs,
     int port,
     int sslPort,
-    User[] users
+    User[] users,
+    String secretKey
   ) {
-    this.databaseUrl = databaseUrl;
+    this.databaseConfigs = databaseConfigs;
     this.port = port;
     this.sslPort = sslPort;
 
     if (users != null) {
       for (User user : users) {
-        assert user.username() != null && !user.username().isEmpty();
-        assert user.password() != null && !user.password().isEmpty();
+        if (user.username().isBlank()) {
+          throw new IllegalArgumentException("Username cannot be empty");
+        }
+        if (user.password().isBlank()) {
+          throw new IllegalArgumentException("Password cannot be empty");
+        }
       }
 
       this.users = users;
@@ -157,30 +152,14 @@ public class BackdoorServer {
       this.users = new User[0];
     }
 
-    this.hostName = extractHost(this.databaseUrl);
+    this.secretKey = secretKey;
   }
 
-  private String extractHost(String databaseUrl) {
-    try {
-      URI uri;
-      if (databaseUrl.startsWith("jdbc:postgresql://")) {
-        uri = new URI(databaseUrl.substring("jdbc:".length()));
-      } else if (databaseUrl.startsWith("postgresql://") || databaseUrl.startsWith("postgres://")) {
-        uri = new URI(databaseUrl);
-      } else {
-        throw new IllegalArgumentException("Invalid JDBC or Postgresql URL format");
-      }
-      return uri.getHost();
-    } catch (URISyntaxException e) {
-      throw new IllegalArgumentException("Invalid URL format: " + e.getMessage());
-    }
-  }
-
-  static String makeSqlLiteral(String sql) {
+  public static String makeSqlLiteral(String sql) {
     return "'" + sql.replace("'", "''") + "'";
   }
 
-  static String makeSqlName(String sql) {
+  public static String makeSqlName(String sql) {
     return '"' + sql.replace("\"", "").replace(";", "") + '"';
   }
 
@@ -201,8 +180,6 @@ public class BackdoorServer {
     return layout.renderTemplate(
       Map.of(
         "content", targetHtml.renderTemplate(propsMap),
-        "TARGET_HOSTNAME", this.hostName,
-        "TARGET_HOSTNAME_JSON", Json.value(this.hostName).toString(),
         "IS_LOCAL_DEV_JSON", Json.value(MinumBuilder.IS_LOCAL_DEV).toString()
       )
     );
@@ -232,50 +209,46 @@ public class BackdoorServer {
   }
 
   void checkAuth(IRequest req) throws Exception {
-    var authException = new EarlyExitException(decideAuthError(req));
     var cookieHeaders = req.getHeaders().valueByKey("Cookie");
     if (cookieHeaders == null || cookieHeaders.isEmpty()) {
-      throw authException;
+      throw new AuthFailureException();
     }
 
-    String[] parts = extractUsernamePasswordAndExpiresFromCookie(cookieHeaders);
+    var auth = extractAuthFromCookie(cookieHeaders);
 
-    if (parts == null) {
-      throw authException;
+    if (auth == null) {
+      throw new AuthFailureException();
     }
 
-    var username = parts[0];
-    var password = parts[1];
-    var expires = Instant.ofEpochMilli(Long.parseLong(parts[2]));
-
-    if (expires.isBefore(Instant.now())) {
+    if (auth.expires().isBefore(Instant.now())) {
       // The encrypted credential expires. Requires another login.
-      throw authException;
+      throw new AuthFailureException();
     }
 
-    User found = getUser(username, password);
-
-    if (found == null) {
-      throw authException;
+    for (var user : auth.users()) {
+      if (getUser(user.username(), user.password()) != null) {
+        this.auth.set(auth);
+        return;
+      }
     }
 
-    loggedInUser.set(found);
+    throw new AuthFailureException();
   }
 
   private static final String authCookieKey = "backdoor";
 
-  public static String makeCookieValueForUser(User user, String secretKey, Instant expires) throws Exception {
+  public static String makeCookieValueForUser(User[] users, String secretKey, Instant expires) throws Exception {
     return EncryptionHelper.encryptText(
-      user.username() + ":" + user.password() + ":" + expires.toEpochMilli(),
+      new AuthCookie(users, expires).toJson().toString(),
       secretKey
     );
   }
 
-  public static String makeSetCookieForUser(User user, String secretKey, Instant expires) throws Exception {
-    return authCookieKey + "=" + makeCookieValueForUser(user, secretKey, expires);
+  public static String makeSetCookieForUser(User[] users, String secretKey, Instant expires) throws Exception {
+    return authCookieKey + "=" + makeCookieValueForUser(users, secretKey, expires);
   }
 
-  private String[] extractUsernamePasswordAndExpiresFromCookie(List<String> cookies) throws Exception {
+  private AuthCookie extractAuthFromCookie(List<String> cookies) throws Exception {
     var cookie = Arrays.stream(cookies.getFirst().split(";"))
       .filter(s -> s.trim().startsWith(authCookieKey + "="))
       .findFirst()
@@ -288,14 +261,9 @@ public class BackdoorServer {
     var base64Credentials = cookie.trim().substring((authCookieKey + "=").length()).trim();
     try {
       var credentials = EncryptionHelper.decryptText(base64Credentials, secretKey);
-      var parts = credentials.split(":", 3);
-
-      if (parts.length == 3) {
-        return parts;
-      } else {
-        return null;
-      }
-    } catch (IllegalArgumentException | IllegalBlockSizeException | BadPaddingException | InvalidKeyException e) {
+      return AuthCookie.fromJson(Json.parse(credentials));
+    } catch (IllegalArgumentException | IllegalBlockSizeException | BadPaddingException | InvalidKeyException |
+             ParseException e) {
       return null;
     }
   }
@@ -311,18 +279,18 @@ public class BackdoorServer {
     }
 
     if (found == null) {
-      var potentialPgUser = new User(username, password, true);
-      try (var session = new SqlSession(this.databaseUrl, potentialPgUser)) {
-        var rs = session.executeQuery("SELECT 123");
-        rs.next();
-        if (rs.getInt(1) == 123) {
-          found = potentialPgUser;
-        }
+      for (var databaseConfig : databaseConfigs) {
+        var potentialDatabaseUser = new User(username, password, databaseConfig.nickname);
+        try (var engine = Engine.createEngine(databaseConfig, potentialDatabaseUser)) {
+          var rs = engine.executeQuery("SELECT 123");
+          rs.next();
+          if (rs.getInt(1) == 123) {
+            return potentialDatabaseUser;
+          }
 
-      } catch (PSQLException e) {
-        if (e.getSQLState().equals("28000")) {
+        } catch (Engine.InvalidCredentialsException e) {
           found = null;
-        } else {
+        } catch (Exception e) {
           throw e;
         }
       }
@@ -334,9 +302,16 @@ public class BackdoorServer {
   ThrowingFunction<IRequest, IResponse> handleEndpoint(Boolean requireAuth, ThrowingFunction<IRequest, IResponse> handler) {
     return req -> {
       try {
-        if (requireAuth) {
+        try {
           checkAuth(req);
+        } catch (AuthFailureException ex) {
+          if (requireAuth) {
+            throw new EarlyExitException(decideAuthError(req));
+          }
+        } catch (Exception ex) {
+          throw ex;
         }
+
         return handler.apply(req);
       } catch (IllegalArgumentException | SQLException e) {
         logger.log(Level.WARNING, e.getMessage(), e);
@@ -353,7 +328,7 @@ public class BackdoorServer {
       } catch (EarlyExitException e) {
         return e.response;
       } finally {
-        loggedInUser.set(null);
+        auth.set(null);
       }
     };
   }
@@ -362,8 +337,16 @@ public class BackdoorServer {
     return handleEndpoint(true, handler);
   }
 
-  SqlSession makeSqlSession() throws SQLException, URISyntaxException {
-    return new SqlSession(databaseUrl, loggedInUser.get());
+  Engine makeEngine(String databaseNickname) throws SQLException, URISyntaxException, Engine.InvalidCredentialsException {
+    var databaseConfig = Arrays.stream(databaseConfigs).filter(d -> d.nickname.equals(databaseNickname)).findFirst().orElse(null);
+
+    if (databaseConfig == null) {
+      throw new IllegalArgumentException("Database not found: " + databaseNickname);
+    }
+
+    var user = Arrays.stream(auth.get().users()).filter(u -> databaseNickname.equals(u.databaseNickname())).findFirst().orElse(null);
+
+    return Engine.createEngine(databaseConfig, user);
   }
 
   public FullSystem start() throws SQLException {
@@ -382,7 +365,7 @@ public class BackdoorServer {
           options.secureRandomNumber = true;
           options.maxNumber = 1_000_000L;
           options.saltLength = 12L;
-          options.expires = Instant.now().plus(1, ChronoUnit.MINUTES).toEpochMilli();
+          options.setExpiresInSeconds(2 * 60);
           options.hmacKey = secretKey;
           var challenge = Altcha.createChallenge(options);
           return Response.buildResponse(
@@ -424,9 +407,7 @@ public class BackdoorServer {
           var username = json.asObject().get("username").asString();
           var password = json.asObject().get("password").asString();
           var altcha = json.asObject().get("altcha").asString();
-
           checkAltcha(altcha);
-
           var user = getUser(username, password);
 
           if (user != null) {
@@ -434,7 +415,7 @@ public class BackdoorServer {
               StatusLine.StatusCode.CODE_200_OK,
               Map.of(
                 "Content-Type", "application/json",
-                "Set-Cookie", makeSetCookieForUser(user, secretKey, Instant.now().plus(1, ChronoUnit.DAYS)) + "; Max-Age=86400; Secure; HttpOnly"
+                "Set-Cookie", makeSetCookieForUser(new User[]{user}, secretKey, Instant.now().plus(1, ChronoUnit.DAYS)) + "; Max-Age=86400; Secure; HttpOnly"
               ),
               Json.object().toString()
             );
@@ -454,6 +435,47 @@ public class BackdoorServer {
 
 
     wf.registerPath(
+      POST,
+      "api/login-additional",
+      handleEndpoint(
+        req -> {
+          var json = Json.parse(req.getBody().asString());
+          var database = json.asObject().get("database").asString();
+          var username = json.asObject().get("username").asString();
+          var password = json.asObject().get("password").asString();
+          var altcha = json.asObject().get("altcha").asString();
+          checkAltcha(altcha);
+
+          var databaseConfig = Arrays.stream(databaseConfigs).filter(d -> d.nickname.equals(database)).findFirst().orElse(null);
+          var potentialUser = new User(username, password, database);
+
+          try (var ignored = Engine.createEngine(databaseConfig, potentialUser)) {
+            var users = new ArrayList<>(List.of(auth.get().users()));
+            users.add(potentialUser);
+
+            return Response.buildResponse(
+              StatusLine.StatusCode.CODE_200_OK,
+              Map.of(
+                "Content-Type", "application/json",
+                "Set-Cookie", makeSetCookieForUser(users.toArray(new User[0]), secretKey, Instant.now().plus(1, ChronoUnit.DAYS)) + "; Max-Age=86400; Secure; HttpOnly"
+              ),
+              Json.object().toString()
+            );
+          } catch (Engine.InvalidCredentialsException e) {
+            return Response.buildResponse(
+              StatusLine.StatusCode.CODE_400_BAD_REQUEST,
+              Map.of("Content-Type", "application/json"),
+              Json
+                .object()
+                .add("errors", Json.array().add("The username or password is invalid."))
+                .toString()
+            );
+          }
+        }
+      )
+    );
+
+    wf.registerPath(
       GET,
       "logout",
       handleEndpoint(
@@ -462,7 +484,7 @@ public class BackdoorServer {
           return Response.buildResponse(
             StatusLine.StatusCode.CODE_302_FOUND,
             Map.of(
-              "Set-Cookie", makeSetCookieForUser(new User("", ""), "dontcare", Instant.now()) + "; Max-Age=0; Secure; HttpOnly",
+              "Set-Cookie", makeSetCookieForUser(new User[0], "dontcare", Instant.now()) + "; Max-Age=0; Secure; HttpOnly",
               "Location", "/login"
             ),
             ""
@@ -484,23 +506,33 @@ public class BackdoorServer {
       "api/get-relations",
       handleEndpoint(
         r -> {
-          try (var session = makeSqlSession()) {
-            var rs = session.executeQuery(
-              "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' ORDER BY table_name ASC;"
-            );
-            var tablesJson = Json.array();
-            while (rs.next()) {
-              tablesJson.add(rs.getString("table_name"));
+          var databases = Json.array();
+
+          for (var databaseConfig : databaseConfigs) {
+            var databaseJson = Json.object().add("name", databaseConfig.nickname);
+
+            try (var engine = makeEngine(databaseConfig.nickname)) {
+              var tablesJson = Json.array();
+
+              var tables = engine.getTables();
+              for (var table : tables) {
+                tablesJson.add(table);
+              }
+
+              databaseJson.add("tables", tablesJson);
+              databaseJson.add("requireLogin", false);
+            } catch (Engine.InvalidCredentialsException e) {
+              databaseJson.add("requireLogin", true);
             }
 
-            return Response.buildResponse(
-              StatusLine.StatusCode.CODE_200_OK,
-              Map.of("Content-Type", "application/json"),
-              Json.object()
-                .add("tables", tablesJson)
-                .toString()
-            );
+            databases.add(databaseJson);
           }
+
+          return Response.buildResponse(
+            StatusLine.StatusCode.CODE_200_OK,
+            Map.of("Content-Type", "application/json"),
+            Json.object().add("databases", databases).toString()
+          );
         }
       )
     );
@@ -510,14 +542,18 @@ public class BackdoorServer {
       "api/delete-row",
       handleEndpoint(req -> {
         var json = Json.parse(req.getBody().asString());
+        var database = json.asObject().get("database").asString();
         var tableName = json.asObject().get("table").asString();
-        var primaryKeyValue = json.asObject().get("primaryKeyValue").asString();
-        var primaryKeyColumn = json.asObject().get("primaryKeyColumn").asString();
+        var primaryKeyFilters = json.asObject().get("primaryKeys").asArray().values().stream().map(s -> {
+          var o = s.asObject();
+          var value = o.get("value");
 
-        try (var session = makeSqlSession()) {
-          session.execute(
-            "DELETE FROM " + makeSqlName(tableName) + " WHERE " + makeSqlName(primaryKeyColumn) + " = " + makeSqlLiteral(primaryKeyValue) + ";"
-          );
+          return new Filter(o.get("name").asString(), value.isNull() ? null : value.asString());
+        }).toArray(Filter[]::new);
+
+        try (var engine = makeEngine(database)) {
+          engine.delete(tableName, primaryKeyFilters);
+
           return Response.buildResponse(
             StatusLine.StatusCode.CODE_200_OK,
             Map.of("Content-Type", "application/json"),
@@ -532,34 +568,27 @@ public class BackdoorServer {
       "api/edit-field",
       handleEndpoint(req -> {
         var json = Json.parse(req.getBody().asString());
+        var database = json.asObject().get("database").asString();
         var tableName = json.asObject().get("table").asString();
         var columnName = json.asObject().get("column").asString();
         var newValue = json.asObject().get("value").asString();
         var setToNull = json.asObject().get("setToNull").asBoolean();
-        var primaryKeyColumnName = json.asObject().get("primaryKeyColumn").asString();
-        var primaryKeyValue = json.asObject().get("primaryKeyValue").asString();
+        var primaryKeyFilters = json.asObject().get("primaryKeys").asArray().values().stream().map(s -> {
+          var o = s.asObject();
+          var value = o.get("value");
 
-        try (var session = makeSqlSession()) {
-          var column = getTableColumns(session, tableName).stream().filter(c -> c.name.equals(columnName)).findFirst().orElse(null);
+          return new Filter(o.get("name").asString(), value.isNull() ? null : value.asString());
+        }).toArray(Filter[]::new);
 
-          var whereClause = " WHERE " + makeSqlName(primaryKeyColumnName) + " = " + makeSqlLiteral(primaryKeyValue);
+        try (var engine = makeEngine(database)) {
+          var column = Arrays.stream(engine.getColumns(tableName)).filter(c -> c.name.equals(columnName)).findFirst().orElse(null);
 
-          session.execute(
-            "UPDATE " + makeSqlName(tableName) +
-              " SET " + makeSqlName(columnName) + " = " +
-              (setToNull ? "NULL" : makeUpdateValue(column, newValue)) +
-              whereClause + ";"
-          );
-
-          var rs = session.executeQuery(
-            "SELECT " + makeSqlName(columnName) + " FROM " + makeSqlName(tableName) + whereClause
-          );
+          engine.update(tableName, column, setToNull ? null : newValue, primaryKeyFilters);
+          var rs = engine.select(tableName, column, primaryKeyFilters);
 
           JsonValue newFetchedValue = Json.NULL;
-          if (column != null) {
-            while (rs.next()) {
-              newFetchedValue = getJsonValue(rs, 1, column);
-            }
+          while (rs.next()) {
+            newFetchedValue = engine.getJsonValue(rs, 1, column);
           }
 
           return Response.buildResponse(
@@ -580,15 +609,12 @@ public class BackdoorServer {
       "api/drop-table",
       handleEndpoint(req -> {
         var json = Json.parse(req.getBody().asString());
+        var database = json.asObject().get("database").asString();
         var tableName = json.asObject().get("table").asString();
         var useCascade = json.asObject().get("useCascade").asBoolean();
 
-        var maybeCascade = useCascade ? " CASCADE" : "";
-
-        try (var session = makeSqlSession()) {
-          session.execute(
-            "DROP TABLE IF EXISTS " + makeSqlName(tableName) + maybeCascade
-          );
+        try (var engine = makeEngine(database)) {
+          engine.drop(tableName, useCascade);
         }
         return Response.buildResponse(
           StatusLine.StatusCode.CODE_200_OK,
@@ -600,33 +626,15 @@ public class BackdoorServer {
 
     wf.registerPath(
       POST,
-      "api/drop-view",
-      handleEndpoint(req -> {
-        var json = Json.parse(req.getBody().asString());
-        var viewName = json.asObject().get("view").asString();
-
-        try (var session = makeSqlSession()) {
-          session.execute("DROP VIEW IF EXISTS " + makeSqlName(viewName));
-
-          return Response.buildResponse(
-            StatusLine.StatusCode.CODE_200_OK,
-            Map.of("Content-Type", "application/json"),
-            Json.object().toString()
-          );
-        }
-      })
-    );
-
-    wf.registerPath(
-      POST,
       "api/rename-table",
       handleEndpoint(req -> {
         var json = Json.parse(req.getBody().asString());
+        var database = json.asObject().get("database").asString();
         var tableName = json.asObject().get("table").asString();
         var newName = json.asObject().get("newName").asString();
 
-        try (var session = makeSqlSession()) {
-          session.execute("ALTER TABLE " + makeSqlName(tableName) + " RENAME TO " + makeSqlName(newName));
+        try (var engine = makeEngine(database)) {
+          engine.rename(tableName, newName);
 
           return Response.buildResponse(
             StatusLine.StatusCode.CODE_200_OK,
@@ -643,6 +651,7 @@ public class BackdoorServer {
       "api/load-query",
       handleEndpoint(req -> {
         var json = Json.parse(req.getBody().asString());
+        var database = json.asObject().get("database").asString();
         var name = json.asObject().get("name").asString();
         var sql = json.asObject().get("sql").asString().trim();
         var offset = json.asObject().get("offset").asInt();
@@ -665,17 +674,17 @@ public class BackdoorServer {
           return new Sort(o.get("name").asString(), o.get("direction").asString());
         }).toArray(Sort[]::new);
 
-        try (var session = makeSqlSession()) {
+        try (var engine = makeEngine(database)) {
           ResultSet rs = null;
           int modifyCount = 0;
-          SqlType sqlType = getSqlType(session, sql);
+          SqlType sqlType = engine.getSqlType(sql);
           if (sqlType == SqlType.SELECT) {
-            rs = executeQueryWithParams(session, sql, filters, sorts, offset, 100);
+            rs = engine.executeQueryWithParams(sql, filters, sorts, offset, 100);
           } else if (sqlType == SqlType.EXPLAIN) {
-            rs = session.executeQuery(sql);
+            rs = engine.executeQuery(sql);
           } else if (sqlType == SqlType.MODIFY || sqlType == SqlType.ADMINISTRATIVE) {
             rs = null;
-            modifyCount = session.executeUpdate(sql);
+            modifyCount = engine.executeUpdate(sql);
           }
 
           Stats stats = new Stats(0);
@@ -686,19 +695,21 @@ public class BackdoorServer {
 
             for (int i = 1; i <= metaData.getColumnCount(); i++) {
               var colName = metaData.getColumnName(i);
+              var rawType = metaData.getColumnTypeName(i);
               columns.add(new Column(
                 colName,
-                metaData.getColumnTypeName(i),
+                engine.convertRawType(rawType),
+                rawType,
                 colName.length(),
                 false,
                 metaData.isNullable(i) == ResultSetMetaData.columnNullable
               ));
             }
 
-            rows = readRows(columns, rs);
+            rows = readRows(engine, columns.toArray(new Column[0]), rs);
 
             if (sqlType == SqlType.SELECT) {
-              stats = getStats(session, sql, filters);
+              stats = engine.getStats(sql, filters);
             } else {
               stats = new Stats(rows.length);
             }
@@ -706,6 +717,7 @@ public class BackdoorServer {
             var colName = "modified_count";
             var column = new Column(
               colName,
+              Column.ColumnType.INTEGER,
               "int",
               colName.length(),
               false,
@@ -730,6 +742,7 @@ public class BackdoorServer {
           }
 
           var sheet = new Sheet(
+            database,
             sqlType == SqlType.SELECT ? name : "",
             sql,
             sqlType == SqlType.SELECT ? "query" : "execute",
@@ -756,6 +769,7 @@ public class BackdoorServer {
       "api/load-table",
       handleEndpoint(req -> {
         var json = Json.parse(req.getBody().asString());
+        var database = json.asObject().get("database").asString();
         var name = json.asObject().get("name").asString();
         var offset = json.asObject().get("offset").asInt();
         var filters = json.asObject().get("filters").asArray().values().stream().map(s -> {
@@ -770,13 +784,12 @@ public class BackdoorServer {
           return new Sort(o.get("name").asString(), o.get("direction").asString());
         }).toArray(Sort[]::new);
 
-        try (var session = makeSqlSession()) {
-          var columns = getTableColumns(session, name);
-          var sql = "SELECT " + String.join(", ", columns.stream().map(c -> makeSqlName(c.name)).toArray(String[]::new)) +
-            " FROM " + makeSqlName(name);
-          var rs = executeQueryWithParams(session, sql, filters, sorts, offset, 100);
-          var rows = readRows(columns, rs);
-          var stats = getStats(session, sql, filters);
+        try (var engine = makeEngine(database)) {
+          var columns = engine.getColumns(name);
+          var sql = engine.makeLoadTableSql(name, columns);
+          var stats = engine.getStats(sql, filters);
+          var rs = engine.executeQueryWithParams(sql, filters, sorts, offset, 100);
+          var rows = readRows(engine, columns, rs);
           var rowsJson = Json.array();
 
           for (var row : rows) {
@@ -788,10 +801,11 @@ public class BackdoorServer {
           }
 
           var sheet = new Sheet(
+            engine.databaseConfig.nickname,
             name,
             sql,
             "table",
-            columns.toArray(new Column[0]),
+            columns,
             filters,
             sorts,
             stats,
@@ -833,60 +847,13 @@ public class BackdoorServer {
     }
   }
 
-  private SqlType getSqlType(SqlSession session, String sql) throws SQLException {
-    var sanitized = sql.toLowerCase().trim();
-    if (sanitized.startsWith("explain")) {
-      return SqlType.EXPLAIN;
-    }
-
-    if (
-      !sanitized.startsWith("with") &&
-        !sanitized.startsWith("select") &&
-        !sanitized.startsWith("insert") &&
-        !sanitized.startsWith("update") &&
-        !sanitized.startsWith("delete")
-    ) {
-      return SqlType.ADMINISTRATIVE;
-    }
-
-    var rs = session.executeQuery("explain (format json) " + sql);
-    rs.next();
-    var result = Json.parse(rs.getString(1));
-    var isModifyingTable = result.asArray().get(0).asObject().get("Plan").asObject().get("Node Type").asString().equals("ModifyTable");
-
-    return isModifyingTable ? SqlType.MODIFY : SqlType.SELECT;
-  }
-
-  private Stats getStats(
-    SqlSession session,
-    String sql,
-    Filter[] filters
-  ) throws SQLException {
-    var whereClause = getWhereClause(filters);
-    var rs = session.executeQuery("SELECT COUNT(*) AS numberOfRows FROM (" + sql + ") " + whereClause);
-    var tableStats = new Stats(0);
-    while (rs.next()) {
-      tableStats.numberOfRows = rs.getInt("numberOfRows");
-    }
-    return tableStats;
-  }
-
-  private String makeUpdateValue(Column column, String value) {
-    var type = column.type.toLowerCase();
-    if (type.contains("timestamp")) {
-      return makeSqlLiteral(value) + "::timestamp AT TIME ZONE 'UTC'";
-    } else {
-      return makeSqlLiteral(value);
-    }
-  }
-
-  private JsonValue[][] readRows(ArrayList<Column> columns, ResultSet rs) throws SQLException {
+  private JsonValue[][] readRows(Engine engine, Column[] columns, ResultSet rs) throws SQLException {
     var rows = new ArrayList<JsonValue[]>();
     while (rs.next()) {
-      var row = new JsonValue[columns.size()];
-      for (int i = 0; i < columns.size(); i++) {
-        var column = columns.get(i);
-        var value = getJsonValue(rs, i + 1, column);
+      var row = new JsonValue[columns.length];
+      for (int i = 0; i < columns.length; i++) {
+        var column = columns[i];
+        var value = engine.getJsonValue(rs, i + 1, column);
 
         column.maxCharacterLength = Math.max(column.maxCharacterLength, getValueLength(value, column));
         row[i] = value;
@@ -894,69 +861,6 @@ public class BackdoorServer {
       rows.add(row);
     }
     return rows.toArray(new JsonValue[0][]);
-  }
-
-  private ResultSet executeQueryWithParams(SqlSession session, String sql, Filter[] filters, Sort[] sorts, int offset, int limit) throws SQLException {
-    var whereClause = getWhereClause(filters);
-
-    var orderByClause = "";
-    if (sorts != null && sorts.length > 0) {
-      orderByClause = " ORDER BY " + String.join(", ", Arrays.stream(sorts).map(s -> makeSqlName(s.name) + " " + s.direction).toArray(String[]::new));
-    }
-
-    return session.executeQuery(
-      "SELECT * FROM (" + sql + ") " +
-        whereClause +
-        orderByClause +
-        " OFFSET " + offset +
-        " LIMIT " + limit
-    );
-  }
-
-  private String getWhereClause(Filter[] filters) {
-    var whereClause = "";
-    if (filters != null && filters.length > 0) {
-      var clauses = Arrays
-        .stream(filters)
-        .map(s -> {
-          var value = s.value == null ? "NULL" : makeSqlLiteral(s.value);
-          var op = s.value == null ? "IS" : "=";
-
-          return makeSqlName(s.name) + " " + op + " " + value;
-        })
-        .toArray(String[]::new);
-      whereClause = " WHERE " + String.join(" AND ", clauses);
-    }
-    return whereClause;
-  }
-
-  private static ArrayList<Column> getTableColumns(SqlSession session, String tableName) throws SQLException {
-    var rs = session.executeQuery(
-      "SELECT c.column_name, c.data_type, c.is_nullable, " +
-        "CASE WHEN tc.constraint_type = 'PRIMARY KEY' THEN true ELSE false END as is_primary_key " +
-        "FROM information_schema.columns c " +
-        "LEFT JOIN information_schema.key_column_usage kcu " +
-        "ON c.table_schema = kcu.table_schema " +
-        "AND c.table_name = kcu.table_name " +
-        "AND c.column_name = kcu.column_name " +
-        "LEFT JOIN information_schema.table_constraints tc " +
-        "ON kcu.constraint_name = tc.constraint_name " +
-        "AND kcu.table_schema = tc.table_schema " +
-        "AND kcu.table_name = tc.table_name " +
-        "WHERE c.table_schema = 'public' AND c.table_name = " + makeSqlLiteral(tableName) + ";"
-    );
-    var columns = new ArrayList<>(List.<Column>of());
-    while (rs.next()) {
-      var name = rs.getString("column_name");
-      columns.add(new Column(
-        name,
-        rs.getString("data_type"),
-        name.length(),
-        rs.getBoolean("is_primary_key"),
-        rs.getString("is_nullable").equals("YES")
-      ));
-    }
-    return columns;
   }
 
   public void stop() {
@@ -973,36 +877,17 @@ public class BackdoorServer {
 
     var timestampLength = Instant.now().toString().length();
 
-    var len = switch (column.type.toLowerCase()) {
-      case "integer", "serial", "bigint", "smallint" -> ("" + value.asLong()).length();
-      case "numeric", "decimal", "real", "double precision" -> ("" + value.asDouble()).length();
-      case "boolean" -> ("" + value.asBoolean()).length();
-      case "timestamp without time zone", "timestamp with time zone" -> timestampLength;
-      case "date" -> timestampLength;
-      case "time without time zone", "time with time zone" -> timestampLength;
-      case "json", "jsonb", "vector" -> value.asString().length();
+    var len = switch (column.type) {
+      case INTEGER -> ("" + value.asLong()).length();
+      case DOUBLE -> ("" + value.asDouble()).length();
+      case BOOLEAN -> ("" + value.asBoolean()).length();
+      case TIMESTAMP, DATE, TIME -> timestampLength;
+      case STRING ->
+        Arrays.stream(value.asString().split("\n")).max(Comparator.comparingInt(String::length)).get().length();
       default ->
         Arrays.stream(value.asString().split("\n")).max(Comparator.comparingInt(String::length)).get().length();
     };
 
     return Math.min(len, 60);
-  }
-
-  private JsonValue getJsonValue(ResultSet rs, int columnIndex, Column column) throws SQLException {
-    var value = rs.getObject(columnIndex);
-    if (value == null) {
-      return Json.NULL;
-    }
-
-    return switch (column.type.toLowerCase()) {
-      case "integer", "serial", "bigint", "smallint" -> Json.value(rs.getLong(columnIndex));
-      case "numeric", "decimal", "real", "double precision" -> Json.value(rs.getDouble(columnIndex));
-      case "boolean" -> Json.value(rs.getBoolean(columnIndex));
-      case "timestamp without time zone", "timestamp with time zone" ->
-        Json.value(rs.getTimestamp(columnIndex).toInstant().toString());
-      case "date" -> Json.value(rs.getDate(columnIndex).toString());
-      case "time without time zone", "time with time zone" -> Json.value(rs.getTime(columnIndex).toString());
-      default -> Json.value(rs.getString(columnIndex));
-    };
   }
 }
