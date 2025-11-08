@@ -8,7 +8,6 @@ import com.eclipsesource.json.ParseException;
 import com.renomad.minum.templating.TemplateProcessor;
 import com.renomad.minum.web.*;
 import org.altcha.altcha.Altcha;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.postgresql.Driver;
 import tanin.backdoor.engine.AuthCookie;
 import tanin.backdoor.engine.Engine;
@@ -66,7 +65,7 @@ public class BackdoorServer {
 //      databaseConfigs.add(new DatabaseConfig("postgres", "postgres://127.0.0.1:5432/backdoor_test", "backdoor_test_user", "test"));
 //      databaseConfigs.add(new DatabaseConfig("clickhouse", "jdbc:ch://localhost:8123", "abacus_dev_user", "dev"));
       databaseConfigs.add(new DatabaseConfig("postgres", "postgres://127.0.0.1:5432/backdoor_test", null, null));
-      databaseConfigs.add(new DatabaseConfig("clickhouse", "jdbc:ch://localhost:8123", null, null));
+      databaseConfigs.add(new DatabaseConfig("clickhouse", "jdbc:ch://localhost:8123?user=backdoor&password=test_ch", null, null));
 //      users.add(new User("backdoor_test", "1234"));
       secretKey = "testkey";
       port = 9090;
@@ -75,8 +74,13 @@ public class BackdoorServer {
     for (int i = 0; i < args.length; i++) {
       switch (args[i]) {
         case "-url":
-          if (i + 1 < args.length)
-            databaseConfigs.add(new DatabaseConfig("database_" + databaseConfigs.size(), args[++i], null, null));
+          if (i + 1 < args.length) {
+            var urls = args[++i].split(",");
+
+            for (var url : urls) {
+              databaseConfigs.add(new DatabaseConfig("database_" + databaseConfigs.size(), url.trim(), null, null));
+            }
+          }
           break;
         case "-port":
           if (i + 1 < args.length) port = Integer.parseInt(args[++i]);
@@ -167,7 +171,7 @@ public class BackdoorServer {
     return makeHtml(path, null);
   }
 
-  String makeHtml(String path, @Nullable JsonObject props) throws IOException {
+  String makeHtml(String path, JsonObject props) throws IOException {
     var layout = TemplateProcessor.buildProcessor(new String(BackdoorServer.class.getResourceAsStream("/html/layout.html").readAllBytes()));
     var targetHtml = TemplateProcessor.buildProcessor(new String(BackdoorServer.class.getResourceAsStream("/html/" + path).readAllBytes()));
 
