@@ -142,13 +142,13 @@ public class Base {
   @BeforeEach
   void setUp() throws Exception {
     resetDatabase();
-    server = new BackdoorServer(
-      new DatabaseConfig[]{postgresConfig, clickHouseConfig},
-      PORT,
-      0,
-      new User[]{loggedInUser},
-      "fakesecretkey"
-    );
+    server = new BackdoorServerBuilder()
+      .addDatabaseConfig(postgresConfig.nickname, postgresConfig.jdbcUrl, postgresConfig.username, postgresConfig.password)
+      .addDatabaseConfig(clickHouseConfig.nickname, clickHouseConfig.jdbcUrl, clickHouseConfig.username, clickHouseConfig.password)
+      .withPort(PORT)
+      .addUser(loggedInUser.username(), loggedInUser.password())
+      .withSecretKey("fakesecretkey")
+      .build();
     server.start();
 
     go("/");

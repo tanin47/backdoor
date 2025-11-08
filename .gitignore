@@ -9,3 +9,5 @@ logs
 metals.sbt
 SYSTEM_RUNNING
 ./db
+build
+.gradle

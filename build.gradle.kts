@@ -1,0 +1,129 @@
+import org.jreleaser.model.Active
+import org.jreleaser.model.Signing.Mode
+
+plugins {
+    `java-library`
+    application
+    `maven-publish`
+    id("org.jreleaser") version "1.21.0"
+    id("com.gradleup.shadow") version "9.2.2"
+}
+
+group = "tanin.backdoor"
+version = "2.1.0-rc1"
+
+description = "Backdoor: Database Querying and Editing Tool"
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(21))
+    }
+    withSourcesJar()
+    withJavadocJar()
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation("com.renomad:minum:8.2.0")
+    implementation("org.postgresql:postgresql:42.7.8")
+    implementation("com.clickhouse:jdbc-v2:0.9.3")
+    implementation("com.eclipsesource.minimal-json:minimal-json:0.9.5")
+    implementation("org.altcha:altcha:1.2.0")
+
+    testImplementation("org.junit.jupiter:junit-jupiter:6.0.0")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation("org.seleniumhq.selenium:selenium-java:4.36.0")
+}
+
+tasks.named<Test>("test") {
+    useJUnitPlatform()
+
+    maxHeapSize = "1G"
+
+    testLogging {
+        events("passed")
+    }
+}
+
+application {
+    mainClass.set("tanin.backdoor.BackdoorServer")
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            groupId = "io.github.tanin47"
+            artifactId = "backdoor"
+            version = project.version.toString()
+            artifact(tasks.shadowJar)
+            artifact(tasks["sourcesJar"])
+            artifact(tasks["javadocJar"])
+
+            pom {
+                name.set("Backdoor")
+                description.set("Database querying and editing tool for you and your team")
+                url.set("https://github.com/tanin47/backdoor")
+                inceptionYear.set("2025")
+                licenses {
+                    license {
+                        name.set("MIT")
+                        url.set("https://spdx.org/licenses/MIT.html")
+                    }
+                }
+                developers {
+                    developer {
+                        id.set("tanin47")
+                        name.set("Tanin Na Nakorn")
+                    }
+                }
+                scm {
+                    connection.set("scm:git:https://github.com/tanin47/backdoor.git")
+                    developerConnection.set("scm:git:ssh://github.com/tanin47/backdoor.git")
+                    url.set("http://github.com/tanin47/backdoor")
+                }
+            }
+        }
+    }
+
+    repositories {
+        maven {
+            url = uri(layout.buildDirectory.dir("staging-deploy"))
+        }
+    }
+}
+
+jreleaser {
+    signing {
+        mode = Mode.COMMAND
+        active = Active.ALWAYS
+        armored = true
+        command {
+            executable = "/opt/homebrew/bin/gpg"
+        }
+    }
+    deploy {
+        maven {
+            mavenCentral {
+                create("sonatype") {
+                    setActive("ALWAYS")
+                    url = "https://central.sonatype.com/api/v1/publisher"
+                    stagingRepository("build/staging-deploy")
+                }
+            }
+        }
+    }
+}
+
+tasks.shadowJar {
+    archiveClassifier.set("") // Remove the suffix -all.
+    relocate("com", "tanin.backdoor.com")
+    exclude("META-INF/MANIFEST.MF")
+
+}
+
+tasks.jar {
+    manifest.attributes["Main-Class"] = "tanin.backdoor.BackdoorServer"
+}
