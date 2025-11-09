@@ -43,7 +43,7 @@ repository: https://central.sonatype.com/artifact/io.github.tanin47/backdoor/ove
 Then, you can run the command below:
 
 ```
-java -jar backdoor-2.1.0-rc1.jar \
+java -jar backdoor-2.1.0.jar \
   -port 9999 \
   -url "postgres://127.0.0.1:5432/backdoor_test,jdbc:ch://localhost:8123?user=backdoor&password=test_ch" \
   -secret-key SbZlbmJIXh \
@@ -62,7 +62,7 @@ The docker image is here: https://hub.docker.com/repository/docker/tanin47/backd
 ```
 docker run -p 9999:9999 \
            --entrypoint "" \
-           tanin47/backdoor:2.1.0-rc1 \
+           tanin47/backdoor:2.1.0 \
            java -jar backdoor.jar \
            -port 9999 \
            -url "postgres://127.0.0.1:5432/backdoor_test,jdbc:ch://localhost:8123?user=backdoor&password=test_ch" \
@@ -82,7 +82,7 @@ Add the dependency to your project:
 <dependency>
     <groupId>io.github.tanin47</groupId>
     <artifactId>backdoor</artifactId>
-    <version>2.1.0-rc1</version>
+    <version>2.1.0</version>
 </dependency>
 ```
 
@@ -253,7 +253,11 @@ To publish to a Maven repository, please follow the below steps:
 Publish Docker
 ---------------
 
-1. Run `docker buildx build --platform linux/amd64 -t backdoor:2.1.0-rc1 .`
-2. Test locally with: `docker run -p 9090:9090 --entrypoint "" backdoor:2.1.0-rc1 java -jar backdoor.jar -port 9090`
-3. Run: `docker tag backdoor:2.1.0-rc1 tanin47/backdoor:2.1.0-rc1`
-4. Run: `docker push tanin47/backdoor:2.1.0-rc1`
+This must be done after the JAR is published on Sonatype because the docker image will pull the new version from
+Sonatype.
+
+1. Run `docker buildx build --platform linux/amd64 -t backdoor:2.1.0 .`
+2. Test locally with: `docker run -p 9090:9090 --entrypoint "" backdoor:2.1.0 java -jar backdoor.jar -port 9090`
+3. Run: `docker tag backdoor:2.1.0 tanin47/backdoor:2.1.0`
+4. Run: `docker push tanin47/backdoor:2.1.0`
+5. Go to Render.com, sync the blueprint, and test that it works
