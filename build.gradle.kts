@@ -47,7 +47,6 @@ dependencies {
     implementation("org.altcha:altcha:1.2.0")
 
     testImplementation("org.junit.jupiter:junit-jupiter:6.0.0")
-    testImplementation("junit:junit:4.12")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testImplementation("org.seleniumhq.selenium:selenium-java:4.36.0")
 }

@@ -19,9 +19,19 @@ weeks and months building an admin dashboard by yourself.
 * ✨ __<ins>Modern UI:</ins>__ -- Exploring and investigating large data is a breeze and enjoyable. Offers modern UI with
   infinitely scrollable table.
 
-Supported databases: Postgres and ClickHouse. Please open a github issue if you want other databases.
-
 ![Demo](demo.png)
+
+### Supported Databases
+
+| Database      | Status         |
+|---------------|----------------|
+| PostgreSQL    | ✅ Supported    |
+| ClickHouse    | ✅ Supported    |
+| MySQL         | 🔜 Coming Soon |
+| Oracle        | 🔜 Coming Soon |
+| MS SQL Server | 🔜 Coming Soon |
+| IBM DB2       | 🔜 Coming Soon |
+| MariaDB       | 🔜 Coming Soon |
 
 Try it out today and let me know if it fits what you and your team need!
 
