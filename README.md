@@ -45,6 +45,8 @@ There are 3 ways of using Backdoor:
 2. Embed into your Java application and serve on a specific port.
 3. Embed into your Java application and serve on your main port but at a specific path.
 
+Backdoor is published as a fat jar. Therefore, there is no external dependency. Its jar is self-contained and suitable for embedding into your JVM application.
+
 ### Run as a standalone
 
 __Run from the JAR file__
@@ -112,12 +114,6 @@ var server = new BackdoorServerBuilder()
 
 server.start();
 ```
-
-You can login using a Postgres user. You can manage Postgres users
-directly ([See instructions](https://www.postgresql.org/docs/16/database-roles.html)).
-
-While using Postgres users is the recommended approach, using your own username and password is also supported. Please
-see FAQ.
 
 Then, when your Java application stops, make sure to stop Backdoor with:
 
