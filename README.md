@@ -45,11 +45,11 @@ There are 3 ways of using Backdoor:
 2. Embed into your Java application and serve on a specific port.
 3. Embed into your Java application and serve on your main port but at a specific path.
 
-Backdoor is published as a fat jar. Therefore, there is no external dependency. Its jar is self-contained and suitable for embedding into your JVM application.
+Backdoor is based on [Embeddable Java Web Framework](https://github.com/tanin47/embeddable-java-web-framework) and published as a fat jar. Therefore, there is no external dependency. Its jar is self-contained and suitable for embedding into your JVM application.
 
-### Run as a standalone
+### 1. Run as a standalone
 
-__Run from the JAR file__
+__<ins>Run from the JAR file</ins>__
 
 First, you can download the JAR file from our Maven
 repository: https://central.sonatype.com/artifact/io.github.tanin47/backdoor/overview
@@ -69,7 +69,7 @@ You can visit http://localhost:9999 and login with a Postgres user, a ClickHouse
 
 See FAQ for how authentication works.
 
-__Using Docker__
+__<ins>Use Docker</ins>__
 
 The docker image is here: https://hub.docker.com/repository/docker/tanin47/backdoor
 
@@ -84,11 +84,11 @@ docker run -p 9999:9999 \
            -user test_user:test_pass,another_user:another_pass
 ```
 
-__Using Render.com__
+__<ins>Use Render.com</ins>__
 
-`render.yaml` shows a blueprint example of how to run Backdoor on Render.
+The file [render.yaml](./render.yaml) shows a blueprint example of how to run Backdoor on Render.
 
-### Embed and serve on a specific port
+### 2. Embed and serve on a specific port
 
 Add the dependency to your project:
 
@@ -121,7 +121,7 @@ Then, when your Java application stops, make sure to stop Backdoor with:
 server.stop();
 ```
 
-### Embed and serve on a specific path
+### 3. Embed and serve on a specific path
 
 First, you must follow the steps above in order to serve Backdoor at a specific internal port.
 
@@ -171,9 +171,7 @@ You can run: `ssh -L <local_port>:<remote_backdoor_host>:<remote_backdoor_port> 
 Your company might already use VPN. It's a great option to connect to a server that hosts a Backdoor instance.
 
 The setup might be complicated and overkilled, so I'd recommend using this option if your company already have a
-VPN.
-
-[Tailscale](https://tailscale.com/) is one example.
+VPN. [Tailscale](https://tailscale.com/) is one example that provides a company VPN.
 
 FAQ
 -----
