@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: backdoor
+    plan: free
+    runtime: image
+    image:
+      url: docker.io/tanin47/backdoor:2.1.0-rc1
+    dockerCommand: java -jar backdoor.jar -port $PORT -url $DATABASE_URL -secret-key $SECRET_KEY -user $USER_CONFIG
+    healthCheckPath: /healthcheck
+    envVars:
+      - key: PORT
+        value: 9999
+      - key: DATABASE_URL
+        fromDatabase:
+          name: backdoor-postgres-for-testing
+          property: connectionString
+      # IMPORTANT: Delete this environment variable and set it on Render dashboard instead for security
+      - key: SECRET_KEY
+        value: SbZlbmJIXh
+      # IMPORTANT: Delete this environment variable and set it on Render dashboard instead for security
+      - key: USER_CONFIG
+        value: test_user:test_pass,another_user:another_pass
+    autoDeploy: true
+
+databases:
+  - name: backdoor-postgres-for-testing
+    plan: free

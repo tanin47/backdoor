@@ -71,11 +71,12 @@ public class BackdoorServer {
       port = 9090;
     }
 
+
     for (int i = 0; i < args.length; i++) {
       switch (args[i]) {
         case "-url":
           if (i + 1 < args.length) {
-            var urls = args[++i].split(",");
+            var urls = stripeSurroundingDoubleQuotes(args[++i]).split(",");
 
             for (var url : urls) {
               databaseConfigs.add(new DatabaseConfig("database_" + databaseConfigs.size(), url.trim(), null, null));
@@ -120,6 +121,19 @@ public class BackdoorServer {
     );
     var minum = main.start();
     minum.block();
+  }
+
+  private static String stripeSurroundingDoubleQuotes(String arg) {
+    if (arg == null) {
+      return null;
+    }
+    if (arg.length() < 2) {
+      return arg;
+    }
+    if (arg.charAt(0) == '"' && arg.charAt(arg.length() - 1) == '"') {
+      return arg.substring(1, arg.length() - 1);
+    }
+    return arg;
   }
 
   DatabaseConfig[] databaseConfigs;
@@ -392,6 +406,17 @@ public class BackdoorServer {
 
     wf.registerPath(
       GET,
+      "healthcheck",
+      handleEndpoint(
+        false,
+        req -> {
+          return Response.buildResponse(StatusLine.StatusCode.CODE_200_OK, Map.of("Content-Type", "text/plain"), "OK Backdoor");
+        }
+      )
+    );
+
+    wf.registerPath(
+      GET,
       "login",
       handleEndpoint(
         false,
@@ -419,7 +444,7 @@ public class BackdoorServer {
               StatusLine.StatusCode.CODE_200_OK,
               Map.of(
                 "Content-Type", "application/json",
-                "Set-Cookie", makeSetCookieForUser(new User[]{user}, secretKey, Instant.now().plus(1, ChronoUnit.DAYS)) + "; Max-Age=86400; Secure; HttpOnly"
+                "Set-Cookie", makeSetCookieForUser(new User[]{user}, secretKey, Instant.now().plus(1, ChronoUnit.DAYS)) + "; Path=/; Max-Age=86400; Secure; HttpOnly"
               ),
               Json.object().toString()
             );
@@ -461,7 +486,7 @@ public class BackdoorServer {
               StatusLine.StatusCode.CODE_200_OK,
               Map.of(
                 "Content-Type", "application/json",
-                "Set-Cookie", makeSetCookieForUser(users.toArray(new User[0]), secretKey, Instant.now().plus(1, ChronoUnit.DAYS)) + "; Max-Age=86400; Secure; HttpOnly"
+                "Set-Cookie", makeSetCookieForUser(users.toArray(new User[0]), secretKey, Instant.now().plus(1, ChronoUnit.DAYS)) + "; Path=/; Max-Age=86400; Secure; HttpOnly"
               ),
               Json.object().toString()
             );
@@ -826,6 +851,8 @@ public class BackdoorServer {
         }
       })
     );
+
+    logger.info("Backdoor has been started (port: " + this.port + ", ssl-port: " + this.sslPort + ", databases: " + databaseConfigs.length + ").");
 
     return minum;
   }

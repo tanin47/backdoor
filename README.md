@@ -8,12 +8,14 @@ _Explore data & investigate issues faster and more securely with a better databa
 Backdoor is a self-hosted and self-contained database querying and editing tool for you and your team. No need to spend
 weeks and months building an admin dashboard by yourself.
 
-* 🔥 __Easy to setup:__ takes minutes to set up for you and your team to edit, explore, and investigate data quickly.
-* 💵 __Cost Saving:__ reduces the need to build an admin dashboard and saves time/money for your team.
-* 🔒 __Secure:__ supports its own users, so you don't have to share the database credentials. The best security practices
+* 🔥 __<ins>Easy to setup:</ins>__ -- Takes minutes to set up for you and your team to edit, explore, and investigate
+  data quickly.
+* 💵 __<ins>Cost Saving:</ins>__ -- Reduces the need to build an admin dashboard. Saves weeks and months in effort.
+* 🔒 __<ins>Secure:</ins>__ -- Supports masked users, so you don't have to share the database credentials. The best
+  security practices
   are implemented e.g. encrypted cookies with AES-256 and proof-of-work captcha.
-* ✨ __Modern UI:__ offers modern UI with infinitely scrollable table. Exploring and investigating large data is a breeze
-  and enjoyable.
+* ✨ __<ins>Modern UI:</ins>__ -- Exploring and investigating large data is a breeze and enjoyable. Offers modern UI with
+  infinitely scrollable table.
 
 Supported databases: Postgres and ClickHouse. Please open a github issue if you want other databases.
 
@@ -27,11 +29,13 @@ How to use
 
 There are 3 ways of using Backdoor:
 
-1. Run as a standalone.
+1. Run as a standalone: JAR file, Docker, and Render.com.
 2. Embed into your Java application and serve on a specific port.
 3. Embed into your Java application and serve on your main port but at a specific path.
 
 ### Run as a standalone
+
+__Run from the JAR file__
 
 First, you can download the JAR file from our Maven
 repository: https://central.sonatype.com/artifact/io.github.tanin47/backdoor/overview
@@ -40,9 +44,9 @@ Then, you can run the command below:
 
 ```
 java -jar backdoor-2.1.0-rc1.jar \
-  -url postgres://127.0.0.1:5432/backdoor_test,jdbc:ch://localhost:8123?user=backdoor&password=test_ch \
   -port 9999 \
-  -secret-key SbZlbmJIXh
+  -url "postgres://127.0.0.1:5432/backdoor_test,jdbc:ch://localhost:8123?user=backdoor&password=test_ch" \
+  -secret-key SbZlbmJIXh \
   -user test_user:test_pass,another_user:another_pass
 ```
 
@@ -50,6 +54,25 @@ You can visit http://localhost:9999 and login with a Postgres user, a ClickHouse
 `test_user` and `another_user`).
 
 See FAQ for how authentication works.
+
+__Using Docker__
+
+The docker image is here: https://hub.docker.com/repository/docker/tanin47/backdoor
+
+```
+docker run -p 9999:9999 \
+           --entrypoint "" \
+           tanin47/backdoor:2.1.0-rc1 \
+           java -jar backdoor.jar \
+           -port 9999 \
+           -url "postgres://127.0.0.1:5432/backdoor_test,jdbc:ch://localhost:8123?user=backdoor&password=test_ch" \
+           -secret-key SbZlbmJIXh \
+           -user test_user:test_pass,another_user:another_pass
+```
+
+__Using Render.com__
+
+`render.yaml` shows a blueprint example of how to run Backdoor on Render.
 
 ### Embed and serve on a specific port
 
@@ -208,8 +231,8 @@ How to run tests
 3. On a separate terminal, run `npm run hmr`.
 2. Run `./gradlew test` in order to run all the tests.
 
-Publish
---------
+Publish JAR
+------------
 
 1. Run `./gradlew clean`. This step is *IMPORTANT* for cleaning out old builds.
 1. Build the tailwindbase.css with:
@@ -224,6 +247,13 @@ You can run your server with: `java -jar ./build/libs/backdoor-VERSION.jar`
 
 To publish to a Maven repository, please follow the below steps:
 
-1. Remove `./build/staging-deploy` by running `rm -rf ./build/staging-deploy`
-2. Set up `~/.jreleaser/config.toml` with `JRELEASER_MAVENCENTRAL_USERNAME` and `JRELEASER_MAVENCENTRAL_PASSWORD`
-3. Run `./gradlew jreleaserDeploy`
+1. Set up `~/.jreleaser/config.toml` with `JRELEASER_MAVENCENTRAL_USERNAME` and `JRELEASER_MAVENCENTRAL_PASSWORD`
+2. Run `./gradlew jreleaserDeploy`
+
+Publish Docker
+---------------
+
+1. Run `docker buildx build --platform linux/amd64 -t backdoor:2.1.0-rc1 .`
+2. Test locally with: `docker run -p 9090:9090 --entrypoint "" backdoor:2.1.0-rc1 java -jar backdoor.jar -port 9090`
+3. Run: `docker tag backdoor:2.1.0-rc1 tanin47/backdoor:2.1.0-rc1`
+4. Run: `docker push tanin47/backdoor:2.1.0-rc1`
