@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+permissions:
+  contents: read
+  actions: read
+  checks: write
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: backdoor_test
+          POSTGRES_USER: backdoor_test_user
+          POSTGRES_PASSWORD: test
+        ports:
+          - 5432:5432
+      clickhouse:
+        image: clickhouse/clickhouse-server:25.8-alpine
+        env:
+          CLICKHOUSE_DB: backdoor_test
+          CLICKHOUSE_USER: backdoor
+          CLICKHOUSE_PASSWORD: test_ch
+        ports:
+          - 8123:8123
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: 'gradle'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: browser-actions/setup-chrome@v2
+        with:
+          chrome-version: 'stable'
+          install-chromedriver: true
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/master' }}
+      - name: Install Node modules
+        run: npm install
+      - name: Run tests
+        run: |
+          npm run hmr &
+          ./gradlew --no-daemon jacocoTestReport
+        env:
+          HEADLESS: true
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_ORG_TOKEN }}
+      - name: Publish Test Results
+        uses: dorny/test-reporter@v1
+        if: ${{ !cancelled() }}
+        with:
+          name: CI Tests
+          path: build/test-results/test/*.xml
+          reporter: java-junit

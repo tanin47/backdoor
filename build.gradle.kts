@@ -1,3 +1,4 @@
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.jreleaser.model.Active
 import org.jreleaser.model.Signing.Mode
 
@@ -5,6 +6,7 @@ plugins {
     `java-library`
     application
     `maven-publish`
+    jacoco
     id("org.jreleaser") version "1.21.0"
     id("com.gradleup.shadow") version "9.2.2"
 }
@@ -26,6 +28,17 @@ repositories {
     mavenCentral()
 }
 
+tasks.jacocoTestReport {
+    dependsOn(tasks.test) // tests are required to run before generating the report
+
+    reports {
+        xml.required = true
+        csv.required = false
+        html.outputLocation = layout.buildDirectory.dir("jacocoHtml")
+    }
+}
+
+
 dependencies {
     implementation("com.renomad:minum:8.2.0")
     implementation("org.postgresql:postgresql:42.7.8")
@@ -34,6 +47,7 @@ dependencies {
     implementation("org.altcha:altcha:1.2.0")
 
     testImplementation("org.junit.jupiter:junit-jupiter:6.0.0")
+    testImplementation("junit:junit:4.12")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testImplementation("org.seleniumhq.selenium:selenium-java:4.36.0")
 }
@@ -44,7 +58,12 @@ tasks.named<Test>("test") {
     maxHeapSize = "1G"
 
     testLogging {
-        events("passed")
+        events("started", "passed", "skipped", "failed")
+        showStandardStreams = true
+        showStackTraces = true
+        showExceptions = true
+        showCauses = true
+        exceptionFormat = TestExceptionFormat.FULL
     }
 }
 
