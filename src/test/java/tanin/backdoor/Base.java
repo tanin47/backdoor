@@ -46,6 +46,9 @@ public class Base {
     }
     var options = new ChromeOptions();
 
+    if (System.getenv("HEADLESS") != null) {
+      options.addArguments("--headless");
+    }
     options.addArguments("--guest");
     options.addArguments("--disable-extensions");
     options.addArguments("--disable-web-security");
@@ -112,7 +115,8 @@ public class Base {
             )
             ENGINE = ReplacingMergeTree()
             ORDER BY (user_id, project_id, item_id)
-            PRIMARY KEY (user_id, project_id, item_id);
+            PRIMARY KEY (user_id, project_id, item_id)
+            SETTINGS allow_nullable_key = 1;
             """
         );
 

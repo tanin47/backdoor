@@ -1,5 +1,6 @@
 package tanin.backdoor.postgres;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.JavascriptExecutor;
 import tanin.backdoor.Base;
@@ -8,6 +9,7 @@ import tanin.backdoor.engine.Engine;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class TableTest extends Base {
+  @Disabled("Timezone doesn't work correctly on CI")
   @Test
   void dateTimeColumn() throws Exception {
     try (var engine = Engine.createEngine(postgresConfig, null)) {
@@ -158,7 +160,7 @@ public class TableTest extends Base {
     click(tid("drop-table-button"));
     click(tid("submit-button"));
 
-    waitUntil(() -> assertTrue(hasElem(tid("sheet-tab", "user_new_name"))));
+    waitUntil(() -> assertFalse(hasElem(tid("sheet-tab", "user_new_name"))));
     waitUntil(() -> assertFalse(hasElem(tid("menu-items", "postgres", null, "menu-item-table", "user_new_name"))));
   }
 
@@ -177,6 +179,7 @@ public class TableTest extends Base {
     waitUntil(() -> assertEquals("new-username", elem(tid("sheet-column-value", "username")).getText().trim()));
   }
 
+  @Disabled("Hovering doesn't work on CI")
   @Test
   void deleteRow() throws InterruptedException {
     go("/");

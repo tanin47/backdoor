@@ -15,7 +15,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Properties;
-import java.util.logging.Logger;
 
 import static tanin.backdoor.BackdoorServer.makeSqlLiteral;
 import static tanin.backdoor.BackdoorServer.makeSqlName;
