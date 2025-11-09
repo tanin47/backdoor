@@ -119,7 +119,9 @@ jreleaser {
 
 tasks.shadowJar {
     archiveClassifier.set("") // Remove the suffix -all.
-    relocate("com", "tanin.backdoor.com")
+    relocate("com.", "tanin.backdoor.com.")
+    relocate("org.", "tanin.backdoor.org.")
+    relocate("net.", "tanin.backdoor.net.")
     exclude("META-INF/MANIFEST.MF")
 
 }

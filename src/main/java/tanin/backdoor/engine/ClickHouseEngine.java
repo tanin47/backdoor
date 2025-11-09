@@ -15,11 +15,13 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Properties;
+import java.util.logging.Logger;
 
 import static tanin.backdoor.BackdoorServer.makeSqlLiteral;
 import static tanin.backdoor.BackdoorServer.makeSqlName;
 
 public class ClickHouseEngine extends Engine {
+
   ClickHouseEngine(DatabaseConfig config, User overwritingUser) throws SQLException, InvalidCredentialsException {
     this.databaseConfig = config;
     var props = new Properties();
@@ -32,7 +34,7 @@ public class ClickHouseEngine extends Engine {
     }
     props.setProperty("clickhouse_setting_mutations_sync", "2");
     props.setProperty("clickhouse_setting_enable_time_time64_type", "1");
-   
+
     if (overwritingUser != null) {
       props.setProperty("user", overwritingUser.username());
       props.setProperty("password", overwritingUser.password());
