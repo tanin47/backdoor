@@ -71,6 +71,6 @@ jobs:
         uses: dorny/test-reporter@v1
         if: ${{ !cancelled() }}
         with:
-          name: CI Tests
+          name: CI test result
           path: build/test-results/test/*.xml
           reporter: java-junit
