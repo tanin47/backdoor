@@ -115,9 +115,9 @@ publishing {
 
 jreleaser {
     signing {
-        mode = Mode.COMMAND
         active = Active.ALWAYS
         armored = true
+        mode = if (System.getenv("CI") != null) Mode.MEMORY else Mode.COMMAND
         command {
             executable = "/opt/homebrew/bin/gpg"
         }
