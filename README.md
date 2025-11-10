@@ -1,7 +1,7 @@
 Backdoor: Self-hosted Database Querying and Editing Tool
 ==============================================================
 
-[![Sonatype Central](https://maven-badges.sml.io/sonatype-central/io.github.tanin47/backdoor/badge.png?2.1.0)](https://central.sonatype.com/artifact/io.github.tanin47/backdoor)
+[![Sonatype Central](https://maven-badges.sml.io/sonatype-central/io.github.tanin47/backdoor/badge.png?2.2.0-rc1)](https://central.sonatype.com/artifact/io.github.tanin47/backdoor)
 ![Github Actions](https://github.com/tanin47/backdoor/actions/workflows/ci.yml/badge.svg?branch=main)
 [![codecov](https://codecov.io/gh/tanin47/backdoor/graph/badge.svg?token=SODPQLLTDM)](https://codecov.io/gh/tanin47/backdoor)
 
@@ -45,7 +45,9 @@ There are 3 ways of using Backdoor:
 2. Embed into your Java application and serve on a specific port.
 3. Embed into your Java application and serve on your main port but at a specific path.
 
-Backdoor is based on [Embeddable Java Web Framework](https://github.com/tanin47/embeddable-java-web-framework) and published as a fat jar. Therefore, there is no external dependency. Its jar is self-contained and suitable for embedding into your JVM application.
+Backdoor is based on [Embeddable Java Web Framework](https://github.com/tanin47/embeddable-java-web-framework) and
+published as a fat jar. Therefore, there is no external dependency. Its jar is self-contained and suitable for embedding
+into your JVM application.
 
 ### 1. Run as a standalone
 
@@ -57,7 +59,7 @@ repository: https://central.sonatype.com/artifact/io.github.tanin47/backdoor/ove
 Then, you can run the command below:
 
 ```
-java -jar backdoor-2.1.0.jar \
+java -jar backdoor-2.2.0-rc1.jar \
   -port 9999 \
   -url "postgres://127.0.0.1:5432/backdoor_test,jdbc:ch://localhost:8123?user=backdoor&password=test_ch" \
   -secret-key SbZlbmJIXh \
@@ -76,7 +78,7 @@ The docker image is here: https://hub.docker.com/repository/docker/tanin47/backd
 ```
 docker run -p 9999:9999 \
            --entrypoint "" \
-           tanin47/backdoor:2.1.0 \
+           tanin47/backdoor:2.2.0-rc1 \
            java -jar backdoor.jar \
            -port 9999 \
            -url "postgres://127.0.0.1:5432/backdoor_test,jdbc:ch://localhost:8123?user=backdoor&password=test_ch" \
@@ -96,7 +98,7 @@ Add the dependency to your project:
 <dependency>
     <groupId>io.github.tanin47</groupId>
     <artifactId>backdoor</artifactId>
-    <version>2.1.0</version>
+    <version>2.2.0-rc1</version>
 </dependency>
 ```
 
@@ -262,8 +264,8 @@ Publish Docker
 This must be done after the JAR is published on Sonatype because the docker image will pull the new version from
 Sonatype.
 
-1. Run `docker buildx build --platform linux/amd64 -t backdoor:2.1.0 .`
-2. Test locally with: `docker run -p 9090:9090 --entrypoint "" backdoor:2.1.0 java -jar backdoor.jar -port 9090`
-3. Run: `docker tag backdoor:2.1.0 tanin47/backdoor:2.1.0`
-4. Run: `docker push tanin47/backdoor:2.1.0`
+1. Run `docker buildx build --platform linux/amd64 -t backdoor:2.2.0-rc1 .`
+2. Test locally with: `docker run -p 9090:9090 --entrypoint "" backdoor:2.2.0-rc1 java -jar backdoor.jar -port 9090`
+3. Run: `docker tag backdoor:2.2.0-rc1 tanin47/backdoor:2.2.0-rc1`
+4. Run: `docker push tanin47/backdoor:2.2.0-rc1`
 5. Go to Render.com, sync the blueprint, and test that it works
