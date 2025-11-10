@@ -5,7 +5,11 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
-    inputs: { }
+    inputs:
+      tag:
+        description: 'Optional tag. Default to the tag of the selected branch.'
+        required: false
+        type: string
 
 
 permissions:
@@ -18,6 +22,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -35,33 +41,24 @@ jobs:
         run: echo "VERSION=$(./gradlew -q printVersion)" >> "$GITHUB_OUTPUT"
       - name: Validate the tag name
         run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ ! -z "${{ github.event.inputs.tag }}" ]; then
             TAG=${{ github.event.inputs.tag }}
-            if [[ ! "$TAG" =~ ^v ]]; then
-              echo "Error: Tag must start with 'v'"
-              exit 1
-            fi
-            TAG_VERSION=${TAG#v}
           else
             TAG=${GITHUB_REF#refs/tags/}
-            if [[ ! "$TAG" =~ ^v ]]; then
-              echo "Error: Tag must start with 'v'"
-              exit 1
-            fi
-            TAG_VERSION=${TAG#v}
           fi
+          if [[ ! "$TAG" =~ ^v ]]; then
+            echo "Error: Tag must start with 'v'"
+            exit 1
+          fi
+          TAG_VERSION=${TAG#v}
           if [ "$TAG_VERSION" != "${{ steps.version.outputs.VERSION }}" ]; then
             echo "Error: Git tag version ($TAG_VERSION) doesn't match project version (v${{ steps.version.outputs.VERSION }})"
             exit 1
           fi
       - name: Install Node modules
         run: npm install
-      - name: Compile tailwindcss
-        run: ./node_modules/.bin/postcss ./frontend/stylesheets/tailwindbase.css --config . --output ./src/main/resources/assets/stylesheets/tailwindbase.css
-      - name: Compile Svelte
-        run: ENABLE_SVELTE_CHECK=true ./node_modules/webpack/bin/webpack.js --config ./webpack.config.js --output-path ./src/main/resources/assets --mode production
       - name: Build a publishable JAR
-        run: ./gradlew publish
+        run: ./gradlew clean publish
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v2
         with:
@@ -71,6 +68,7 @@ jobs:
           overwrite_files: true
           fail_on_unmatched_files: true
           generate_release_notes: true
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
       - name: Log in to Docker Hub
         uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a
         with:
@@ -86,4 +84,4 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: tanin47/backdoor:${{ github.ref_name }}
+          tags: tanin47/backdoor:${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
