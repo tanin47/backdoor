@@ -19,8 +19,12 @@ import static tanin.backdoor.BackdoorServer.makeSqlName;
 
 public class PostgresEngine extends Engine {
 
-  PostgresEngine(DatabaseConfig config, User overwritingUser) throws SQLException, URISyntaxException, InvalidCredentialsException {
-    this.databaseConfig = config;
+  PostgresEngine(DatabaseConfig config, User overwritingUser) throws SQLException, URISyntaxException, InvalidCredentialsException, OverwritingUserAndCredentialedJdbcConflictedException {
+    super(config, overwritingUser);
+  }
+
+  @Override
+  protected void connect(DatabaseConfig config, User overwritingUser) throws SQLException, InvalidCredentialsException, URISyntaxException {
 
     var url = config.jdbcUrl;
     var props = new Properties();

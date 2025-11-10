@@ -66,7 +66,7 @@ public class BackdoorServer {
 //      databaseConfigs.add(new DatabaseConfig("clickhouse", "jdbc:ch://localhost:8123", "abacus_dev_user", "dev"));
       databaseConfigs.add(new DatabaseConfig("postgres", "postgres://127.0.0.1:5432/backdoor_test", null, null));
       databaseConfigs.add(new DatabaseConfig("clickhouse", "jdbc:ch://localhost:8123?user=backdoor&password=test_ch", null, null));
-//      users.add(new User("backdoor_test", "1234"));
+      users.add(new User("masked_test", "1234"));
       secretKey = "testkey";
       port = 9090;
     }
@@ -305,8 +305,7 @@ public class BackdoorServer {
           if (rs.getInt(1) == 123) {
             return potentialDatabaseUser;
           }
-
-        } catch (Engine.InvalidCredentialsException e) {
+        } catch (Engine.InvalidCredentialsException | Engine.OverwritingUserAndCredentialedJdbcConflictedException e) {
           found = null;
         } catch (Exception e) {
           throw e;
@@ -355,7 +354,7 @@ public class BackdoorServer {
     return handleEndpoint(true, handler);
   }
 
-  Engine makeEngine(String databaseNickname) throws SQLException, URISyntaxException, Engine.InvalidCredentialsException {
+  Engine makeEngine(String databaseNickname) throws SQLException, URISyntaxException, Engine.InvalidCredentialsException, Engine.OverwritingUserAndCredentialedJdbcConflictedException {
     var databaseConfig = Arrays.stream(databaseConfigs).filter(d -> d.nickname.equals(databaseNickname)).findFirst().orElse(null);
 
     if (databaseConfig == null) {
