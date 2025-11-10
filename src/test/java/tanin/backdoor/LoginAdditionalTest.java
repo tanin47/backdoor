@@ -39,7 +39,7 @@ public class LoginAdditionalTest extends Base {
     webDriver.manage().deleteAllCookies();
     webDriver.manage().addCookie(new Cookie(
       "backdoor",
-      BackdoorServer.makeCookieValueForUser(new User[]{new User("backdoor_test_user", "test", "postgres")}, server.secretKey, Instant.now().plus(1, ChronoUnit.DAYS))
+      BackdoorServer.makeAuthCookieValueForUser(new User[]{new User("backdoor_test_user", "test", "postgres")}, server.secretKey, Instant.now().plus(1, ChronoUnit.DAYS))
     ));
     go("/");
 

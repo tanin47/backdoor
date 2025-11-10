@@ -160,7 +160,7 @@ public class Base {
     if (shouldLoggedIn) {
       webDriver.manage().addCookie(new Cookie(
         "backdoor",
-        BackdoorServer.makeCookieValueForUser(new User[]{loggedInUser}, server.secretKey, Instant.now().plus(1, ChronoUnit.DAYS))
+        BackdoorServer.makeAuthCookieValueForUser(new User[]{loggedInUser}, server.secretKey, Instant.now().plus(1, ChronoUnit.DAYS))
       ));
     }
   }
