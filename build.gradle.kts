@@ -147,3 +147,10 @@ tasks.shadowJar {
 tasks.jar {
     manifest.attributes["Main-Class"] = "tanin.backdoor.BackdoorServer"
 }
+
+// For building and publishing Docker image on CI
+tasks.register("printVersion") {
+    doLast {
+        print("$version")
+    }
+}
