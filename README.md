@@ -1,7 +1,7 @@
 Backdoor: Self-hosted Database Querying and Editing Tool
 ==============================================================
 
-[![Sonatype Central](https://maven-badges.sml.io/sonatype-central/io.github.tanin47/backdoor/badge.png?2.2.0-rc1)](https://central.sonatype.com/artifact/io.github.tanin47/backdoor)
+[![Sonatype Central](https://maven-badges.sml.io/sonatype-central/io.github.tanin47/backdoor/badge.png?version=2.2.0-rc1)](https://central.sonatype.com/artifact/io.github.tanin47/backdoor)
 ![Github Actions](https://github.com/tanin47/backdoor/actions/workflows/ci.yml/badge.svg?branch=main)
 [![codecov](https://codecov.io/gh/tanin47/backdoor/graph/badge.svg?token=SODPQLLTDM)](https://codecov.io/gh/tanin47/backdoor)
 
