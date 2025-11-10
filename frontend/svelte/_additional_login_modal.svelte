@@ -59,6 +59,7 @@ async function submit() {
   try {
     const json = await post('/api/login-additional', {
       database: database_!.name,
+      useHttps: window.location.protocol === 'https:',
       ...form
     })
 

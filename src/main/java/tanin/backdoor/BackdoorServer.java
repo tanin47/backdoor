@@ -253,22 +253,22 @@ public class BackdoorServer {
     throw new AuthFailureException();
   }
 
-  private static final String authCookieKey = "backdoor";
+  private static final String AUTH_COOKIE_KEY = "backdoor";
 
-  public static String makeCookieValueForUser(User[] users, String secretKey, Instant expires) throws Exception {
+  public static String makeAuthCookieValueForUser(User[] users, String secretKey, Instant expires) throws Exception {
     return EncryptionHelper.encryptText(
       new AuthCookie(users, expires).toJson().toString(),
       secretKey
     );
   }
 
-  public static String makeSetCookieForUser(User[] users, String secretKey, Instant expires) throws Exception {
-    return authCookieKey + "=" + makeCookieValueForUser(users, secretKey, expires);
+  public static String makeAuthCookie(User[] users, String secretKey, Instant expires) throws Exception {
+    return AUTH_COOKIE_KEY + "=" + makeAuthCookieValueForUser(users, secretKey, expires);
   }
 
   private AuthCookie extractAuthFromCookie(List<String> cookies) throws Exception {
     var cookie = Arrays.stream(cookies.getFirst().split(";"))
-      .filter(s -> s.trim().startsWith(authCookieKey + "="))
+      .filter(s -> s.trim().startsWith(AUTH_COOKIE_KEY + "="))
       .findFirst()
       .orElse(null);
 
@@ -276,7 +276,7 @@ public class BackdoorServer {
       return null;
     }
 
-    var base64Credentials = cookie.trim().substring((authCookieKey + "=").length()).trim();
+    var base64Credentials = cookie.trim().substring((AUTH_COOKIE_KEY + "=").length()).trim();
     try {
       var credentials = EncryptionHelper.decryptText(base64Credentials, secretKey);
       return AuthCookie.fromJson(Json.parse(credentials));
@@ -436,6 +436,7 @@ public class BackdoorServer {
           var username = json.asObject().get("username").asString();
           var password = json.asObject().get("password").asString();
           var altcha = json.asObject().get("altcha").asString();
+          var useHttps = json.asObject().get("useHttps").asBoolean();
           checkAltcha(altcha);
           var user = getUser(username, password);
 
@@ -444,7 +445,7 @@ public class BackdoorServer {
               StatusLine.StatusCode.CODE_200_OK,
               Map.of(
                 "Content-Type", "application/json",
-                "Set-Cookie", makeSetCookieForUser(new User[]{user}, secretKey, Instant.now().plus(1, ChronoUnit.DAYS)) + "; Path=/; Max-Age=86400; Secure; HttpOnly"
+                "Set-Cookie", makeSetCookieValue(new User[]{user}, secretKey, Instant.now().plus(1, ChronoUnit.DAYS), useHttps)
               ),
               Json.object().toString()
             );
@@ -472,6 +473,7 @@ public class BackdoorServer {
           var database = json.asObject().get("database").asString();
           var username = json.asObject().get("username").asString();
           var password = json.asObject().get("password").asString();
+          var useHttps = json.asObject().get("useHttps").asBoolean();
           var altcha = json.asObject().get("altcha").asString();
           checkAltcha(altcha);
 
@@ -486,7 +488,7 @@ public class BackdoorServer {
               StatusLine.StatusCode.CODE_200_OK,
               Map.of(
                 "Content-Type", "application/json",
-                "Set-Cookie", makeSetCookieForUser(users.toArray(new User[0]), secretKey, Instant.now().plus(1, ChronoUnit.DAYS)) + "; Path=/; Max-Age=86400; Secure; HttpOnly"
+                "Set-Cookie", makeSetCookieValue(users.toArray(new User[0]), secretKey, Instant.now().plus(1, ChronoUnit.DAYS), useHttps)
               ),
               Json.object().toString()
             );
@@ -510,11 +512,13 @@ public class BackdoorServer {
       handleEndpoint(
         false,
         req -> {
+          var isSecure = req.getRequestLine().queryString().get("secure") != null;
           return Response.buildResponse(
             StatusLine.StatusCode.CODE_302_FOUND,
             Map.of(
-              "Set-Cookie", makeSetCookieForUser(new User[0], "dontcare", Instant.now()) + "; Max-Age=0; Secure; HttpOnly",
-              "Location", "/login"
+              "Set-Cookie", makeSetCookieValue(new User[0], "dontcare", Instant.now(), isSecure),
+              // We need double-logout to clear both secure and non-secure cookie.
+              "Location", isSecure ? "/" : "/logout?secure=true"
             ),
             ""
           );
@@ -855,6 +859,11 @@ public class BackdoorServer {
     logger.info("Backdoor has been started (port: " + this.port + ", ssl-port: " + this.sslPort + ", databases: " + databaseConfigs.length + ").");
 
     return minum;
+  }
+
+  private static String makeSetCookieValue(User[] users, String secretKey, Instant expires, boolean isSecure) throws Exception {
+    var securePortion = isSecure ? " Secure;" : "";
+    return makeAuthCookie(users, secretKey, expires) + "; Max-Age=86400;" + securePortion + " HttpOnly";
   }
 
   private void checkAltcha(String altcha) {
