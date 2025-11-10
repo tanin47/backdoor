@@ -2,7 +2,11 @@ name: publish-jar
 
 on:
   workflow_dispatch:
-    inputs: { }
+    inputs:
+      tag:
+        description: 'Optional tag. Default to the tag of the selected branch.'
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -14,6 +18,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -26,18 +32,16 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
-      - name: Validate ref type
-        run: |
-          if [[ ! $GITHUB_REF == refs/tags/* ]]; then
-            echo "Error: This workflow can only be triggered for tags"
-            exit 1
-          fi
       - name: Get version
         id: version
         run: echo "VERSION=$(./gradlew -q printVersion)" >> "$GITHUB_OUTPUT"
       - name: Validate tag format and version
         run: |
-          TAG=${GITHUB_REF#refs/tags/}
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ ! -z "${{ github.event.inputs.tag }}" ]; then
+            TAG=${{ github.event.inputs.tag }}
+          else
+            TAG=${GITHUB_REF#refs/tags/}
+          fi
           if [[ ! $TAG =~ ^v ]]; then
             echo "Error: Tag must start with 'v'"
             exit 1
