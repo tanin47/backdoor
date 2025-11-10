@@ -20,8 +20,32 @@ public abstract class Engine implements AutoCloseable {
     }
   }
 
+  public static class OverwritingUserAndCredentialedJdbcConflictedException extends Exception {
+  }
+
   public DatabaseConfig databaseConfig;
   public Connection connection;
+
+  Engine(DatabaseConfig config, User overwritingUser) throws SQLException, URISyntaxException, InvalidCredentialsException, OverwritingUserAndCredentialedJdbcConflictedException {
+    this.databaseConfig = config;
+
+    try {
+      connect(config, null); // Try it without the overwriting user.
+
+      if (overwritingUser != null) {
+        // If the database config is already valid, we don't allow using the overwriting user.
+        throw new OverwritingUserAndCredentialedJdbcConflictedException();
+      }
+    } catch (InvalidCredentialsException e) {
+      if (overwritingUser != null) {
+        connect(config, overwritingUser);
+      } else {
+        throw new InvalidCredentialsException(e.getMessage());
+      }
+    }
+  }
+
+  protected abstract void connect(DatabaseConfig config, User overwritingUser) throws SQLException, InvalidCredentialsException, URISyntaxException;
 
   public abstract Column[] getColumns(String table) throws SQLException;
 
@@ -116,7 +140,7 @@ public abstract class Engine implements AutoCloseable {
     }
   }
 
-  public static Engine createEngine(DatabaseConfig config, User overwritingUser) throws SQLException, URISyntaxException, InvalidCredentialsException {
+  public static Engine createEngine(DatabaseConfig config, User overwritingUser) throws SQLException, URISyntaxException, InvalidCredentialsException, OverwritingUserAndCredentialedJdbcConflictedException {
     if (config.jdbcUrl.startsWith("jdbc:postgres") || config.jdbcUrl.startsWith("postgres")) {
       return new PostgresEngine(config, overwritingUser);
     } else if (config.jdbcUrl.startsWith("jdbc:ch:")) {

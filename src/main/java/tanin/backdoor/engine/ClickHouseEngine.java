@@ -6,6 +6,7 @@ import com.eclipsesource.json.JsonValue;
 import tanin.backdoor.*;
 
 import java.math.BigDecimal;
+import java.net.URISyntaxException;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -21,23 +22,27 @@ import static tanin.backdoor.BackdoorServer.makeSqlName;
 
 public class ClickHouseEngine extends Engine {
 
-  ClickHouseEngine(DatabaseConfig config, User overwritingUser) throws SQLException, InvalidCredentialsException {
-    this.databaseConfig = config;
-    var props = new Properties();
+  ClickHouseEngine(DatabaseConfig config, User overwritingUser) throws SQLException, InvalidCredentialsException, OverwritingUserAndCredentialedJdbcConflictedException, URISyntaxException {
+    super(config, overwritingUser);
+  }
 
-    if (config.username != null) {
-      props.setProperty("user", config.username);
-    }
-    if (config.password != null) {
-      props.setProperty("password", config.password);
-    }
-    props.setProperty("clickhouse_setting_mutations_sync", "2");
-    props.setProperty("clickhouse_setting_enable_time_time64_type", "1");
+  @Override
+  protected void connect(DatabaseConfig config, User overwritingUser) throws SQLException, InvalidCredentialsException {
+    var props = new Properties();
 
     if (overwritingUser != null) {
       props.setProperty("user", overwritingUser.username());
       props.setProperty("password", overwritingUser.password());
+    } else {
+      if (config.username != null) {
+        props.setProperty("user", config.username);
+      }
+      if (config.password != null) {
+        props.setProperty("password", config.password);
+      }
     }
+    props.setProperty("clickhouse_setting_mutations_sync", "2");
+    props.setProperty("clickhouse_setting_enable_time_time64_type", "1");
 
     try {
       connection = DriverManager.getConnection(config.jdbcUrl, props);
