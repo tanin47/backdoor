@@ -242,12 +242,14 @@ How to run tests
 Publish JAR
 ------------
 
+This flow has been set up as the Github Actions workflow: `publish-jar`.
+
 1. Run `./gradlew clean`. This step is *IMPORTANT* for cleaning out old builds.
-1. Build the tailwindbase.css with:
+2. Build the tailwindbase.css with:
    `./node_modules/.bin/postcss ./frontend/stylesheets/tailwindbase.css --config . --output ./src/main/resources/assets/stylesheets/tailwindbase.css`
-2. Build the production Svelte code with:
+3. Build the production Svelte code with:
    `ENABLE_SVELTE_CHECK=true ./node_modules/webpack/bin/webpack.js --config ./webpack.config.js --output-path ./src/main/resources/assets --mode production`
-3. Run `./gradlew publish`
+4. Run `./gradlew publish`
 
 The far JAR is built at `./build/libs/backdoor-VERSION.jar`
 
