@@ -52,12 +52,8 @@ jobs:
           fi
       - name: Install Node modules
         run: npm install
-      - name: Compile tailwindcss
-        run: ./node_modules/.bin/postcss ./frontend/stylesheets/tailwindbase.css --config . --output ./src/main/resources/assets/stylesheets/tailwindbase.css
-      - name: Compile Svelte
-        run: ENABLE_SVELTE_CHECK=true ./node_modules/webpack/bin/webpack.js --config ./webpack.config.js --output-path ./src/main/resources/assets --mode production
       - name: Build a publishable JAR
-        run: ./gradlew publish
+        run: ./gradlew clean publish
       - name: Publish to Sonatype
         run: ./gradlew jreleaserDeploy
         env:
