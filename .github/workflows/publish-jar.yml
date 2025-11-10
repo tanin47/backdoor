@@ -25,7 +25,26 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
-          cache-read-only: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/master' }}
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+      - name: Validate ref type
+        run: |
+          if [[ ! $GITHUB_REF == refs/tags/* ]]; then
+            echo "Error: This workflow can only be triggered for tags"
+            exit 1
+          fi
+      - name: Get version
+        id: version
+        run: echo "VERSION=$(./gradlew -q printVersion)" >> "$GITHUB_OUTPUT"
+      - name: Validate tag format and version
+        run: |
+          if [[ ! ${{ inputs.ref }} =~ ^v ]]; then
+            echo "Error: Tag must start with 'v'"
+            exit 1
+          fi
+          if [[ ! ${{ inputs.ref }} == v${{ steps.version.outputs.VERSION }} ]]; then
+            echo "Error: Tag version (${{ inputs.ref }}) does not match project version (v${{ steps.version.outputs.VERSION }})"
+            exit 1
+          fi
       - name: Install Node modules
         run: npm install
       - name: Compile tailwindcss

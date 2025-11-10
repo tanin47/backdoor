@@ -53,8 +53,8 @@ into your JVM application.
 
 __<ins>Run from the JAR file</ins>__
 
-First, you can download the JAR file from our Maven
-repository: https://central.sonatype.com/artifact/io.github.tanin47/backdoor/overview
+First, you can download the `backdoor-VERSION.jar` file from
+the [Releases](https://github.com/tanin47/backdoor/releases) page.
 
 Then, you can run the command below:
 

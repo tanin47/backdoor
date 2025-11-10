@@ -5,11 +5,7 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
-    inputs:
-      tag:
-        description: 'Tag name (e.g., v1.0.0)'
-        required: true
-        type: string
+    inputs: { }
 
 
 permissions:
@@ -66,13 +62,6 @@ jobs:
         run: ENABLE_SVELTE_CHECK=true ./node_modules/webpack/bin/webpack.js --config ./webpack.config.js --output-path ./src/main/resources/assets --mode production
       - name: Build a publishable JAR
         run: ./gradlew publish
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: backdoor-${{ github.ref_name }}
-          path: ./build/staging-deploy/io/github/tanin47/backdoor
-          if-no-files-found: error
-          overwrite: true
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
