@@ -78,7 +78,7 @@ The docker image is here: https://hub.docker.com/repository/docker/tanin47/backd
 ```
 docker run -p 9999:9999 \
            --entrypoint "" \
-           --pull always
+           --pull always \
            tanin47/backdoor:v2.2.0 \
            java -jar backdoor-2.2.0.jar \
            -port 9999 \
@@ -245,12 +245,7 @@ Publish JAR
 
 This flow has been set up as the Github Actions workflow: `publish-jar`.
 
-1. Run `./gradlew clean`. This step is *IMPORTANT* for cleaning out old builds.
-2. Build the tailwindbase.css with:
-   `./node_modules/.bin/postcss ./frontend/stylesheets/tailwindbase.css --config . --output ./src/main/resources/assets/stylesheets/tailwindbase.css`
-3. Build the production Svelte code with:
-   `ENABLE_SVELTE_CHECK=true ./node_modules/webpack/bin/webpack.js --config ./webpack.config.js --output-path ./src/main/resources/assets --mode production`
-4. Run `./gradlew publish`
+1. Run `./gradlew clean publish`. It is *IMPORTANT* to include *clean*.
 
 The far JAR is built at `./build/libs/backdoor-VERSION.jar`
 
