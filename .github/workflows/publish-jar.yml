@@ -22,10 +22,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - uses: browser-actions/setup-chrome@v2
-        with:
-          chrome-version: 'stable'
-          install-chromedriver: true
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
@@ -38,8 +34,11 @@ jobs:
         run: ENABLE_SVELTE_CHECK=true ./node_modules/webpack/bin/webpack.js --config ./webpack.config.js --output-path ./src/main/resources/assets --mode production
       - name: Build a publishable JAR
         run: ./gradlew publish
-      - name: Publish to Sonatyp
+      - name: Publish to Sonatype
         run: ./gradlew jreleaserDeploy
         env:
           JRELEASER_MAVENCENTRAL_USERNAME: ${{ secrets.JRELEASER_MAVENCENTRAL_USERNAME }}
           JRELEASER_MAVENCENTRAL_PASSWORD: ${{ secrets.JRELEASER_MAVENCENTRAL_PASSWORD }}
+          CI: true
+          JRELEASER_GPG_PUBLIC_KEY: ${{ secrets.JRELEASER_GPG_PUBLIC_KEY }}
+          JRELEASER_GPG_SECRET_KEY: ${{ secrets.JRELEASER_GPG_SECRET_KEY }}
