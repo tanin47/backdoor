@@ -37,12 +37,13 @@ jobs:
         run: echo "VERSION=$(./gradlew -q printVersion)" >> "$GITHUB_OUTPUT"
       - name: Validate tag format and version
         run: |
-          if [[ ! ${{ github.ref_name }} =~ ^v ]]; then
+          TAG=${GITHUB_REF#refs/tags/}
+          if [[ ! $TAG =~ ^v ]]; then
             echo "Error: Tag must start with 'v'"
             exit 1
           fi
-          if [[ ! ${{ github.ref_name }} == v${{ steps.version.outputs.VERSION }} ]]; then
-            echo "Error: Tag version (${{ github.ref_name }}) does not match project version (v${{ steps.version.outputs.VERSION }})"
+          if [[ ! $TAG == v${{ steps.version.outputs.VERSION }} ]]; then
+            echo "Error: Tag version ($TAG) does not match project version (v${{ steps.version.outputs.VERSION }})"
             exit 1
           fi
       - name: Install Node modules
