@@ -1,7 +1,7 @@
 Backdoor: Self-hosted Database Querying and Editing Tool
 ==============================================================
 
-[![Sonatype Central](https://maven-badges.sml.io/sonatype-central/io.github.tanin47/backdoor/badge.png?version=2.2.0-rc1)](https://central.sonatype.com/artifact/io.github.tanin47/backdoor)
+[![Sonatype Central](https://maven-badges.sml.io/sonatype-central/io.github.tanin47/backdoor/badge.png?version=2.2.0)](https://central.sonatype.com/artifact/io.github.tanin47/backdoor)
 ![Github Actions](https://github.com/tanin47/backdoor/actions/workflows/ci.yml/badge.svg?branch=main)
 [![codecov](https://codecov.io/gh/tanin47/backdoor/graph/badge.svg?token=SODPQLLTDM)](https://codecov.io/gh/tanin47/backdoor)
 
@@ -59,7 +59,7 @@ the [Releases](https://github.com/tanin47/backdoor/releases) page.
 Then, you can run the command below:
 
 ```
-java -jar backdoor-2.2.0-rc1.jar \
+java -jar backdoor-2.2.0.jar \
   -port 9999 \
   -url "postgres://127.0.0.1:5432/backdoor_test,jdbc:ch://localhost:8123?user=backdoor&password=test_ch" \
   -secret-key SbZlbmJIXh \
@@ -78,8 +78,9 @@ The docker image is here: https://hub.docker.com/repository/docker/tanin47/backd
 ```
 docker run -p 9999:9999 \
            --entrypoint "" \
-           tanin47/backdoor:2.2.0-rc1 \
-           java -jar backdoor.jar \
+           --pull always
+           tanin47/backdoor:v2.2.0 \
+           java -jar backdoor-2.2.0.jar \
            -port 9999 \
            -url "postgres://127.0.0.1:5432/backdoor_test,jdbc:ch://localhost:8123?user=backdoor&password=test_ch" \
            -secret-key SbZlbmJIXh \
@@ -98,7 +99,7 @@ Add the dependency to your project:
 <dependency>
     <groupId>io.github.tanin47</groupId>
     <artifactId>backdoor</artifactId>
-    <version>2.2.0-rc1</version>
+    <version>2.2.0</version>
 </dependency>
 ```
 
@@ -265,11 +266,11 @@ Publish Docker
 
 This flow has been set up as a part of the Github Actions workflow: `create-release-and-docker`.
 
-1. Run `docker buildx build --platform linux/amd64 -t backdoor:2.2.0-rc1 .`
+1. Run `docker buildx build --platform linux/amd64,linux/arm64 -t backdoor:v2.2.0 .`
 2. Test locally with:
-   `docker run -p 9090:9090 --entrypoint "" backdoor:2.2.0-rc1 java -jar backdoor-2.2.0-rc1.jar -port 9090`
-3. Run: `docker tag backdoor:2.2.0-rc1 tanin47/backdoor:2.2.0-rc1`
-4. Run: `docker push tanin47/backdoor:2.2.0-rc1`
+   `docker run -p 9090:9090 --entrypoint "" backdoor:v2.2.0 java -jar backdoor-2.2.0.jar -port 9090`
+3. Run: `docker tag backdoor:v2.2.0 tanin47/backdoor:v2.2.0`
+4. Run: `docker push tanin47/backdoor:v2.2.0`
 5. Go to Render.com, sync the blueprint, and test that it works
 
 Release a new version
@@ -278,6 +279,6 @@ Release a new version
 1. Create an empty release with a new tag. The tag must follow the format: `vX.Y.Z`.
 2. Go to Actions and wait for the `create-release-and-docker` (which is triggered automatically) workflow to finish.
 3. Test the docker with
-   `docker run -p 9090:9090 --entrypoint "" tanin47/backdoor:2.2.0-rc1 java -jar backdoor-2.2.0-rc1.jar -port 9090`.
+   `docker run -p 9090:9090 --entrypoint "" tanin47/backdoor:v2.2.0 java -jar backdoor-2.2.0.jar -port 9090`.
 4. Go to Actions and trigger the workflow `publish-jar` on the tag `vX.Y.Z` in order to publish the JAR to Central
    Sonatype.
