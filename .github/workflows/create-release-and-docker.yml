@@ -62,17 +62,6 @@ jobs:
         run: ENABLE_SVELTE_CHECK=true ./node_modules/webpack/bin/webpack.js --config ./webpack.config.js --output-path ./src/main/resources/assets --mode production
       - name: Build a publishable JAR
         run: ./gradlew publish
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref_name }}
-          release_name: Release ${{ github.ref_name }}
-          body: To be filled
-          draft: true
-          prerelease: true
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v2
         with:
@@ -93,7 +82,7 @@ jobs:
         id: push
         uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
         with:
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           context: .
           file: ./Dockerfile
           push: true
