@@ -11,6 +11,29 @@
   />
   <script>
     window.IS_LOCAL_DEV = {{IS_LOCAL_DEV_JSON}};
+
+    var oldFetch = window.fetch;
+    window.fetch = function () {
+      // Some AJAX requests' urls start with `//` (e.g. helpscoutdocs.com). We need to exclude it. Otherwise,
+      // we would hit CORS condition.
+      if (arguments.length >= 1 && !!arguments[0].startsWith && arguments[0].startsWith('/') && !arguments[0].startsWith('//')) {
+      } else {
+        return oldFetch.apply(window, arguments);
+      }
+
+      var args = [...arguments]
+      if (args.length === 1) {
+        args.push({})
+      }
+
+      args[1].headers ||= {};
+
+      if (args[1].method === 'POST' || args[1].method === "DELETE" || args[1].method === "PUT") {
+        args[1].headers['Csrf-Token'] = {{CSRF_TOKEN}};
+      }
+
+      return oldFetch.apply(window, args);
+    };
   </script>
 </head>
 <body>

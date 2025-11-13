@@ -53,7 +53,7 @@ dependencies {
     implementation("com.eclipsesource.minimal-json:minimal-json:0.9.5")
     implementation("org.altcha:altcha:1.2.0")
 
-    testImplementation("org.junit.jupiter:junit-jupiter:6.0.0")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.7.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testImplementation("org.seleniumhq.selenium:selenium-java:4.36.0")
 }
@@ -198,7 +198,7 @@ tasks.jar {
     manifest.attributes["Main-Class"] = "tanin.backdoor.BackdoorServer"
 }
 
-// For building and publishing Docker image on CI
+// For CI validation.
 tasks.register("printVersion") {
     doLast {
         print("$version")
