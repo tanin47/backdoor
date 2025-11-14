@@ -29,8 +29,7 @@ import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
 
-import static com.renomad.minum.web.RequestLine.Method.GET;
-import static com.renomad.minum.web.RequestLine.Method.POST;
+import static com.renomad.minum.web.RequestLine.Method.*;
 
 public class BackdoorServer {
   public static class AuthFailureException extends Exception {
@@ -181,11 +180,11 @@ public class BackdoorServer {
     return '"' + sql.replace("\"", "").replace(";", "") + '"';
   }
 
-  String makeHtml(String path) throws IOException {
-    return makeHtml(path, null);
+  String makeHtml(String path, String csrfToken) throws IOException {
+    return makeHtml(path, csrfToken, null);
   }
 
-  String makeHtml(String path, JsonObject props) throws IOException {
+  String makeHtml(String path, String csrfToken, JsonObject props) throws IOException {
     var layout = TemplateProcessor.buildProcessor(new String(BackdoorServer.class.getResourceAsStream("/html/layout.html").readAllBytes()));
     var targetHtml = TemplateProcessor.buildProcessor(new String(BackdoorServer.class.getResourceAsStream("/html/" + path).readAllBytes()));
 
@@ -198,7 +197,8 @@ public class BackdoorServer {
     return layout.renderTemplate(
       Map.of(
         "content", targetHtml.renderTemplate(propsMap),
-        "IS_LOCAL_DEV_JSON", Json.value(MinumBuilder.IS_LOCAL_DEV).toString()
+        "IS_LOCAL_DEV_JSON", Json.value(MinumBuilder.IS_LOCAL_DEV).toString(),
+        "CSRF_TOKEN", Json.value(csrfToken).toString()
       )
     );
   }
@@ -253,6 +253,8 @@ public class BackdoorServer {
     throw new AuthFailureException();
   }
 
+  static final String CSRF_COOKIE_KEY = "Csrf";
+  private static final Set<RequestLine.Method> CSRF_READ_METHODS = new HashSet<>(List.of(GET, HEAD, OPTIONS));
   private static final String AUTH_COOKIE_KEY = "backdoor";
 
   public static String makeAuthCookieValueForUser(User[] users, String secretKey, Instant expires) throws Exception {
@@ -266,11 +268,19 @@ public class BackdoorServer {
     return AUTH_COOKIE_KEY + "=" + makeAuthCookieValueForUser(users, secretKey, expires);
   }
 
-  private AuthCookie extractAuthFromCookie(List<String> cookies) throws Exception {
-    var cookie = Arrays.stream(cookies.getFirst().split(";"))
-      .filter(s -> s.trim().startsWith(AUTH_COOKIE_KEY + "="))
+  private String extractCookieByKey(String cookieKey, List<String> cookies) {
+    if (cookies == null) {
+      return null;
+    }
+    return Arrays.stream(cookies.getFirst().split(";"))
+      .filter(s -> s.trim().startsWith(cookieKey + "="))
       .findFirst()
+      .map(String::trim)
       .orElse(null);
+  }
+
+  private AuthCookie extractAuthFromCookie(List<String> cookies) throws Exception {
+    var cookie = extractCookieByKey(AUTH_COOKIE_KEY, cookies);
 
     if (cookie == null) {
       return null;
@@ -403,6 +413,37 @@ public class BackdoorServer {
       )
     );
 
+    wf.registerPreHandler((inputs) -> {
+      var request = inputs.clientRequest();
+      var method = request.getRequestLine().getMethod();
+      var csrfTokenHeaders = request.getHeaders().valueByKey("Csrf-Token");
+      String csrfToken = null;
+      if (csrfTokenHeaders != null) {
+        csrfToken = request.getHeaders().valueByKey("Csrf-Token").stream().findFirst().orElse(null);
+      }
+      var csrfCookieValue = extractOrMakeCsrfCookieValue(request, false);
+
+      var isCsrfValid = CSRF_READ_METHODS.contains(method);
+      isCsrfValid = isCsrfValid || (csrfToken != null && csrfToken.equals(csrfCookieValue));
+
+      IResponse response;
+      if (isCsrfValid) {
+        response = inputs.endpoint().apply(inputs.clientRequest());
+      } else {
+        logger.info("The CSRF token is invalid. Expected: " + csrfCookieValue + ", Actual: " + csrfToken);
+        response = Response.buildResponse(
+          StatusLine.StatusCode.CODE_401_UNAUTHORIZED,
+          Map.of("Content-Type", "application/json"),
+          Json.object()
+            .add("errors", Json.array().add("The session has expired. Please refresh the page and try again."))
+            .toString()
+        );
+      }
+
+
+      return response;
+    });
+
     wf.registerPath(
       GET,
       "healthcheck",
@@ -420,7 +461,12 @@ public class BackdoorServer {
       handleEndpoint(
         false,
         req -> {
-          return Response.htmlOk(makeHtml("login.html"));
+          var isLocalHost = req.getHeaders().valueByKey("Host").stream().findFirst().orElse("").startsWith("localhost");
+          var csrfToken = extractOrMakeCsrfCookieValue(req, true);
+          return Response.htmlOk(
+            makeHtml("login.html", csrfToken),
+            Map.of("Set-Cookie", makeCsrfTokenSetCookieValue(csrfToken, !isLocalHost))
+          );
         }
       )
     );
@@ -435,7 +481,7 @@ public class BackdoorServer {
           var username = json.asObject().get("username").asString();
           var password = json.asObject().get("password").asString();
           var altcha = json.asObject().get("altcha").asString();
-          var useHttps = json.asObject().get("useHttps").asBoolean();
+          var isLocalHost = req.getHeaders().valueByKey("Host").stream().findFirst().orElse("").startsWith("localhost");
           checkAltcha(altcha);
           var user = getUser(username, password);
 
@@ -444,7 +490,7 @@ public class BackdoorServer {
               StatusLine.StatusCode.CODE_200_OK,
               Map.of(
                 "Content-Type", "application/json",
-                "Set-Cookie", makeSetCookieValue(new User[]{user}, secretKey, Instant.now().plus(1, ChronoUnit.DAYS), useHttps)
+                "Set-Cookie", makeSetCookieValue(new User[]{user}, secretKey, Instant.now().plus(1, ChronoUnit.DAYS), !isLocalHost)
               ),
               Json.object().toString()
             );
@@ -472,7 +518,7 @@ public class BackdoorServer {
           var database = json.asObject().get("database").asString();
           var username = json.asObject().get("username").asString();
           var password = json.asObject().get("password").asString();
-          var useHttps = json.asObject().get("useHttps").asBoolean();
+          var isLocalHost = req.getHeaders().valueByKey("Host").stream().findFirst().orElse("").startsWith("localhost");
           var altcha = json.asObject().get("altcha").asString();
           checkAltcha(altcha);
 
@@ -487,7 +533,7 @@ public class BackdoorServer {
               StatusLine.StatusCode.CODE_200_OK,
               Map.of(
                 "Content-Type", "application/json",
-                "Set-Cookie", makeSetCookieValue(users.toArray(new User[0]), secretKey, Instant.now().plus(1, ChronoUnit.DAYS), useHttps)
+                "Set-Cookie", makeSetCookieValue(users.toArray(new User[0]), secretKey, Instant.now().plus(1, ChronoUnit.DAYS), !isLocalHost)
               ),
               Json.object().toString()
             );
@@ -529,7 +575,12 @@ public class BackdoorServer {
       GET,
       "",
       handleEndpoint(req -> {
-        return Response.htmlOk(makeHtml("index.html"));
+        var isLocalHost = req.getHeaders().valueByKey("Host").stream().findFirst().orElse("").startsWith("localhost");
+        var csrfToken = extractOrMakeCsrfCookieValue(req, true);
+        return Response.htmlOk(
+          makeHtml("index.html", csrfToken),
+          Map.of("Set-Cookie", makeCsrfTokenSetCookieValue(csrfToken, !isLocalHost))
+        );
       })
     );
 
@@ -858,6 +909,25 @@ public class BackdoorServer {
     logger.info("Backdoor has been started (port: " + this.port + ", ssl-port: " + this.sslPort + ", databases: " + databaseConfigs.length + ").");
 
     return minum;
+  }
+
+  private static String makeCsrfTokenSetCookieValue(String csrfToken, boolean isSecure) throws Exception {
+    var securePortion = isSecure ? " Secure;" : "";
+    return CSRF_COOKIE_KEY + "=" + csrfToken + "; Max-Age=86400;" + securePortion + " HttpOnly";
+  }
+
+  private String extractOrMakeCsrfCookieValue(IRequest request, boolean makeIfMissing) {
+    var cookie = extractCookieByKey(CSRF_COOKIE_KEY, request.getHeaders().valueByKey("Cookie"));
+
+    if (cookie == null) {
+      if (makeIfMissing) {
+        return EncryptionHelper.generateRandomString(16);
+      } else {
+        return null;
+      }
+    } else {
+      return cookie.substring((CSRF_COOKIE_KEY + "=").length());
+    }
   }
 
   private static String makeSetCookieValue(User[] users, String secretKey, Instant expires, boolean isSecure) throws Exception {

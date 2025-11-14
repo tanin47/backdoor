@@ -56,14 +56,14 @@ public class MinumBuilder {
     props.setProperty("SERVER_PORT", "" + port);
     props.setProperty("SSL_SERVER_PORT", "" + sslPort);
     props.setProperty("LOG_LEVELS", "ASYNC_ERROR,AUDIT");
+    props.setProperty("IS_THE_BRIG_ENABLED", "false");
 
     var context = new Context(Executors.newVirtualThreadPerTaskExecutor(), new Constants(props));
-    var logger = new Logger(context.getConstants(), context.getExecutorService(), "primary logger");
-    context.setLogger(logger);
+    context.setLogger(new Logger(context.getConstants(), context.getExecutorService(), "primary logger"));
     var minum = new FullSystem(context);
 
     Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-      System.out.println("Receiving a shutdown signal. Exiting...");
+      logger.info("Receiving a shutdown signal. Exiting...");
       try {
         minum.shutdown();
       } catch (Exception ignored) {
@@ -72,7 +72,7 @@ public class MinumBuilder {
 
     // In SBT console, pressing Ctrl+C only sends SIGINT. Therefore, we have to trigger a shutdown when SIGINT occurs.
     sun.misc.Signal.handle(new sun.misc.Signal("INT"), sig -> {
-      System.out.println("Received SIGINT signal. Shutting down...");
+      logger.info("Received SIGINT signal. Shutting down...");
       try {
         minum.shutdown();
       } catch (Exception ignored) {

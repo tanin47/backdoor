@@ -10,7 +10,6 @@ let form = {
   username: '',
   password: '',
   altcha: '',
-  useHttps: window.location.protocol === 'https:'
 }
 let altcha: any
 
