@@ -913,7 +913,7 @@ public class BackdoorServer {
 
   private static String makeCsrfTokenSetCookieValue(String csrfToken, boolean isSecure) throws Exception {
     var securePortion = isSecure ? " Secure;" : "";
-    return CSRF_COOKIE_KEY + "=" + csrfToken + "; Max-Age=86400;" + securePortion + " HttpOnly";
+    return CSRF_COOKIE_KEY + "=" + csrfToken + "; Max-Age=86400; Path=/;" + securePortion + " HttpOnly";
   }
 
   private String extractOrMakeCsrfCookieValue(IRequest request, boolean makeIfMissing) {
@@ -932,7 +932,7 @@ public class BackdoorServer {
 
   private static String makeSetCookieValue(User[] users, String secretKey, Instant expires, boolean isSecure) throws Exception {
     var securePortion = isSecure ? " Secure;" : "";
-    return makeAuthCookie(users, secretKey, expires) + "; Max-Age=86400;" + securePortion + " HttpOnly";
+    return makeAuthCookie(users, secretKey, expires) + "; Max-Age=86400; Path=/;" + securePortion + " HttpOnly";
   }
 
   private void checkAltcha(String altcha) {
