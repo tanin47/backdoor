@@ -72,5 +72,5 @@ jobs:
         if: ${{ !cancelled() }}
         with:
           name: CI test result
-          path: build/test-results/test/*.xml
+          path: ./**/build/test-results/test/*.xml
           reporter: java-junit

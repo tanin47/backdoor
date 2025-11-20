@@ -34,7 +34,7 @@ jobs:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
       - name: Get version
         id: version
-        run: echo "VERSION=$(./gradlew -q printVersion)" >> "$GITHUB_OUTPUT"
+        run: echo "VERSION=$(./gradlew -q :web:printVersion)" >> "$GITHUB_OUTPUT"
       - name: Validate tag format and version
         run: |
           if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ ! -z "${{ github.event.inputs.tag }}" ]; then
@@ -53,9 +53,9 @@ jobs:
       - name: Install Node modules
         run: npm install
       - name: Build a publishable JAR
-        run: ./gradlew clean publish
+        run: ./gradlew clean :web:publish
       - name: Publish to Sonatype
-        run: ./gradlew jreleaserDeploy
+        run: ./gradlew :web:jreleaserDeploy
         env:
           JRELEASER_MAVENCENTRAL_USERNAME: ${{ secrets.JRELEASER_MAVENCENTRAL_USERNAME }}
           JRELEASER_MAVENCENTRAL_PASSWORD: ${{ secrets.JRELEASER_MAVENCENTRAL_PASSWORD }}
