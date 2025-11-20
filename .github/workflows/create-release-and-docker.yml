@@ -38,7 +38,7 @@ jobs:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
       - name: Get version
         id: version
-        run: echo "VERSION=$(./gradlew -q printVersion)" >> "$GITHUB_OUTPUT"
+        run: echo "VERSION=$(./gradlew -q :web:printVersion)" >> "$GITHUB_OUTPUT"
       - name: Validate the tag name
         run: |
           if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ ! -z "${{ github.event.inputs.tag }}" ]; then
@@ -58,7 +58,7 @@ jobs:
       - name: Install Node modules
         run: npm install
       - name: Build a publishable JAR
-        run: ./gradlew clean publish
+        run: ./gradlew clean :web:publish
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v2
         with:
