@@ -58,7 +58,7 @@ public class ClickHouseEngine extends Engine {
 
     try {
       connection = DriverManager.getConnection(config.jdbcUrl, props);
-      connection.createStatement().execute("SELECT 'backdoor_test_connection_for_click_house'");
+      execute("SELECT 'backdoor_test_connection_for_click_house'");
     } catch (SQLException e) {
       if (e.getMessage().contains("Authentication failed") || e.getMessage().contains("AUTHENTICATION_FAILED")) {
         throw new InvalidCredentialsException(e.getMessage());
@@ -70,12 +70,12 @@ public class ClickHouseEngine extends Engine {
 
   @Override
   public Column[] getColumns(String table) throws SQLException {
-    var rs = connection.createStatement().executeQuery("SELECT currentDatabase();");
+    var rs = executeQuery("SELECT currentDatabase();");
     rs.next();
     var databaseName = rs.getString(1);
 
     var columns = new ArrayList<Column>();
-    rs = connection.createStatement().executeQuery(
+    rs = executeQuery(
       "select name, type, is_in_primary_key FROM system.columns WHERE database = " +
         makeSqlLiteral(databaseName) + " AND `table` = " + makeSqlLiteral(table) +
         " ORDER BY position ASC;"
@@ -99,7 +99,7 @@ public class ClickHouseEngine extends Engine {
   @Override
   public String[] getTables() throws SQLException {
     var tables = new ArrayList<String>();
-    var rs = connection.createStatement().executeQuery(
+    var rs = executeQuery(
       "SHOW TABLES;"
     );
     while (rs.next()) {
@@ -120,7 +120,7 @@ public class ClickHouseEngine extends Engine {
       throw new Exception();
     }
 
-    connection.createStatement().execute(
+    execute(
       "ALTER TABLE " + makeSqlName(table) +
         " UPDATE " + makeSqlName(column.name) + " = " +
         (newValue == null ? "NULL" : makeSqlLiteral(newValue)) +
@@ -138,14 +138,14 @@ public class ClickHouseEngine extends Engine {
     if (whereClause.isEmpty()) {
       throw new Exception();
     }
-    connection.createStatement().execute(
+    execute(
       "ALTER TABLE " + makeSqlName(table) + " DELETE " + whereClause
     );
   }
 
   @Override
   public void rename(String table, String newTableName) throws SQLException {
-    connection.createStatement().execute("RENAME TABLE " + makeSqlName(table) + " TO " + makeSqlName(newTableName));
+    execute("RENAME TABLE " + makeSqlName(table) + " TO " + makeSqlName(newTableName));
   }
 
   @Override

@@ -44,7 +44,7 @@ public class LoginTest extends Base {
 
     waitUntil(() -> assertEquals("/", getCurrentPath()));
 
-    click(".CodeMirror");
+    click(".CodeMirror-code");
     sendKeys("select current_user");
     click(tid("run-sql-button"));
 

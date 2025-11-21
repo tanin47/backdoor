@@ -70,7 +70,7 @@ public abstract class Engine implements AutoCloseable {
     Filter[] filters
   ) throws SQLException {
     var whereClause = makeWhereClause(filters);
-    var rs = connection.createStatement().executeQuery("SELECT COUNT(*) AS numberOfRows FROM (" + sql + ") " + whereClause);
+    var rs = executeQuery("SELECT COUNT(*) AS numberOfRows FROM (" + sql + ") " + whereClause);
     var tableStats = new Stats(0);
     while (rs.next()) {
       tableStats.numberOfRows = rs.getInt("numberOfRows");
@@ -91,7 +91,7 @@ public abstract class Engine implements AutoCloseable {
       orderByClause = " ORDER BY " + String.join(", ", Arrays.stream(sorts).map(s -> makeSqlName(s.name) + " " + s.direction).toArray(String[]::new));
     }
 
-    return connection.createStatement().executeQuery(
+    return executeQuery(
       "SELECT * FROM (" + sql + ") " +
         whereClause +
         orderByClause +
@@ -119,18 +119,24 @@ public abstract class Engine implements AutoCloseable {
 
   public ResultSet select(String tableName, Column column, Filter[] filters) throws SQLException {
     var whereClause = makeWhereClause(filters);
-    return connection.createStatement().executeQuery(
+    return executeQuery(
       "SELECT " + makeSqlName(column.name) + " FROM " + makeSqlName(tableName) + whereClause
     );
   }
 
   public void drop(String table, boolean useCascade) throws SQLException {
     var maybeCascade = useCascade ? " CASCADE" : "";
-    connection.createStatement().execute("DROP TABLE IF EXISTS " + makeSqlName(table) + maybeCascade);
+    execute("DROP TABLE IF EXISTS " + makeSqlName(table) + maybeCascade);
   }
 
   public ResultSet executeQuery(String sql) throws SQLException {
+    logger.info("Executing query: " + sql);
     return connection.createStatement().executeQuery(sql);
+  }
+
+  public boolean execute(String sql) throws SQLException {
+    logger.info("Executing: " + sql);
+    return connection.createStatement().execute(sql);
   }
 
 
@@ -145,6 +151,7 @@ public abstract class Engine implements AutoCloseable {
   }
 
   public int executeUpdate(String sql) throws SQLException {
+    logger.info("Executing update: " + sql);
     return connection.createStatement().executeUpdate(sql);
   }
 }

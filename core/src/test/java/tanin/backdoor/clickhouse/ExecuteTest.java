@@ -9,7 +9,7 @@ public class ExecuteTest extends Base {
   @Test
   void runExplain() throws InterruptedException {
     go("/");
-    click(".CodeMirror");
+    click(".CodeMirror-code");
     sendKeys("explain select 1");
     select(tid("run-sql-database-select"), "clickhouse");
     click(tid("run-sql-button"));
@@ -30,7 +30,7 @@ public class ExecuteTest extends Base {
   @Test
   void updateSql() throws InterruptedException {
     go("/");
-    click(".CodeMirror");
+    click(".CodeMirror-code");
     sendKeys("alter table project_setting update some_value = '123' where user_id = 'user_2'");
     select(tid("run-sql-database-select"), "clickhouse");
     click(tid("run-sql-button"));
@@ -54,7 +54,7 @@ public class ExecuteTest extends Base {
   @Test
   void deleteSql() throws InterruptedException {
     go("/");
-    click(".CodeMirror");
+    click(".CodeMirror-code");
     sendKeys("alter table project_setting delete where user_id = 'user_2'");
     select(tid("run-sql-database-select"), "clickhouse");
     click(tid("run-sql-button"));
@@ -78,7 +78,7 @@ public class ExecuteTest extends Base {
   @Test
   void makeViewAndThenExecute() throws InterruptedException {
     go("/");
-    click(".CodeMirror");
+    click(".CodeMirror-code");
     sendKeys("select 1");
     select(tid("run-sql-database-select"), "clickhouse");
     click(tid("run-sql-button"));
@@ -93,7 +93,7 @@ public class ExecuteTest extends Base {
          1"""
     );
 
-    click(".CodeMirror");
+    click(".CodeMirror-code");
     sendClearKeys();
     sendKeys("explain select 1");
     click(tid("run-sql-button"));
