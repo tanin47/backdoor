@@ -5,15 +5,17 @@ import tanin.backdoor.core.*;
 
 import java.net.URISyntaxException;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.logging.Logger;
 
 import static tanin.backdoor.core.BackdoorCoreServer.makeSqlLiteral;
 import static tanin.backdoor.core.BackdoorCoreServer.makeSqlName;
 
 public abstract class Engine implements AutoCloseable {
+  private static final Logger logger = Logger.getLogger(Engine.class.getName());
+
   public static class InvalidCredentialsException extends Exception {
     public InvalidCredentialsException(String message) {
       super(message);
@@ -131,14 +133,6 @@ public abstract class Engine implements AutoCloseable {
     return connection.createStatement().executeQuery(sql);
   }
 
-  static {
-    try {
-      DriverManager.registerDriver(new org.postgresql.Driver());
-      DriverManager.registerDriver(new com.clickhouse.jdbc.Driver());
-    } catch (SQLException e) {
-      throw new RuntimeException(e);
-    }
-  }
 
   public static Engine createEngine(DatabaseConfig config, User overwritingUser) throws SQLException, URISyntaxException, InvalidCredentialsException, OverwritingUserAndCredentialedJdbcConflictedException {
     if (config.jdbcUrl.startsWith("jdbc:postgres") || config.jdbcUrl.startsWith("postgres")) {

@@ -6,24 +6,14 @@ import tanin.backdoor.core.DatabaseConfig;
 import tanin.backdoor.core.User;
 import tanin.ejwf.MinumBuilder;
 
-import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Map;
 import java.util.Optional;
-import java.util.logging.LogManager;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class BackdoorDesktopServer extends BackdoorCoreServer {
   private static final Logger logger = Logger.getLogger(BackdoorDesktopServer.class.getName());
-
-  static {
-    try (var configFile = BackdoorCoreServer.class.getResourceAsStream("/backdoor_default_logging.properties")) {
-      LogManager.getLogManager().readConfiguration(configFile);
-      logger.info("The log config (backdoor_default_logging.properties) has been loaded.");
-    } catch (IOException e) {
-      logger.warning("Could not load the log config file (backdoor_default_logging.properties): " + e.getMessage());
-    }
-  }
 
   public String authKey;
 
@@ -66,7 +56,15 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
         );
       }
 
-      return inputs.endpoint().apply(inputs.clientRequest());
+      try {
+        logger.info(request.getRequestLine().getMethod() + " " + request.getRequestLine().getPathDetails().getIsolatedPath());
+        var response = inputs.endpoint().apply(inputs.clientRequest());
+        logger.info(request.getRequestLine().getMethod() + " " + request.getRequestLine().getPathDetails().getIsolatedPath() + " " + response.getStatusCode());
+        return response;
+      } catch (Throwable e) {
+        logger.log(Level.SEVERE, request.getRequestLine().getMethod() + " " + request.getRequestLine().getPathDetails().getIsolatedPath() + " raised an error.", e);
+        throw e;
+      }
     });
 
     return minum;
@@ -74,7 +72,7 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
 
   protected IResponse processIndexPage(IRequest req) throws Exception {
     return Response.htmlOk(
-      makeHtml("index.html", null),
+      makeHtml("index.html", null, Paradigm.DESKTOP),
       Map.of(
         "Set-Cookie", AUTH_KEY_COOKIE_KEY + "=" + this.authKey + "; Max-Age=86400; Path=/; Secure; HttpOnly"
       )

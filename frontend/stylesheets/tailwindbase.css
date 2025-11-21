@@ -12,6 +12,13 @@ html, body, #app {
   overflow: hidden;
 }
 
+.resizing {
+  -khtml-user-select: none !important;
+  -webkit-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+}
+
 code {
   @apply rounded text-xs bg-base-300 p-1;
 }

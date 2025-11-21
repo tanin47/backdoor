@@ -1,4 +1,4 @@
-package tanin.javaelectron.nativeinterface;
+package tanin.backdoor.desktop.nativeinterface;
 
 import com.sun.jna.Library;
 import com.sun.jna.Native;
@@ -6,12 +6,12 @@ import com.sun.jna.Native;
 import java.util.Collections;
 import java.util.logging.Logger;
 
-public interface MacOsApi extends tanin.javaelectron.nativeinterface.Base {
-  static final Logger logger = Logger.getLogger(tanin.javaelectron.nativeinterface.WebviewNative.class.getName());
+public interface MacOsApi extends Base {
+  static final Logger logger = Logger.getLogger(WebviewNative.class.getName());
   static final MacOsApi N = runSetup();
 
   private static MacOsApi runSetup() {
-    tanin.javaelectron.nativeinterface.Base.prepareLib("/libMacOsApi.dylib");
+    Base.prepareLib("/libMacOsApi.dylib");
 
     return Native.load(
       "MacOsApi",

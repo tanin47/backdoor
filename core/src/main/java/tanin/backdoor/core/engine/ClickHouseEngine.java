@@ -16,11 +16,23 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Properties;
+import java.util.logging.Logger;
 
 import static tanin.backdoor.core.BackdoorCoreServer.makeSqlLiteral;
 import static tanin.backdoor.core.BackdoorCoreServer.makeSqlName;
 
 public class ClickHouseEngine extends Engine {
+  private static final Logger logger = Logger.getLogger(ClickHouseEngine.class.getName());
+
+  static {
+    try {
+      DriverManager.registerDriver(new com.clickhouse.jdbc.Driver());
+      logger.info("Registered the ClickHouse driver");
+    } catch (SQLException e) {
+      logger.severe("Unable to register the ClickHouse driver: " + e);
+      throw new RuntimeException(e);
+    }
+  }
 
   ClickHouseEngine(DatabaseConfig config, User overwritingUser) throws SQLException, InvalidCredentialsException, OverwritingUserAndCredentialedJdbcConflictedException, URISyntaxException {
     super(config, overwritingUser);

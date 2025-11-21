@@ -1,4 +1,4 @@
-package tanin.javaelectron.nativeinterface;
+package tanin.backdoor.desktop.nativeinterface;
 
 import com.sun.jna.Library;
 
@@ -8,16 +8,16 @@ import java.nio.file.Files;
 import java.util.logging.Logger;
 
 public interface Base extends Library {
-  static final Logger logger = Logger.getLogger(tanin.javaelectron.nativeinterface.WebviewNative.class.getName());
+  static final Logger logger = Logger.getLogger(WebviewNative.class.getName());
   static final File nativeDir = setUpNativeDir();
 
   static File setUpNativeDir() {
-    logger.info("Preparing the native dir: " + nativeDir);
     var dir = new File("./build/native");
+    logger.info("Preparing the native dir: " + dir.getPath());
     if (!dir.exists()) {
       var _ignored = dir.mkdirs();
     }
-    System.setProperty("jna.library.path", dir.getAbsolutePath());
+    System.setProperty("jna.library.path", dir.getPath());
 
     return dir;
   }
@@ -29,7 +29,7 @@ public interface Base extends Library {
       var _ignored = target.delete();
     }
 
-    try (InputStream in = tanin.javaelectron.nativeinterface.MacOsApi.class.getResourceAsStream(resourcePath.toLowerCase())) {
+    try (InputStream in = MacOsApi.class.getResourceAsStream(resourcePath)) {
       assert in != null;
       Files.copy(in, target.toPath());
     } catch (Exception e) {

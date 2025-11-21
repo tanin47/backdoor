@@ -45,8 +45,6 @@ public class Main {
     var browser = new Browser("https://localhost:19999/landing?authKey=" + authKey);
     browser.run();
 
-    logger.info("Blocking...");
-    minum.block();
     logger.info("Exiting");
   }
 }

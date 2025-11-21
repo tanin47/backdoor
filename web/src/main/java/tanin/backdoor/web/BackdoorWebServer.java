@@ -13,13 +13,11 @@ import tanin.backdoor.core.engine.Engine;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
-import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.logging.LogManager;
 import java.util.logging.Logger;
 
 import static com.renomad.minum.web.RequestLine.Method.*;
@@ -30,15 +28,6 @@ public class BackdoorWebServer extends BackdoorCoreServer {
   private static final Logger logger = Logger.getLogger(BackdoorWebServer.class.getName());
   private static final String AUTH_COOKIE_KEY = "backdoor";
   private static final Set<RequestLine.Method> CSRF_READ_METHODS = new HashSet<>(List.of(GET, HEAD, OPTIONS));
-
-  static {
-    try (var configFile = BackdoorCoreServer.class.getResourceAsStream("/backdoor_default_logging.properties")) {
-      LogManager.getLogManager().readConfiguration(configFile);
-      logger.info("The log config (backdoor_default_logging.properties) has been loaded.");
-    } catch (IOException e) {
-      logger.warning("Could not load the log config file (backdoor_default_logging.properties): " + e.getMessage());
-    }
-  }
 
   User[] users;
   public String secretKey;
@@ -332,7 +321,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
         var isLocalHost = req.getHeaders().valueByKey("Host").stream().findFirst().orElse("").startsWith("localhost");
         var csrfToken = extractOrMakeCsrfCookieValue(req, true);
         return Response.htmlOk(
-          makeHtml("login.html", csrfToken),
+          makeHtml("login.html", csrfToken, Paradigm.WEB),
           Map.of("Set-Cookie", makeCsrfTokenSetCookieLine(csrfToken, !isLocalHost))
         );
       }
@@ -437,7 +426,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
     var isLocalHost = req.getHeaders().valueByKey("Host").stream().findFirst().orElse("").startsWith("localhost");
     var csrfToken = extractOrMakeCsrfCookieValue(req, true);
     return Response.htmlOk(
-      makeHtml("index.html", csrfToken),
+      makeHtml("index.html", csrfToken, Paradigm.WEB),
       Map.of("Set-Cookie", makeCsrfTokenSetCookieLine(csrfToken, !isLocalHost))
     );
   }

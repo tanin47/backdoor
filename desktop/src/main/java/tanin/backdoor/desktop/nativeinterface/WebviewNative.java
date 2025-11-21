@@ -1,4 +1,4 @@
-package tanin.javaelectron.nativeinterface;
+package tanin.backdoor.desktop.nativeinterface;
 
 
 import com.sun.jna.Callback;
@@ -17,7 +17,7 @@ public interface WebviewNative extends Library {
   static final WebviewNative N = runSetup();
 
   private static WebviewNative runSetup() {
-    tanin.javaelectron.nativeinterface.Base.prepareLib("/webview/libwebview.dylib");
+    Base.prepareLib("/webview/libwebview.dylib");
 
     return Native.load(
       "webview",
