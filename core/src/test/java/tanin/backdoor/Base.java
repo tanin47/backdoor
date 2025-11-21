@@ -277,6 +277,9 @@ public class Base {
   }
 
   public void sendClearKeys() throws InterruptedException {
+    // For codemirror, we might need to wait a bit for it to be focused.
+    Thread.sleep(500);
+
     var actions = new Actions(webDriver);
     var modifierKey = IS_MAC ? Keys.COMMAND : Keys.CONTROL;
     actions
