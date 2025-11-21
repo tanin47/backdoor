@@ -51,7 +51,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
     User[] users,
     String secretKey
   ) {
-    super(databaseConfigs, port, sslPort);
+    super(databaseConfigs, port, sslPort, null);
     this.secretKey = secretKey;
 
     if (users != null) {

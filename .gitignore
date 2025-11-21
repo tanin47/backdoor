@@ -11,3 +11,4 @@ SYSTEM_RUNNING
 ./db
 build
 .gradle
+hr_err*.log

@@ -101,13 +101,3 @@ tasks.register<Exec>("compileSvelte") {
         "production"
     )
 }
-
-tasks.processResources {
-    dependsOn("compileTailwind")
-    dependsOn("compileSvelte")
-}
-
-tasks.named("sourcesJar") {
-    dependsOn("compileTailwind")
-    dependsOn("compileSvelte")
-}
