@@ -67,10 +67,15 @@ jobs:
         uses: codecov/codecov-action@v5
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_ORG_TOKEN }}
-      - name: Publish Test Results
-        uses: dorny/test-reporter@v1
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v5
         if: ${{ !cancelled() }}
         with:
-          name: CI test result
-          path: ./**/build/test-results/test/*.xml
-          reporter: java-junit
+          require_tests: true
+          report_paths: '**/build/test-results/test/*.xml'
+      - name: Upload Failed Screenshots
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: failed-screenshots
+          path: '**/build/failed-screenshots/'

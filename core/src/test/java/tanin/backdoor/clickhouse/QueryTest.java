@@ -9,7 +9,7 @@ public class QueryTest extends Base {
   @Test
   void createRenameUpdateDeleteView() throws InterruptedException {
     go("/");
-    click(".CodeMirror");
+    click(".CodeMirror-code");
     sendKeys("select * from \"project_setting\" order by user_id asc limit 1");
     select(tid("run-sql-database-select"), "clickhouse");
     click(tid("run-sql-button"));
@@ -37,7 +37,7 @@ public class QueryTest extends Base {
     waitUntil(() -> hasElem(tid("sheet-tab", "bdv_test")));
     waitUntil(() -> hasElem(tid("menu-items", "clickhouse", null, "menu-item-query", "bdv_test")));
 
-    click(".CodeMirror");
+    click(".CodeMirror-code");
     sendClearKeys();
     sendKeys("select * from \"project_setting\" order by user_id desc limit 1");
     click(tid("run-sql-button"));
@@ -65,7 +65,7 @@ public class QueryTest extends Base {
   @Test
   void makeNewSql() throws InterruptedException {
     go("/");
-    click(".CodeMirror");
+    click(".CodeMirror-code");
     sendKeys("select 1");
     select(tid("run-sql-database-select"), "clickhouse");
     click(tid("run-sql-button"));
@@ -84,7 +84,7 @@ public class QueryTest extends Base {
 
     click(tid("make-new-sql-button"));
 
-    click(".CodeMirror");
+    click(".CodeMirror-code");
     sendClearKeys();
     sendKeys("select 2");
     click(tid("run-sql-button"));

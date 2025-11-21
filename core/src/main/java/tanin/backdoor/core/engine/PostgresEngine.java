@@ -80,7 +80,7 @@ public class PostgresEngine extends Engine {
 
     try {
       connection = DriverManager.getConnection(url, props);
-      connection.createStatement().execute("SELECT 'backdoor_test_connection_for_postgres'");
+      execute("SELECT 'backdoor_test_connection_for_postgres'");
     } catch (PSQLException e) {
       if (e.getSQLState().equals("28000") || e.getSQLState().equals("28P01") || e.getSQLState().equals("08004")) {
         throw new InvalidCredentialsException(e.getMessage());
@@ -92,7 +92,7 @@ public class PostgresEngine extends Engine {
 
   @Override
   public Column[] getColumns(String table) throws SQLException {
-    var rs = connection.createStatement().executeQuery(
+    var rs = executeQuery(
       "SELECT c.column_name, c.data_type, c.is_nullable, " +
         "CASE WHEN tc.constraint_type = 'PRIMARY KEY' THEN true ELSE false END as is_primary_key " +
         "FROM information_schema.columns c " +
@@ -125,7 +125,7 @@ public class PostgresEngine extends Engine {
   @Override
   public String[] getTables() throws SQLException {
     var tables = new ArrayList<String>();
-    var rs = connection.createStatement().executeQuery(
+    var rs = executeQuery(
       "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' ORDER BY table_name ASC;"
     );
     while (rs.next()) {
@@ -145,7 +145,7 @@ public class PostgresEngine extends Engine {
       throw new Exception();
     }
 
-    connection.createStatement().execute(
+    execute(
       "UPDATE " + makeSqlName(table) +
         " SET " + makeSqlName(column.name) + " = " +
         (newValue == null ? "NULL" : makeUpdateValue(column, newValue)) +
@@ -164,14 +164,14 @@ public class PostgresEngine extends Engine {
       throw new Exception();
     }
 
-    connection.createStatement().execute(
+    execute(
       "DELETE FROM " + makeSqlName(table) + whereClause
     );
   }
 
   @Override
   public void rename(String table, String newTableName) throws SQLException {
-    connection.createStatement().execute("ALTER TABLE " + makeSqlName(table) + " RENAME TO " + makeSqlName(newTableName));
+    execute("ALTER TABLE " + makeSqlName(table) + " RENAME TO " + makeSqlName(newTableName));
   }
 
   private String makeUpdateValue(Column column, String value) {
@@ -207,7 +207,7 @@ public class PostgresEngine extends Engine {
       return BackdoorCoreServer.SqlType.ADMINISTRATIVE;
     }
 
-    var rs = connection.createStatement().executeQuery("explain (format json) " + sql);
+    var rs = executeQuery("explain (format json) " + sql);
     rs.next();
     var result = Json.parse(rs.getString(1));
     var isModifyingTable = result.asArray().get(0).asObject().get("Plan").asObject().get("Node Type").asString().equals("ModifyTable");
