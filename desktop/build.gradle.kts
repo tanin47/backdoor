@@ -12,7 +12,7 @@ plugins {
 // TODO: Replace the below with the name of your 'Developer ID Application' cert which you can get from https://developer.apple.com/account/resources/certificates/list
 val macDeveloperApplicationCertName = "Developer ID Application: Tanin Na Nakorn (S6482XAL5E)"
 // TODO: Replace the below with the prefix of your bundle ID which you can get from https://developer.apple.com/account/resources/identifiers/list
-val codesignPackagePrefix = "tanin.backdoor.desktop.macos."
+val codesignPackagePrefix = "tanin.backdoor.desktop."
 
 group = "tanin.backdoor.desktop"
 version = "1.0.0"
@@ -125,7 +125,7 @@ tasks.jar {
 tasks.register<Exec>("compileTailwind") {
     workingDir = layout.projectDirectory.dir("..").asFile
     inputs.files(fileTree("frontend"))
-    outputs.dir("build/compiled-frontend-resources")
+    outputs.dir("./desktop/build/compiled-frontend-resources")
 
     environment("NODE_ENV", "production")
 
@@ -135,14 +135,14 @@ tasks.register<Exec>("compileTailwind") {
         "--config",
         ".",
         "--output",
-        "./build/compiled-frontend-resources/assets/stylesheets/tailwindbase.css"
+        "./desktop/build/compiled-frontend-resources/assets/stylesheets/tailwindbase.css"
     )
 }
 
 tasks.register<Exec>("compileSvelte") {
     workingDir = layout.projectDirectory.dir("..").asFile
     inputs.files(fileTree("frontend"))
-    outputs.dir("build/compiled-frontend-resources")
+    outputs.dir("./desktop/build/compiled-frontend-resources")
 
     environment("NODE_ENV", "production")
     environment("ENABLE_SVELTE_CHECK", "true")
@@ -152,7 +152,7 @@ tasks.register<Exec>("compileSvelte") {
         "--config",
         "./webpack.config.js",
         "--output-path",
-        "./build/compiled-frontend-resources/assets",
+        "./desktop/build/compiled-frontend-resources/assets",
         "--mode",
         "production"
     )
@@ -187,6 +187,7 @@ private fun runCmd(vararg args: String) {
     println("Executing command: ${args.joinToString(" ")}")
 
     val retVal = ProcessBuilder(*args)
+        .directory(layout.projectDirectory.asFile)
         .start()
         .waitFor()
 
@@ -282,7 +283,7 @@ tasks.register<Exec>("jlink") {
         "--module-path",
         "${System.getProperty("java.home")}/jmods;${inputs.files.singleFile.absolutePath}",
         "--add-modules",
-        "java.base,java.desktop,java.logging,java.net.http,java.security.jgss,jdk.unsupported,java.security.sasl,jdk.crypto.ec,jdk.crypto.cryptoki",
+        "java.base,java.desktop,java.logging,java.net.http,java.security.jgss,jdk.unsupported,java.security.sasl,jdk.crypto.ec,jdk.crypto.cryptoki,java.sql,java.management",
         "--output",
         outputs.files.singleFile.absolutePath,
     )

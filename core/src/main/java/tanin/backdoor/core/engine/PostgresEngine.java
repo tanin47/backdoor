@@ -13,11 +13,23 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.logging.Logger;
 
 import static tanin.backdoor.core.BackdoorCoreServer.makeSqlLiteral;
 import static tanin.backdoor.core.BackdoorCoreServer.makeSqlName;
 
 public class PostgresEngine extends Engine {
+  private static final Logger logger = Logger.getLogger(PostgresEngine.class.getName());
+
+  static {
+    try {
+      DriverManager.registerDriver(new org.postgresql.Driver());
+      logger.info("Registered the Postgres driver");
+    } catch (SQLException e) {
+      logger.severe("Unable to register the Postgres driver: " + e);
+      throw new RuntimeException(e);
+    }
+  }
 
   PostgresEngine(DatabaseConfig config, User overwritingUser) throws SQLException, URISyntaxException, InvalidCredentialsException, OverwritingUserAndCredentialedJdbcConflictedException {
     super(config, overwritingUser);

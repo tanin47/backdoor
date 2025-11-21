@@ -5,7 +5,7 @@ import {FetchError, post} from "./common/form";
 import {onMount} from "svelte";
 import EditorPanel from "./_editor_panel.svelte";
 import {type Database, type Query, Sheet} from "./common/models";
-import {generateName, IS_LOCAL_DEV} from "./common/globals";
+import {generateName, IS_LOCAL_DEV, PARADIGM} from "./common/globals";
 import ErrorModal from "./common/_error_modal.svelte"
 
 let sheetPanel: SheetPanel;
@@ -48,12 +48,12 @@ let resizeMode: ResizeMode = null
 
 function startResize(mode: ResizeMode) {
   resizeMode = mode;
-  document.body.style.userSelect = 'none';
+  document.body.classList.add('resizing');
 }
 
 function stopResize() {
   resizeMode = null;
-  document.body.style.userSelect = '';
+  document.body.classList.remove('resizing');
 }
 
 function handleResize(event: MouseEvent) {
@@ -169,14 +169,16 @@ export async function runSql(database: string, sql: string): Promise<void> {
         />
         {/each}
       </div>
-      <a
-        href="/logout"
-        class="flex flex-row items-center p-2 gap-1 bg-base-300  text-gray-400 text-sm"
-        data-test-id="logout-button"
-      >
-        <i class="ph ph-sign-out"></i>
-        <span>Log out</span>
-      </a>
+      {#if PARADIGM === 'WEB'}
+        <a
+          href="/logout"
+          class="flex flex-row items-center p-2 gap-1 bg-base-300  text-gray-400 text-sm"
+          data-test-id="logout-button"
+        >
+          <i class="ph ph-sign-out"></i>
+          <span>Log out</span>
+        </a>
+      {/if}
     </div>
     <div class="flex flex-col items-stretch h-full w-full overflow-hidden">
       <SheetPanel

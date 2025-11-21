@@ -1,6 +1,10 @@
 // @ts-expect-error defined globally
 export const IS_LOCAL_DEV: string = window.IS_LOCAL_DEV;
 
+export type Paradigm = 'CORE' | 'WEB' | 'DESKTOP';
+// @ts-expect-error defined globally
+export const PARADIGM: string = window.PARADIGM;
+
 
 const NAMES = [
   "acacia",
