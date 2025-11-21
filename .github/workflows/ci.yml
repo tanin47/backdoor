@@ -60,7 +60,7 @@ jobs:
       - name: Run tests
         run: |
           npm run hmr &
-          ./gradlew --no-daemon jacocoTestReport
+          ./gradlew --no-daemon :web:jacocoTestReport :core:jacocoTestReport
         env:
           HEADLESS: true
       - name: Upload coverage to Codecov

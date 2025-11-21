@@ -151,7 +151,8 @@ public class Base {
         new DatabaseConfig(clickHouseConfig.nickname, clickHouseConfig.jdbcUrl, clickHouseConfig.username, clickHouseConfig.password)
       },
       PORT,
-      0
+      0,
+      null
     ) {
       @Override
       protected User getUserByDatabaseConfig(DatabaseConfig databaseConfig) {

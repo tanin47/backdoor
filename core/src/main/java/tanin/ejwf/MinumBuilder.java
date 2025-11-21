@@ -7,6 +7,7 @@ import com.renomad.minum.web.FullSystem;
 import com.renomad.minum.web.Response;
 import com.renomad.minum.web.StatusLine;
 
+import java.io.File;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -43,7 +44,10 @@ public class MinumBuilder {
 
   public static final boolean IS_LOCAL_DEV = Files.exists(Path.of("./local_dev_marker.ejwf")) || Files.exists(Path.of("../local_dev_marker.ejwf"));
 
-  public static FullSystem start(int port, int sslPort) {
+  public static record KeyStore(File file, String password) {
+  }
+
+  public static FullSystem start(int port, int sslPort, KeyStore keyStore) {
     if (IS_LOCAL_DEV) {
       logger.info("Running in the local development mode. Hot-Reload Module is enabled. `npm run hmr` must be running in a separate terminal");
     } else {
@@ -57,6 +61,12 @@ public class MinumBuilder {
     props.setProperty("SSL_SERVER_PORT", "" + sslPort);
     props.setProperty("LOG_LEVELS", "ASYNC_ERROR,AUDIT");
     props.setProperty("IS_THE_BRIG_ENABLED", "false");
+    props.setProperty("ENABLE_SYSTEM_RUNNING_MARKER", "false");
+
+    if (keyStore != null) {
+      props.setProperty("KEYSTORE_PATH", keyStore.file.getAbsolutePath());
+      props.setProperty("KEYSTORE_PASSWORD", keyStore.password);
+    }
 
     var context = new Context(Executors.newVirtualThreadPerTaskExecutor(), new Constants(props));
     context.setLogger(new Logger(context.getConstants(), context.getExecutorService(), "primary logger"));

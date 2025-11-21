@@ -60,17 +60,20 @@ public abstract class BackdoorCoreServer {
   public DatabaseConfig[] databaseConfigs;
   int port;
   int sslPort;
+  MinumBuilder.KeyStore keyStore;
   private FullSystem minum;
 
 
   public BackdoorCoreServer(
     DatabaseConfig[] databaseConfigs,
     int port,
-    int sslPort
+    int sslPort,
+    MinumBuilder.KeyStore keyStore
   ) {
     this.databaseConfigs = databaseConfigs;
     this.port = port;
     this.sslPort = sslPort;
+    this.keyStore = keyStore;
   }
 
   protected abstract User getUserByDatabaseConfig(DatabaseConfig databaseConfig);
@@ -130,7 +133,7 @@ public abstract class BackdoorCoreServer {
   }
 
   public FullSystem start() throws SQLException {
-    minum = MinumBuilder.start(this.port, this.sslPort);
+    minum = MinumBuilder.start(this.port, this.sslPort, this.keyStore);
     var wf = minum.getWebFramework();
 
 
@@ -452,6 +455,12 @@ public abstract class BackdoorCoreServer {
           );
         }
       }
+    );
+
+    wf.registerPath(
+      GET,
+      "landing",
+      this::processIndexPage
     );
 
     wf.registerPath(
