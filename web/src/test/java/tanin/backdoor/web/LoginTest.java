@@ -13,7 +13,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class LoginTest extends Base {
   LoginTest() {
     shouldLoggedIn = false;
-    waitUntilTimeoutInMillis = 15000;
   }
 
   @Test
@@ -37,7 +36,7 @@ public class LoginTest extends Base {
     fill(tid("username"), "backdoor");
     fill(tid("password"), "test");
     click(".altcha-checkbox input[type='checkbox']");
-    waitUntil(() -> {
+    waitUntil(15000, () -> {
       assertEquals("true", elem(".altcha-checkbox input[type='checkbox']").getDomProperty("checked"));
     });
     click(tid("submit-button"));
@@ -66,7 +65,7 @@ public class LoginTest extends Base {
     fill(tid("username"), "backdoor");
     fill(tid("password"), "test123");
     click(".altcha-checkbox input[type='checkbox']");
-    waitUntil(() -> {
+    waitUntil(15000, () -> {
       assertEquals("true", elem(".altcha-checkbox input[type='checkbox']").getDomProperty("checked"));
     });
     click(tid("submit-button"));
@@ -97,7 +96,7 @@ public class LoginTest extends Base {
     fill(tid("username"), "backdoor_test_user");
     fill(tid("password"), "test");
     click(".altcha-checkbox input[type='checkbox']");
-    waitUntil(() -> {
+    waitUntil(15000, () -> {
       assertEquals("true", elem(".altcha-checkbox input[type='checkbox']").getDomProperty("checked"));
     });
     click(tid("submit-button"));
@@ -136,7 +135,7 @@ public class LoginTest extends Base {
     fill(tid("username"), "backdoor_test_user");
     fill(tid("password"), "test");
     click(".altcha-checkbox input[type='checkbox']");
-    waitUntil(() -> {
+    waitUntil(15000, () -> {
       assertEquals("true", elem(".altcha-checkbox input[type='checkbox']").getDomProperty("checked"));
     });
     click(tid("submit-button"));
@@ -146,7 +145,7 @@ public class LoginTest extends Base {
     fill(tid("username"), "backdoor");
     fill(tid("password"), "test_ch");
     click(".altcha-checkbox input[type='checkbox']");
-    waitUntil(() -> {
+    waitUntil(15000, () -> {
       assertEquals("true", elem(".altcha-checkbox input[type='checkbox']").getDomProperty("checked"));
     });
     click(tid("submit-button"));
@@ -187,7 +186,7 @@ public class LoginTest extends Base {
     fill(tid("username"), "backdoor");
     fill(tid("password"), "test_ch");
     click(".altcha-checkbox input[type='checkbox']");
-    waitUntil(() -> {
+    waitUntil(15000, () -> {
       assertEquals("true", elem(".altcha-checkbox input[type='checkbox']").getDomProperty("checked"));
     });
     click(tid("submit-button"));
@@ -197,7 +196,7 @@ public class LoginTest extends Base {
     fill(tid("username"), "backdoor_test_user");
     fill(tid("password"), "test");
     click(".altcha-checkbox input[type='checkbox']");
-    waitUntil(() -> {
+    waitUntil(15000, () -> {
       assertEquals("true", elem(".altcha-checkbox input[type='checkbox']").getDomProperty("checked"));
     });
     click(tid("submit-button"));
@@ -232,7 +231,7 @@ public class LoginTest extends Base {
     fill(tid("username"), "random_user");
     fill(tid("password"), "test123");
     click(".altcha-checkbox input[type='checkbox']");
-    waitUntil(() -> {
+    waitUntil(15000, () -> {
       assertEquals("true", elem(".altcha-checkbox input[type='checkbox']").getDomProperty("checked"));
     });
     click(tid("submit-button"));

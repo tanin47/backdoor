@@ -17,7 +17,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 public class LoginAdditionalTest extends Base {
   LoginAdditionalTest() {
     shouldLoggedIn = false;
-    waitUntilTimeoutInMillis = 15000;
   }
 
   @BeforeEach
@@ -40,7 +39,12 @@ public class LoginAdditionalTest extends Base {
     webDriver.manage().deleteAllCookies();
     webDriver.manage().addCookie(new Cookie(
       "backdoor",
-      BackdoorWebServer.makeAuthCookieValueForUser(new User[]{new User("backdoor_test_user", "test", "postgres")}, server.secretKey, Instant.now().plus(1, ChronoUnit.DAYS))
+      BackdoorWebServer.makeAuthCookieValueForUser(
+        new User[]{new User("backdoor_test_user", "test", "postgres")},
+        new DatabaseConfig[0],
+        server.secretKey,
+        Instant.now().plus(1, ChronoUnit.DAYS)
+      )
     ));
     go("/");
 
@@ -62,7 +66,7 @@ public class LoginAdditionalTest extends Base {
     fill(tid("username"), "backdoor");
     fill(tid("password"), "test_ch");
     click(".altcha-checkbox input[type='checkbox']");
-    waitUntil(() -> {
+    waitUntil(15000, () -> {
       assertEquals("true", elem(".altcha-checkbox input[type='checkbox']").getDomProperty("checked"));
     });
     click(tid("submit-button"));

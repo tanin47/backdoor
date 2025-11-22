@@ -1,13 +1,12 @@
 package tanin.backdoor;
 
-import jdk.jfr.Description;
-import org.apache.commons.codec.language.bm.Rule;
+import com.renomad.minum.web.IRequest;
+import com.renomad.minum.web.IResponse;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.AfterTestExecutionCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.api.extension.TestWatcher;
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
@@ -26,7 +25,6 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -189,6 +187,16 @@ public class Base {
     ) {
       @Override
       protected User getUserByDatabaseConfig(DatabaseConfig databaseConfig) {
+        return null;
+      }
+
+      @Override
+      protected DatabaseConfig[] getAdHocDatabaseConfigs() {
+        return new DatabaseConfig[0];
+      }
+
+      @Override
+      protected IResponse handleAddingValidDataSource(IRequest req, DatabaseConfig adHocDatabaseConfig) throws Exception {
         return null;
       }
     };

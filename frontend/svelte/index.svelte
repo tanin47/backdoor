@@ -7,6 +7,7 @@ import EditorPanel from "./_editor_panel.svelte";
 import {type Database, type Query, Sheet} from "./common/models";
 import {generateName, IS_LOCAL_DEV, PARADIGM} from "./common/globals";
 import ErrorModal from "./common/_error_modal.svelte"
+import NewDataSourceModal from "./_new_data_source_modal.svelte"
 
 let sheetPanel: SheetPanel;
 
@@ -14,6 +15,7 @@ let selectedQuery: Query | null = null
 let selectedDatabase: Database | null = null
 
 let errorModal: ErrorModal;
+let newDataSourceModal: NewDataSourceModal;
 
 let isLoading = false
 let databases: Database[] = []
@@ -112,6 +114,7 @@ export async function runSql(database: string, sql: string): Promise<void> {
 <svelte:window on:mousemove={handleResize} on:mouseup={stopResize}/>
 
 <ErrorModal bind:this={errorModal} />
+<NewDataSourceModal bind:this={newDataSourceModal} onAdded={async () => {await load()}} />
 
 <div class="relative h-full w-full flex flex-row items-stretch">
   {#if isLoading}
@@ -145,34 +148,42 @@ export async function runSql(database: string, sql: string): Promise<void> {
           <i class="ph ph-door-open"></i>
           <div class="whitespace-nowrap overflow-hidden text-ellipsis">Backdoor</div>
         </a>
+        <div
+          class="flex flex-row items-center p-2 gap-2 bg-base-300  text-gray-400 text-sm cursor-pointer"
+          data-test-id="add-new-data-source-button"
+          onclick={() => {newDataSourceModal.open()}}
+        >
+          <i class="ph ph-plus-circle text-sm"></i>
+          <span class="overflow-hidden text-ellipsis font-mono text-xs whitespace-nowrap">Add Data Source</span>
+        </div>
         {#each databases as database, index (index)}
-        <TableMenuList
-          {database}
-          {queries}
-          {selectedQuery}
-          onTableClicked={async (table) => {
-            selectedDatabase = database
-            await sheetPanel.openTable(table)
-          }}
-          onQueryClicked={async (query) => {
-            selectedDatabase = database
-            if (selectedQuery === query) {
-              selectedQuery = null;
-            } else {
-              selectedQuery = query;
-            }
-            await sheetPanel.openQuery(query)
-          }}
-          onLoggedIn={async () => {
-            await load();
-          }}
-        />
+          <TableMenuList
+            {database}
+            {queries}
+            {selectedQuery}
+            onTableClicked={async (table) => {
+              selectedDatabase = database
+              await sheetPanel.openTable(table)
+            }}
+            onQueryClicked={async (query) => {
+              selectedDatabase = database
+              if (selectedQuery === query) {
+                selectedQuery = null;
+              } else {
+                selectedQuery = query;
+              }
+              await sheetPanel.openQuery(query)
+            }}
+            onLoggedIn={async () => {
+              await load();
+            }}
+          />
         {/each}
       </div>
       {#if PARADIGM === 'WEB'}
         <a
           href="/logout"
-          class="flex flex-row items-center p-2 gap-1 bg-base-300  text-gray-400 text-sm"
+          class="flex flex-row items-center p-2 gap-2 bg-base-300  text-gray-400 text-sm"
           data-test-id="logout-button"
         >
           <i class="ph ph-sign-out"></i>

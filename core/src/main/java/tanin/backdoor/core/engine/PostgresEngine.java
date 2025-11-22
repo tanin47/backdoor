@@ -31,12 +31,12 @@ public class PostgresEngine extends Engine {
     }
   }
 
-  PostgresEngine(DatabaseConfig config, User overwritingUser) throws SQLException, URISyntaxException, InvalidCredentialsException, OverwritingUserAndCredentialedJdbcConflictedException {
+  PostgresEngine(DatabaseConfig config, User overwritingUser) throws SQLException, URISyntaxException, InvalidCredentialsException, OverwritingUserAndCredentialedJdbcConflictedException, UnreachableServerException, InvalidDatabaseNameProbablyException {
     super(config, overwritingUser);
   }
 
   @Override
-  protected void connect(DatabaseConfig config, User overwritingUser) throws SQLException, InvalidCredentialsException, URISyntaxException {
+  protected void connect(DatabaseConfig config, User overwritingUser) throws SQLException, InvalidCredentialsException, URISyntaxException, UnreachableServerException, InvalidDatabaseNameProbablyException {
 
     var url = config.jdbcUrl;
     var props = new Properties();
@@ -82,8 +82,12 @@ public class PostgresEngine extends Engine {
       connection = DriverManager.getConnection(url, props);
       execute("SELECT 'backdoor_test_connection_for_postgres'");
     } catch (PSQLException e) {
-      if (e.getSQLState().equals("28000") || e.getSQLState().equals("28P01") || e.getSQLState().equals("08004")) {
+      if (e.getSQLState().equals("28P01") || e.getSQLState().equals("08004")) {
         throw new InvalidCredentialsException(e.getMessage());
+      } else if (e.getSQLState().equals("28000")) {
+        throw new InvalidDatabaseNameProbablyException(e.getMessage());
+      } else if (e.getSQLState().equals("08001")) {
+        throw new UnreachableServerException(e.getMessage());
       } else {
         throw e;
       }

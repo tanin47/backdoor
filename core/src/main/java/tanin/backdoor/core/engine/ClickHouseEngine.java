@@ -34,7 +34,7 @@ public class ClickHouseEngine extends Engine {
     }
   }
 
-  ClickHouseEngine(DatabaseConfig config, User overwritingUser) throws SQLException, InvalidCredentialsException, OverwritingUserAndCredentialedJdbcConflictedException, URISyntaxException {
+  ClickHouseEngine(DatabaseConfig config, User overwritingUser) throws SQLException, InvalidCredentialsException, OverwritingUserAndCredentialedJdbcConflictedException, URISyntaxException, UnreachableServerException, InvalidDatabaseNameProbablyException {
     super(config, overwritingUser);
   }
 
