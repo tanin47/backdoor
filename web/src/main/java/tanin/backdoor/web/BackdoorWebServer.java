@@ -261,6 +261,14 @@ public class BackdoorWebServer extends BackdoorCoreServer {
       if (isCsrfValid) {
         try {
           response = inputs.endpoint().apply(inputs.clientRequest());
+        } catch (SQLException e) {
+          return Response.buildResponse(
+            StatusLine.StatusCode.CODE_400_BAD_REQUEST,
+            Map.of("Content-Type", "application/json"),
+            Json.object()
+              .add("errors", Json.array(e.getMessage()))
+              .toString()
+          );
         } catch (EarlyExitException e) {
           return e.response;
         }

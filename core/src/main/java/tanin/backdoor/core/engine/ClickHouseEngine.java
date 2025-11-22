@@ -7,10 +7,12 @@ import tanin.backdoor.core.*;
 
 import java.math.BigDecimal;
 import java.net.URISyntaxException;
+import java.util.UUID;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Time;
+import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -55,6 +57,7 @@ public class ClickHouseEngine extends Engine {
     }
     props.setProperty("clickhouse_setting_mutations_sync", "2");
     props.setProperty("clickhouse_setting_enable_time_time64_type", "1");
+    props.setProperty("clickhouse_setting_session_id", "clickhouse-session-" + Instant.now().toEpochMilli() + "-" + UUID.randomUUID());
 
     try {
       connection = DriverManager.getConnection(config.jdbcUrl, props);
