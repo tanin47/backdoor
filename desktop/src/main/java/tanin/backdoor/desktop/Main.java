@@ -30,10 +30,7 @@ public class Main {
     var authKey = SelfSignedCertificate.generateRandomString(32);
     logger.info("The auth key is randomly generated on each run: " + authKey);
     var server = new BackdoorDesktopServer(
-      new DatabaseConfig[]{
-        new DatabaseConfig("postgres", "postgres://127.0.0.1:5432/backdoor_test", null, null),
-        new DatabaseConfig("clickhouse", "jdbc:ch://localhost:8123?user=backdoor&password=test_ch", null, null)
-      },
+      new DatabaseConfig[0],
       0,
       19999,
       authKey,
