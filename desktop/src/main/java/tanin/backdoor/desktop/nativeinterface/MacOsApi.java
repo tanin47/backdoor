@@ -21,4 +21,6 @@ public interface MacOsApi extends Base {
   }
 
   void setupMenu();
+
+  void nsWindowMakeKeyAndOrderFront();
 }
