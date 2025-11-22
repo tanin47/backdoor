@@ -69,6 +69,7 @@ async function submit() {
       class="input w-full"
       disabled={isLoading}
       bind:value={newName}
+      autocorrect="off"
     >
     <ErrorPanel {errors}/>
     <div class="flex items-center justify-between mt-2">

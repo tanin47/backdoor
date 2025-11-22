@@ -58,6 +58,7 @@ let isValidHost = isLocalhost ? true : window.location.protocol === 'https:';
         <div class="card-body flex flex-col gap-4" onkeydown={invokeOnEnter(submit)}>
           <span class="label">Username</span>
           <input type="text" class="input w-full" placeholder="Username" data-test-id="username"
+                 autocorrect="off"
                  bind:value={form.username}/>
           <span class="label">Password</span>
           <input type="password" class="input w-full" placeholder="Password" data-test-id="password"

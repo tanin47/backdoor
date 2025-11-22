@@ -69,7 +69,8 @@ public record AuthCookie(
           u.get("nickname").asString(),
           u.get("url").asString(),
           u.get("username").asString(),
-          u.get("password").asString()
+          u.get("password").asString(),
+          true
         ));
       }
     }

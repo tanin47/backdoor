@@ -1,8 +1,8 @@
 package tanin.backdoor.desktop;
 
 
-import tanin.backdoor.desktop.nativeinterface.MacOsApi;
 import sun.misc.Signal;
+import tanin.backdoor.desktop.nativeinterface.MacOsApi;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;

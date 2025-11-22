@@ -199,6 +199,11 @@ public class Base {
       protected IResponse handleAddingValidDataSource(IRequest req, DatabaseConfig adHocDatabaseConfig) throws Exception {
         return null;
       }
+
+      @Override
+      protected IResponse handleRemovingValidDataSource(IRequest req, DatabaseConfig removedDatabaseConfig) throws Exception {
+        return null;
+      }
     };
     server.start();
 

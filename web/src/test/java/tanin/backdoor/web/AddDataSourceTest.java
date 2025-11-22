@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class AddDataSourceTest extends Base {
   @Test
-  void addPostgres() throws InterruptedException {
+  void addAndDeletePostgres() throws InterruptedException {
     go("/");
     click(tid("add-new-data-source-button"));
     fill(tid("url"), "postgres://backdoor_test_user:test@127.0.0.1:5432/backdoor_test");
@@ -27,6 +27,15 @@ public class AddDataSourceTest extends Base {
     assertEquals(
       List.of("user"),
       elems(tid("menu-items", "adhoc-test", null, "menu-item-table")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()
+    );
+
+    click(tid("delete-data-source-button"));
+    click(tid("submit-button"));
+    waitUntil(() -> assertFalse(hasElem(tid("submit-button"))));
+
+    assertEquals(
+      List.of("postgres", "clickhouse"),
+      elems(tid("menu-items")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()
     );
   }
 

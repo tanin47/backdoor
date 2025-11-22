@@ -87,7 +87,7 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
         var password = preferences.get(nickname + ".password", null);
 
         if (jdbcUrl != null) {
-          configs.add(new DatabaseConfig(nickname, jdbcUrl, username, password));
+          configs.add(new DatabaseConfig(nickname, jdbcUrl, username, password, true));
         }
       }
     }
@@ -102,6 +102,22 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
     preferences.put(adHocDatabaseConfig.nickname + ".username", adHocDatabaseConfig.username);
     preferences.put(adHocDatabaseConfig.nickname + ".password", adHocDatabaseConfig.password);
     preferences.flush();
+
+    return Response.buildResponse(
+      StatusLine.StatusCode.CODE_200_OK,
+      Map.of("Content-Type", "application/json"),
+      Json.object().toString()
+    );
+  }
+
+  @Override
+  protected IResponse handleRemovingValidDataSource(IRequest req, DatabaseConfig removedDatabaseConfig) throws Exception {
+    var preferences = Preferences.userNodeForPackage(BackdoorDesktopServer.class);
+    preferences.remove(removedDatabaseConfig.nickname + ".jdbcUrl");
+    preferences.remove(removedDatabaseConfig.nickname + ".username");
+    preferences.remove(removedDatabaseConfig.nickname + ".password");
+    preferences.flush();
+
     return Response.buildResponse(
       StatusLine.StatusCode.CODE_200_OK,
       Map.of("Content-Type", "application/json"),
