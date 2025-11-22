@@ -2,6 +2,7 @@ package tanin.backdoor.desktop;
 
 
 import tanin.backdoor.desktop.nativeinterface.MacOsApi;
+import sun.misc.Signal;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -26,8 +27,10 @@ public class Browser {
     N.webview_set_size(this.pointer, 1000, 600, WV_HINT_FIXED);
     N.webview_navigate(this.pointer, this.url);
 
+    Signal.handle(new Signal("INT"), sig -> terminate());
     Runtime.getRuntime().addShutdownHook(new Thread(this::terminate));
 
+    MacOsApi.N.nsWindowMakeKeyAndOrderFront();
     N.webview_run(this.pointer);
     if (this.pointer != 0) {
       N.webview_destroy(this.pointer);

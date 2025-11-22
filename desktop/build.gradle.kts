@@ -124,8 +124,8 @@ tasks.jar {
 
 tasks.register<Exec>("compileTailwind") {
     workingDir = layout.projectDirectory.dir("..").asFile
-    inputs.files(fileTree("frontend"))
-    outputs.dir("./build/compiled-frontend-resources")
+//    inputs.files(fileTree("frontend"))
+//    outputs.dir("./build/compiled-frontend-resources")
 
     environment("NODE_ENV", "production")
 
@@ -141,8 +141,8 @@ tasks.register<Exec>("compileTailwind") {
 
 tasks.register<Exec>("compileSvelte") {
     workingDir = layout.projectDirectory.dir("..").asFile
-    inputs.files(fileTree("frontend"))
-    outputs.dir("./build/compiled-frontend-resources")
+//    inputs.files(fileTree("frontend"))
+//    outputs.dir("./build/compiled-frontend-resources")
 
     environment("NODE_ENV", "production")
     environment("ENABLE_SVELTE_CHECK", "true")
