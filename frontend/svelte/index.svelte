@@ -8,6 +8,8 @@ import {type Database, type Query, Sheet} from "./common/models";
 import {generateName, IS_LOCAL_DEV, PARADIGM} from "./common/globals";
 import ErrorModal from "./common/_error_modal.svelte"
 import NewDataSourceModal from "./_new_data_source_modal.svelte"
+import DeleteDataSourceModal from "./_delete_data_source_modal.svelte"
+import AdditionalLoginModal from "./_additional_login_modal.svelte";
 
 let sheetPanel: SheetPanel;
 
@@ -16,6 +18,8 @@ let selectedDatabase: Database | null = null
 
 let errorModal: ErrorModal;
 let newDataSourceModal: NewDataSourceModal;
+let deleteDataSourceModal: DeleteDataSourceModal;
+let additionalLoginModal: AdditionalLoginModal |  null
 
 let isLoading = false
 let databases: Database[] = []
@@ -115,6 +119,8 @@ export async function runSql(database: string, sql: string): Promise<void> {
 
 <ErrorModal bind:this={errorModal} />
 <NewDataSourceModal bind:this={newDataSourceModal} onAdded={async () => {await load()}} />
+<DeleteDataSourceModal bind:this={deleteDataSourceModal} onDeleted={async () => {await load()}} />
+<AdditionalLoginModal bind:this={additionalLoginModal} onLoggedIn={async () => {await load()}} />
 
 <div class="relative h-full w-full flex flex-row items-stretch">
   {#if isLoading}
@@ -174,9 +180,8 @@ export async function runSql(database: string, sql: string): Promise<void> {
               }
               await sheetPanel.openQuery(query)
             }}
-            onLoggedIn={async () => {
-              await load();
-            }}
+            onLoggingIn={() => { additionalLoginModal.open(database) }}
+            onDeleting={() => {deleteDataSourceModal.open(database)}}
           />
         {/each}
       </div>

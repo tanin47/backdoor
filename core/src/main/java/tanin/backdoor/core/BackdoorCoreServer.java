@@ -157,7 +157,9 @@ public abstract class BackdoorCoreServer {
         var databases = Json.array();
 
         for (var databaseConfig : getAllDatabaseConfigs()) {
-          var databaseJson = Json.object().add("name", databaseConfig.nickname);
+          var databaseJson = Json.object()
+            .add("name", databaseConfig.nickname)
+            .add("isAdHoc", databaseConfig.isAdHoc);
 
           try (var engine = makeEngine(databaseConfig)) {
             var tablesJson = Json.array();
@@ -508,7 +510,8 @@ public abstract class BackdoorCoreServer {
           nickname,
           url,
           username,
-          password
+          password,
+          true
         );
 
         try (var _engine = Engine.createEngine(adHocDatabaseConfig, null)) {
@@ -552,7 +555,19 @@ public abstract class BackdoorCoreServer {
               .toString()
           );
         }
+      }
+    );
 
+    wf.registerPath(
+      POST,
+      "api/delete-data-source",
+      req -> {
+        var json = Json.parse(req.getBody().asString());
+        var database = json.asObject().get("database").asString().trim();
+
+        var removedDatabaseConfig = Arrays.stream(getAdHocDatabaseConfigs()).filter(d -> d.nickname.equals(database)).findFirst().orElse(null);
+
+        return handleRemovingValidDataSource(req, removedDatabaseConfig);
       }
     );
 
@@ -570,6 +585,8 @@ public abstract class BackdoorCoreServer {
   protected abstract DatabaseConfig[] getAdHocDatabaseConfigs() throws BackingStoreException;
 
   protected abstract IResponse handleAddingValidDataSource(IRequest req, DatabaseConfig adHocDatabaseConfig) throws Exception;
+
+  protected abstract IResponse handleRemovingValidDataSource(IRequest req, DatabaseConfig removedDatabaseConfig) throws Exception;
 
   protected IResponse processIndexPage(IRequest req) throws Exception {
     return Response.htmlOk(

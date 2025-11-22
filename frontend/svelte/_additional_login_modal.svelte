@@ -82,7 +82,6 @@ async function submit() {
     <div class="text-neutral-content text-sm">
       Login to the database: <span class="font-bold">{database_?.name}</span>
     </div>
-    <span class="label">Username</span>
     <input
       type="text"
       class="input w-full"
@@ -90,14 +89,15 @@ async function submit() {
       data-test-id="username"
       bind:this={usernameInput}
       bind:value={form.username}
+      autocorrect="off"
     />
-    <span class="label">Password</span>
     <input
       type="password"
       class="input w-full"
       placeholder="Password"
       data-test-id="password"
       bind:value={form.password}
+      autocorrect="off"
     />
     <altcha-widget
       bind:this={altcha}

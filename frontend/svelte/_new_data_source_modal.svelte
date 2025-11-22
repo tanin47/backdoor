@@ -73,33 +73,26 @@ async function submit() {
   data-test-id="edit-modal"
 >
   <div class="modal-box !min-w-[480px] !w-auto flex flex-col gap-4" onkeydown={invokeOnEnter(submit)}>
-    <div class="text-neutral-content text-sm">
-      Add a new data source
-    </div>
-    <span class="label">Database URL</span>
-    <input
-      type="text"
-      class="input w-full"
-      placeholder="URL"
-      data-test-id="url"
-      bind:this={mainInput}
-      bind:value={form.url}
-    />
-    <div class="text-neutral-content text-xs">
-      A JDBC or Postgres URL is accepted. Credentials specified within the URL are also accepted.
-    </div>
-    <span class="label">Nickname</span>
     <input
       type="text"
       class="input w-full"
       placeholder="Nickname"
       data-test-id="nickname"
       bind:value={form.nickname}
+      autocorrect="off"
+    />
+    <input
+      type="text"
+      class="input w-full"
+      placeholder="Database URL"
+      data-test-id="url"
+      bind:this={mainInput}
+      bind:value={form.url}
+      autocorrect="off"
     />
     <div class="text-neutral-content text-xs">
-      The nickname of the database will be shown in the left panel.
+      A JDBC or Postgres URL is accepted. Credentials specified within the URL are also accepted.
     </div>
-    <span class="label">Credentials (optional)</span>
     <div class="flex gap-2 items-center justify-between">
       <input
         type="text"
@@ -107,6 +100,7 @@ async function submit() {
         placeholder="Username"
         data-test-id="username"
         bind:value={form.username}
+        autocorrect="off"
       />
       <input
         type="password"
@@ -114,6 +108,7 @@ async function submit() {
         placeholder="Password"
         data-test-id="password"
         bind:value={form.password}
+        autocorrect="off"
       />
     </div>
     <div class="text-neutral-content text-xs">

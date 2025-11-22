@@ -1,6 +1,5 @@
 <script lang="ts">
 import type {Database, Query, Table} from "./common/models";
-import AdditionalLoginModal from "./_additional_login_modal.svelte";
 
 export let database: Database
 export let queries: Query[]
@@ -8,28 +7,33 @@ export let selectedQuery: Query | null
 
 export let onTableClicked: (table: Table) => Promise<void>
 export let onQueryClicked: (query: Query) => Promise<void>
-export let onLoggedIn: () => Promise<void>
+export let onLoggingIn: () => void
+export let onDeleting: () => void
 
 let expanded = true
-let additionalLoginModal: AdditionalLoginModal |  null
 </script>
 
 <div>
   {#if database.requireLogin}
     <div
       class="flex items-center gap-2 p-2 cursor-pointer"
-      onclick={() => {additionalLoginModal!.open(database)}}
+      onclick={onLoggingIn}
       data-test-id="database-lock-item"
       data-test-value={database.name}
     >
       <i class="ph ph-lock text-sm"></i>
       <span class="overflow-hidden text-ellipsis font-mono text-xs whitespace-nowrap underline">{database.name}</span>
     </div>
-    <AdditionalLoginModal bind:this={additionalLoginModal} onLoggedIn={onLoggedIn} />
   {:else}
-    <div class="flex items-center gap-2 p-2 cursor-pointer" onclick={() => {expanded = !expanded}}>
-      <i class="ph {expanded ? 'ph-caret-down' : 'ph-caret-right' } text-sm"></i>
-      <span class="overflow-hidden text-ellipsis font-mono text-xs whitespace-nowrap underline">{database.name}</span>
+    <div class="flex items-center gap-2 p-2 justify-between">
+      <div class="flex items-center gap-2 cursor-pointer overflow-hidden" onclick={() => {expanded = !expanded}}>
+        <i class="ph {expanded ? 'ph-caret-down' : 'ph-caret-right' } text-sm"></i>
+        <span class="overflow-hidden text-ellipsis font-mono text-xs whitespace-nowrap underline">{database.name}</span>
+      </div>
+      {#if database.isAdHoc}
+        <i class="ph ph-trash text-sm z-10 cursor-pointer" onclick={onDeleting}
+           data-test-id="delete-data-source-button"></i>
+      {/if}
     </div>
     <ul
       class="menu flex flex-col w-full text-xs p-0"

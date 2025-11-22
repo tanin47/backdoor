@@ -445,6 +445,24 @@ public class BackdoorWebServer extends BackdoorCoreServer {
     );
   }
 
+  @Override
+  protected IResponse handleRemovingValidDataSource(IRequest req, DatabaseConfig removedDatabaseConfig) throws Exception {
+    var isLocalHost = req.getHeaders().valueByKey("Host").stream().findFirst().orElse("").startsWith("localhost");
+
+    var adHocDatabaseConfigs = Arrays.stream(this.auth.get().adHocDatabaseConfigs())
+      .filter(c -> !c.nickname.equals(removedDatabaseConfig.nickname))
+      .toArray(DatabaseConfig[]::new);
+
+    return Response.buildResponse(
+      StatusLine.StatusCode.CODE_200_OK,
+      Map.of(
+        "Content-Type", "application/json",
+        "Set-Cookie", makeAuthSetCookieLine(this.auth.get().users(), adHocDatabaseConfigs, this.secretKey, Instant.now().plus(1, ChronoUnit.DAYS), !isLocalHost)
+      ),
+      Json.object().toString()
+    );
+  }
+
   protected IResponse processIndexPage(IRequest req) throws Exception {
     var isLocalHost = req.getHeaders().valueByKey("Host").stream().findFirst().orElse("").startsWith("localhost");
     var csrfToken = extractOrMakeCsrfCookieValue(req, true);

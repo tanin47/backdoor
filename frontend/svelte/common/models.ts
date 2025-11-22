@@ -1,5 +1,6 @@
 export interface Database {
   name: string;
+  isAdHoc: boolean;
   requireLogin: boolean;
   tables: string[];
 }
