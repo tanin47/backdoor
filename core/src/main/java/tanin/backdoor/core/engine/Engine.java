@@ -5,6 +5,7 @@ import tanin.backdoor.core.*;
 
 import java.net.URISyntaxException;
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
@@ -14,6 +15,7 @@ import static tanin.backdoor.core.BackdoorCoreServer.makeSqlLiteral;
 import static tanin.backdoor.core.BackdoorCoreServer.makeSqlName;
 
 public abstract class Engine implements AutoCloseable {
+
   private static final Logger logger = Logger.getLogger(Engine.class.getName());
 
   public static class InvalidCredentialsException extends Exception {
@@ -22,13 +24,29 @@ public abstract class Engine implements AutoCloseable {
     }
   }
 
+  public static class InvalidDatabaseNameProbablyException extends Exception {
+    public InvalidDatabaseNameProbablyException(String message) {
+      super(message);
+    }
+  }
+
+  public static class UnreachableServerException extends Exception {
+    public UnreachableServerException(String message) {
+      super(message);
+    }
+  }
+
   public static class OverwritingUserAndCredentialedJdbcConflictedException extends Exception {
+  }
+
+  static {
+    DriverManager.setLoginTimeout(5);
   }
 
   public DatabaseConfig databaseConfig;
   public Connection connection;
 
-  Engine(DatabaseConfig config, User overwritingUser) throws SQLException, URISyntaxException, InvalidCredentialsException, OverwritingUserAndCredentialedJdbcConflictedException {
+  Engine(DatabaseConfig config, User overwritingUser) throws SQLException, URISyntaxException, InvalidCredentialsException, OverwritingUserAndCredentialedJdbcConflictedException, UnreachableServerException, InvalidDatabaseNameProbablyException {
     this.databaseConfig = config;
 
     try {
@@ -47,7 +65,7 @@ public abstract class Engine implements AutoCloseable {
     }
   }
 
-  protected abstract void connect(DatabaseConfig config, User overwritingUser) throws SQLException, InvalidCredentialsException, URISyntaxException;
+  protected abstract void connect(DatabaseConfig config, User overwritingUser) throws SQLException, InvalidCredentialsException, URISyntaxException, UnreachableServerException, InvalidDatabaseNameProbablyException;
 
   public abstract Column[] getColumns(String table) throws SQLException;
 
@@ -140,7 +158,7 @@ public abstract class Engine implements AutoCloseable {
   }
 
 
-  public static Engine createEngine(DatabaseConfig config, User overwritingUser) throws SQLException, URISyntaxException, InvalidCredentialsException, OverwritingUserAndCredentialedJdbcConflictedException {
+  public static Engine createEngine(DatabaseConfig config, User overwritingUser) throws SQLException, URISyntaxException, InvalidCredentialsException, OverwritingUserAndCredentialedJdbcConflictedException, UnreachableServerException, InvalidDatabaseNameProbablyException {
     if (config.jdbcUrl.startsWith("jdbc:postgres") || config.jdbcUrl.startsWith("postgres")) {
       return new PostgresEngine(config, overwritingUser);
     } else if (config.jdbcUrl.startsWith("jdbc:ch:")) {

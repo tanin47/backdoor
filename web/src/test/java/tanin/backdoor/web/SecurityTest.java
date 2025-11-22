@@ -2,6 +2,7 @@ package tanin.backdoor.web;
 
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.Cookie;
+import tanin.backdoor.core.DatabaseConfig;
 import tanin.backdoor.core.User;
 
 import java.time.Instant;
@@ -23,6 +24,7 @@ public class SecurityTest extends Base {
       "backdoor",
       BackdoorWebServer.makeAuthCookieValueForUser(
         new User[]{loggedInUser},
+        new DatabaseConfig[0],
         server.secretKey,
         Instant.now().plus(10, ChronoUnit.SECONDS))
     ));

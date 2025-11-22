@@ -71,15 +71,15 @@ public class BackdoorWebServer extends BackdoorCoreServer {
     return CSRF_COOKIE_KEY + "=" + csrfToken + "; Max-Age=86400; Path=/;" + securePortion + " HttpOnly";
   }
 
-  public static String makeAuthCookieValueForUser(User[] users, String secretKey, Instant expires) throws Exception {
+  public static String makeAuthCookieValueForUser(User[] users, DatabaseConfig[] adHocDatabaseConfigs, String secretKey, Instant expires) throws Exception {
     return EncryptionHelper.encryptText(
-      new AuthCookie(users, expires).toJson().toString(),
+      new AuthCookie(users, adHocDatabaseConfigs, expires).toJson().toString(),
       secretKey
     );
   }
 
-  public static String makeAuthCookie(User[] users, String secretKey, Instant expires) throws Exception {
-    return AUTH_COOKIE_KEY + "=" + makeAuthCookieValueForUser(users, secretKey, expires);
+  public static String makeAuthCookie(User[] users, DatabaseConfig[] adHocDatabaseConfigs, String secretKey, Instant expires) throws Exception {
+    return AUTH_COOKIE_KEY + "=" + makeAuthCookieValueForUser(users, adHocDatabaseConfigs, secretKey, expires);
   }
 
   private String extractOrMakeCsrfCookieValue(IRequest request, boolean makeIfMissing) {
@@ -113,9 +113,9 @@ public class BackdoorWebServer extends BackdoorCoreServer {
     }
   }
 
-  private static String makeAuthSetCookieLine(User[] users, String secretKey, Instant expires, boolean isSecure) throws Exception {
+  private static String makeAuthSetCookieLine(User[] users, DatabaseConfig[] adHocDatabaseConfigs, String secretKey, Instant expires, boolean isSecure) throws Exception {
     var securePortion = isSecure ? " Secure;" : "";
-    return makeAuthCookie(users, secretKey, expires) + "; Max-Age=86400; Path=/;" + securePortion + " HttpOnly";
+    return makeAuthCookie(users, adHocDatabaseConfigs, secretKey, expires) + "; Max-Age=86400; Path=/;" + securePortion + " HttpOnly";
   }
 
   private User getUser(String username, String password) throws Exception {
@@ -137,8 +137,8 @@ public class BackdoorWebServer extends BackdoorCoreServer {
           if (rs.getInt(1) == 123) {
             return potentialDatabaseUser;
           }
-        } catch (Engine.InvalidCredentialsException | Engine.OverwritingUserAndCredentialedJdbcConflictedException e) {
-          found = null;
+        } catch (Engine.InvalidCredentialsException |
+                 Engine.OverwritingUserAndCredentialedJdbcConflictedException ignored) {
         } catch (Exception e) {
           throw e;
         }
@@ -178,7 +178,8 @@ public class BackdoorWebServer extends BackdoorCoreServer {
       path.equals("login") ||
         path.equals("altcha") ||
         path.equals("healthcheck") ||
-        path.startsWith("assets/")
+        path.startsWith("assets/") ||
+        path.equals("logout")
     ) {
       // These paths don't need authentication.
       return;
@@ -344,7 +345,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
             StatusLine.StatusCode.CODE_200_OK,
             Map.of(
               "Content-Type", "application/json",
-              "Set-Cookie", makeAuthSetCookieLine(new User[]{user}, secretKey, Instant.now().plus(1, ChronoUnit.DAYS), !isLocalHost)
+              "Set-Cookie", makeAuthSetCookieLine(new User[]{user}, new DatabaseConfig[0], secretKey, Instant.now().plus(1, ChronoUnit.DAYS), !isLocalHost)
             ),
             Json.object().toString()
           );
@@ -385,7 +386,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
             StatusLine.StatusCode.CODE_200_OK,
             Map.of(
               "Content-Type", "application/json",
-              "Set-Cookie", makeAuthSetCookieLine(users.toArray(new User[0]), secretKey, Instant.now().plus(1, ChronoUnit.DAYS), !isLocalHost)
+              "Set-Cookie", makeAuthSetCookieLine(users.toArray(new User[0]), auth.get().adHocDatabaseConfigs(), secretKey, Instant.now().plus(1, ChronoUnit.DAYS), !isLocalHost)
             ),
             Json.object().toString()
           );
@@ -410,7 +411,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
         return Response.buildResponse(
           StatusLine.StatusCode.CODE_302_FOUND,
           Map.of(
-            "Set-Cookie", makeAuthSetCookieLine(new User[0], "dontcare", Instant.now(), isSecure),
+            "Set-Cookie", makeAuthSetCookieLine(new User[0], new DatabaseConfig[0], "dontcare", Instant.now(), isSecure),
             // We need double-logout to clear both secure and non-secure cookie.
             "Location", isSecure ? "/" : "/logout?secure=true"
           ),
@@ -420,6 +421,28 @@ public class BackdoorWebServer extends BackdoorCoreServer {
     );
 
     return minum;
+  }
+
+  @Override
+  protected DatabaseConfig[] getAdHocDatabaseConfigs() {
+    return this.auth.get().adHocDatabaseConfigs();
+  }
+
+  @Override
+  protected IResponse handleAddingValidDataSource(IRequest req, DatabaseConfig adHocDatabaseConfig) throws Exception {
+    var isLocalHost = req.getHeaders().valueByKey("Host").stream().findFirst().orElse("").startsWith("localhost");
+
+    var adHocDatabaseConfigs = new ArrayList<DatabaseConfig>(List.of(this.auth.get().adHocDatabaseConfigs()));
+    adHocDatabaseConfigs.add(adHocDatabaseConfig);
+
+    return Response.buildResponse(
+      StatusLine.StatusCode.CODE_200_OK,
+      Map.of(
+        "Content-Type", "application/json",
+        "Set-Cookie", makeAuthSetCookieLine(this.auth.get().users(), adHocDatabaseConfigs.toArray(new DatabaseConfig[0]), this.secretKey, Instant.now().plus(1, ChronoUnit.DAYS), !isLocalHost)
+      ),
+      Json.object().toString()
+    );
   }
 
   protected IResponse processIndexPage(IRequest req) throws Exception {

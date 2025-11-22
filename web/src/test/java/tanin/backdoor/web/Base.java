@@ -162,7 +162,12 @@ public class Base {
     if (shouldLoggedIn) {
       webDriver.manage().addCookie(new Cookie(
         "backdoor",
-        BackdoorWebServer.makeAuthCookieValueForUser(new User[]{loggedInUser}, server.secretKey, Instant.now().plus(1, ChronoUnit.DAYS))
+        BackdoorWebServer.makeAuthCookieValueForUser(
+          new User[]{loggedInUser},
+          new DatabaseConfig[0],
+          server.secretKey,
+          Instant.now().plus(1, ChronoUnit.DAYS)
+        )
       ));
     }
   }
@@ -295,9 +300,6 @@ public class Base {
     actions.sendKeys(text).perform();
   }
 
-
-  int waitUntilTimeoutInMillis = 5000;
-
   @FunctionalInterface
   public interface InterruptibleSupplier {
     boolean get() throws InterruptedException;
@@ -309,6 +311,10 @@ public class Base {
   }
 
   public void waitUntil(VoidFn fn) throws InterruptedException {
+    waitUntil(5000, fn);
+  }
+
+  public void waitUntil(long waitUntilTimeoutInMillis, VoidFn fn) throws InterruptedException {
     InterruptibleSupplier newFn = () -> {
       try {
         fn.invoke();
@@ -363,8 +369,16 @@ public class Base {
   }
 
   void checkErrorPanel(String... errors) throws InterruptedException {
-    var actualErrors = elems(tid("error-panel") + " p").stream().map(p -> p.getText().trim());
+    checkErrorPanel(5000, errors);
+  }
 
-    assertArrayEquals(errors, actualErrors.toArray());
+  void checkErrorPanel(long waitTimeoutInMillis, String... errors) throws InterruptedException {
+    waitUntil(
+      waitTimeoutInMillis,
+      () -> {
+        var actualErrors = elems(tid("error-panel") + " p").stream().map(p -> p.getText().trim());
+        assertArrayEquals(errors, actualErrors.toArray());
+      }
+    );
   }
 }

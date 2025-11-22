@@ -70,6 +70,17 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
     return minum;
   }
 
+  @Override
+  protected DatabaseConfig[] getAdHocDatabaseConfigs() {
+    return new DatabaseConfig[0];
+  }
+
+  @Override
+  protected IResponse handleAddingValidDataSource(IRequest req, DatabaseConfig adHocDatabaseConfig) throws Exception {
+    // TODO: Implement this
+    return null;
+  }
+
   protected IResponse processIndexPage(IRequest req) throws Exception {
     return Response.htmlOk(
       makeHtml("index.html", null, Paradigm.DESKTOP),
