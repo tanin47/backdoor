@@ -1,5 +1,6 @@
 package tanin.backdoor.desktop;
 
+import com.eclipsesource.json.Json;
 import com.renomad.minum.web.*;
 import tanin.backdoor.core.BackdoorCoreServer;
 import tanin.backdoor.core.DatabaseConfig;
@@ -7,10 +8,13 @@ import tanin.backdoor.core.User;
 import tanin.ejwf.MinumBuilder;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.prefs.BackingStoreException;
+import java.util.prefs.Preferences;
 
 public class BackdoorDesktopServer extends BackdoorCoreServer {
   private static final Logger logger = Logger.getLogger(BackdoorDesktopServer.class.getName());
@@ -71,14 +75,38 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
   }
 
   @Override
-  protected DatabaseConfig[] getAdHocDatabaseConfigs() {
-    return new DatabaseConfig[0];
+  protected DatabaseConfig[] getAdHocDatabaseConfigs() throws BackingStoreException {
+    var preferences = Preferences.userNodeForPackage(BackdoorDesktopServer.class);
+    var configs = new ArrayList<DatabaseConfig>();
+
+    for (String key : preferences.keys()) {
+      if (key.endsWith(".jdbcUrl")) {
+        var nickname = key.substring(0, key.length() - ".jdbcUrl".length());
+        var jdbcUrl = preferences.get(nickname + ".jdbcUrl", null);
+        var username = preferences.get(nickname + ".username", null);
+        var password = preferences.get(nickname + ".password", null);
+
+        if (jdbcUrl != null) {
+          configs.add(new DatabaseConfig(nickname, jdbcUrl, username, password));
+        }
+      }
+    }
+
+    return configs.toArray(new DatabaseConfig[0]);
   }
 
   @Override
   protected IResponse handleAddingValidDataSource(IRequest req, DatabaseConfig adHocDatabaseConfig) throws Exception {
-    // TODO: Implement this
-    return null;
+    var preferences = Preferences.userNodeForPackage(BackdoorDesktopServer.class);
+    preferences.put(adHocDatabaseConfig.nickname + ".jdbcUrl", adHocDatabaseConfig.jdbcUrl);
+    preferences.put(adHocDatabaseConfig.nickname + ".username", adHocDatabaseConfig.username);
+    preferences.put(adHocDatabaseConfig.nickname + ".password", adHocDatabaseConfig.password);
+    preferences.flush();
+    return Response.buildResponse(
+      StatusLine.StatusCode.CODE_200_OK,
+      Map.of("Content-Type", "application/json"),
+      Json.object().toString()
+    );
   }
 
   protected IResponse processIndexPage(IRequest req) throws Exception {

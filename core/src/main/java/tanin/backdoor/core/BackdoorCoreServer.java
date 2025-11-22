@@ -18,6 +18,7 @@ import java.time.Instant;
 import java.util.*;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
+import java.util.prefs.BackingStoreException;
 
 import static com.renomad.minum.web.RequestLine.Method.GET;
 import static com.renomad.minum.web.RequestLine.Method.POST;
@@ -128,7 +129,7 @@ public abstract class BackdoorCoreServer {
       .orElse(null);
   }
 
-  Engine makeEngine(String databaseNickname) throws SQLException, URISyntaxException, Engine.InvalidCredentialsException, Engine.OverwritingUserAndCredentialedJdbcConflictedException, Engine.UnreachableServerException, Engine.InvalidDatabaseNameProbablyException {
+  Engine makeEngine(String databaseNickname) throws SQLException, URISyntaxException, Engine.InvalidCredentialsException, Engine.OverwritingUserAndCredentialedJdbcConflictedException, Engine.UnreachableServerException, Engine.InvalidDatabaseNameProbablyException, BackingStoreException {
     var databaseConfig = Arrays.stream(getAllDatabaseConfigs()).filter(d -> d.nickname.equals(databaseNickname)).findFirst().orElse(null);
 
     if (databaseConfig == null) {
@@ -560,13 +561,13 @@ public abstract class BackdoorCoreServer {
     return minum;
   }
 
-  private DatabaseConfig[] getAllDatabaseConfigs() {
+  private DatabaseConfig[] getAllDatabaseConfigs() throws BackingStoreException {
     var all = new ArrayList<DatabaseConfig>(List.of(databaseConfigs));
     all.addAll(List.of(getAdHocDatabaseConfigs()));
     return all.toArray(new DatabaseConfig[0]);
   }
 
-  protected abstract DatabaseConfig[] getAdHocDatabaseConfigs();
+  protected abstract DatabaseConfig[] getAdHocDatabaseConfigs() throws BackingStoreException;
 
   protected abstract IResponse handleAddingValidDataSource(IRequest req, DatabaseConfig adHocDatabaseConfig) throws Exception;
 
