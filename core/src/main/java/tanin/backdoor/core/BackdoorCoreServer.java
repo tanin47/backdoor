@@ -329,12 +329,9 @@ public abstract class BackdoorCoreServer {
           int modifyCount = 0;
           SqlType sqlType = engine.getSqlType(originalSql);
 
-          var sql = originalSql;
+          var sql = originalSql.trim().replaceAll(";$", "");
 
           if (sqlType == SqlType.SELECT) {
-            var viewName = "tmp-view-" + Instant.now().toEpochMilli() + "-" + new SecureRandom().nextInt(10000);
-            engine.execute("CREATE TEMPORARY VIEW " + makeSqlName(viewName) + " AS " + sql);
-            sql = "SELECT * FROM " + makeSqlName(viewName);
             rs = engine.executeQueryWithParams(sql, filters, sorts, offset, 100);
           } else if (sqlType == SqlType.EXPLAIN) {
             rs = engine.executeQuery(sql);
