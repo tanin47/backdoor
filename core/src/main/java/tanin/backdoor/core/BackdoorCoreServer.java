@@ -11,6 +11,7 @@ import tanin.ejwf.MinumBuilder;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.security.SecureRandom;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -302,7 +303,7 @@ public abstract class BackdoorCoreServer {
         var json = Json.parse(req.getBody().asString());
         var database = json.asObject().get("database").asString();
         var name = json.asObject().get("name").asString();
-        var sql = json.asObject().get("sql").asString().trim();
+        var originalSql = json.asObject().get("sql").asString().trim();
         var offset = json.asObject().get("offset").asInt();
         var filters = json.asObject().get("filters").asArray().values().stream().map(s -> {
           var o = s.asObject();
@@ -326,8 +327,14 @@ public abstract class BackdoorCoreServer {
         try (var engine = makeEngine(database)) {
           ResultSet rs = null;
           int modifyCount = 0;
-          SqlType sqlType = engine.getSqlType(sql);
+          SqlType sqlType = engine.getSqlType(originalSql);
+
+          var sql = originalSql;
+
           if (sqlType == SqlType.SELECT) {
+            var viewName = "tmp-view-" + Instant.now().toEpochMilli() + "-" + new SecureRandom().nextInt(10000);
+            engine.execute("CREATE TEMPORARY VIEW " + makeSqlName(viewName) + " AS " + sql);
+            sql = "SELECT * FROM " + makeSqlName(viewName);
             rs = engine.executeQueryWithParams(sql, filters, sorts, offset, 100);
           } else if (sqlType == SqlType.EXPLAIN) {
             rs = engine.executeQuery(sql);
@@ -393,7 +400,7 @@ public abstract class BackdoorCoreServer {
           var sheet = new Sheet(
             database,
             sqlType == SqlType.SELECT ? name : "",
-            sql,
+            originalSql,
             sqlType == SqlType.SELECT ? "query" : "execute",
             columns.toArray(new Column[0]),
             filters,
@@ -409,6 +416,7 @@ public abstract class BackdoorCoreServer {
               .add("sheet", sheet.toJson())
               .toString()
           );
+
         }
       }
     );

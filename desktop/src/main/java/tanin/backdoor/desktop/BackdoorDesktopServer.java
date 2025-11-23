@@ -65,6 +65,14 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
         var response = inputs.endpoint().apply(inputs.clientRequest());
         logger.info(request.getRequestLine().getMethod() + " " + request.getRequestLine().getPathDetails().getIsolatedPath() + " " + response.getStatusCode());
         return response;
+      } catch (SQLException e) {
+        return Response.buildResponse(
+          StatusLine.StatusCode.CODE_400_BAD_REQUEST,
+          Map.of("Content-Type", "application/json"),
+          Json.object()
+            .add("errors", Json.array(e.getMessage()))
+            .toString()
+        );
       } catch (Throwable e) {
         logger.log(Level.SEVERE, request.getRequestLine().getMethod() + " " + request.getRequestLine().getPathDetails().getIsolatedPath() + " raised an error.", e);
         throw e;
