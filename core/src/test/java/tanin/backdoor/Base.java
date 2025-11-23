@@ -259,16 +259,23 @@ public class Base {
   }
 
   WebElement elem(String cssSelector, boolean checkDisplay) throws InterruptedException {
+    WebElement candidate = null;
     try {
       if (checkDisplay) {
         waitUntil(() -> assertTrue(elems(cssSelector).stream().anyMatch(WebElement::isDisplayed)));
-        return elems(cssSelector).stream().filter(WebElement::isDisplayed).findFirst().orElse(null);
+        candidate = elems(cssSelector).stream().filter(WebElement::isDisplayed).findFirst().orElse(null);
       } else {
-        return elems(cssSelector).getFirst();
+        candidate = elems(cssSelector).getFirst();
       }
     } catch (StaleElementReferenceException e) {
       Thread.sleep(100);
+      candidate = elem(cssSelector, checkDisplay);
+    }
+
+    if (candidate == null) {
       return elem(cssSelector, checkDisplay);
+    } else {
+      return candidate;
     }
   }
 
