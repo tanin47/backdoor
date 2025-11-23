@@ -125,11 +125,11 @@ public class MinumBuilder {
 
           var assetPath = matcher.group("assetPath");
 
-          if (assetPath.startsWith("images/")) {
+          if (assetPath.startsWith("images/") || assetPath.startsWith("phosphor/")) {
             return Response.buildResponse(
               StatusLine.StatusCode.CODE_200_OK,
               Map.of(
-                "Content-Type", "image/png"
+                "Content-Type", inferContentType(assetPath)
               ),
               MinumBuilder.class.getResourceAsStream("/assets/" + assetPath).readAllBytes()
             );

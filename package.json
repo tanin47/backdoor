@@ -42,5 +42,8 @@
   },
   "scripts": {
     "hmr": "NODE_PATH=./node_modules ENABLE_HMR=true node hmr.js"
+  },
+  "dependencies": {
+    "@aptabase/web": "^0.4.3"
   }
 }
