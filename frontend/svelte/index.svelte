@@ -10,6 +10,7 @@ import ErrorModal from "./common/_error_modal.svelte"
 import NewDataSourceModal from "./_new_data_source_modal.svelte"
 import DeleteDataSourceModal from "./_delete_data_source_modal.svelte"
 import AdditionalLoginModal from "./_additional_login_modal.svelte";
+import {trackEvent} from "./common/tracker";
 
 let sheetPanel: SheetPanel;
 
@@ -41,6 +42,7 @@ async function load(): Promise<void> {
 }
 
 onMount(() => {
+  trackEvent('landing_index')
   isLoading = true
   void load()
 })

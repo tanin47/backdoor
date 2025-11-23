@@ -5,6 +5,14 @@ const sveltePreprocess = require("svelte-preprocess");
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const pathModule = require("path");
 const glob = require('glob');
+const fs = require('fs');
+
+const aptabaseIdPath = './secret/APTABASE_ID';
+let aptabaseId = process.env.APTABASE_ID;
+if (fs.existsSync(aptabaseIdPath)) {
+  aptabaseId = fs.readFileSync(aptabaseIdPath, 'utf8').trim();
+}
+
 
 function buildEntry(mode) {
   let entry = {}
@@ -123,7 +131,10 @@ const config = {
   },
   plugins: [
     new MiniCssExtractPlugin(),
-    new CamelCaseNamePlugin()
+    new CamelCaseNamePlugin(),
+    new webpack.DefinePlugin({
+      'APTABASE_ID_WEBPACK_REPLACEMENT': JSON.stringify(aptabaseId),
+    }),
   ],
   output: {
     publicPath: '/assets/',

@@ -8,7 +8,8 @@ logs
 .metals
 metals.sbt
 SYSTEM_RUNNING
-./db
+/db
 build
 .gradle
 hs_err*.log
+/secret

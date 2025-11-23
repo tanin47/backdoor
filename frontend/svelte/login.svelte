@@ -3,6 +3,8 @@ import Button from './common/_button.svelte'
 import {FetchError, invokeOnEnter, post} from "./common/form";
 import ErrorPanel from './common/form/_error_panel.svelte';
 import 'altcha'
+import {onMount} from "svelte";
+import {trackEvent} from "./common/tracker";
 
 let isLoading = false
 let errors: string[] = []
@@ -29,6 +31,11 @@ async function submit(): Promise<void> {
 
 let isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '[::1]';
 let isValidHost = isLocalhost ? true : window.location.protocol === 'https:';
+
+onMount(() => {
+  trackEvent('landing_login')
+})
+
 </script>
 
 {#if !isValidHost}
