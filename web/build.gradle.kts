@@ -151,7 +151,7 @@ tasks.register<Exec>("compileTailwind") {
         "--config",
         ".",
         "--output",
-        "./build/compiled-frontend-resources/assets/stylesheets/tailwindbase.css"
+        "./web/build/compiled-frontend-resources/assets/stylesheets/tailwindbase.css"
     )
 }
 
@@ -168,7 +168,7 @@ tasks.register<Exec>("compileSvelte") {
         "--config",
         "./webpack.config.js",
         "--output-path",
-        "./build/compiled-frontend-resources/assets",
+        "./web/build/compiled-frontend-resources/assets",
         "--mode",
         "production"
     )
