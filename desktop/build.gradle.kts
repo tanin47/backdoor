@@ -41,7 +41,7 @@ val appleEmail = try {
 val codesignPackagePrefix = "tanin.backdoor.desktop."
 
 group = "tanin.backdoor.desktop"
-version = "1.0.0"
+version = "1.0"
 
 java {
     toolchain {
