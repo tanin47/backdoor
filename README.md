@@ -1,14 +1,16 @@
-Backdoor: Self-hosted Database Querying and Editing Tool
+Backdoor: Database Querying and Editing Tool
 ==============================================================
 
 [![Sonatype Central](https://maven-badges.sml.io/sonatype-central/io.github.tanin47/backdoor/badge.png?version=2.3.0-rc4)](https://central.sonatype.com/artifact/io.github.tanin47/backdoor)
-![Github Actions](https://github.com/tanin47/backdoor/actions/workflows/ci.yml/badge.svg?branch=main)
+[![Github Actions](https://github.com/tanin47/backdoor/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/tanin47/backdoor/actions/workflows/ci.yml?query=branch%3Amain)
 [![codecov](https://codecov.io/gh/tanin47/backdoor/graph/badge.svg?token=SODPQLLTDM)](https://codecov.io/gh/tanin47/backdoor)
 
-_Explore data & investigate issues faster and more securely with a better database tool_
+_Explore, edit, and investigate data faster and more securely with a better database tool_
 
-Backdoor is a self-hosted and self-contained database querying and editing tool for you and your team. No need to spend
-weeks and months building an admin dashboard by yourself.
+Get
+started: [<ins>Self-hostable version (great for teams)</ins>](#self-hostable-version-great-for-teams) | [<ins>Desktop app version (great for personal use)</ins>](#desktop-app-version-great-for-personal-use)
+
+Backdoor is a database querying and editing tool for you and your team.
 
 * 🔥 __<ins>Easy to setup:</ins>__ -- Takes minutes to set up for you and your team to edit, explore, and investigate
   data quickly.
@@ -19,7 +21,9 @@ weeks and months building an admin dashboard by yourself.
 * ✨ __<ins>Modern UI:</ins>__ -- Exploring and investigating large data is a breeze and enjoyable. Offers modern UI with
   infinitely scrollable table.
 
-![Demo](demo.png)
+| ![View and write SQL](readme/view-write.png)        | ![Filter data](readme/filter-data.png)              | ![New data source](readme/new-data-source.png) |
+|-----------------------------------------------------|-----------------------------------------------------|------------------------------------------------|
+| ![Multi Data Sources](readme/multi-data-source.png) | ![Filter data with SQL](readme/filter-data-sql.png) | ![Rename Table](readme/rename-table.png)       |
 
 ### Supported Databases
 
@@ -27,19 +31,30 @@ weeks and months building an admin dashboard by yourself.
 |---------------|----------------|
 | PostgreSQL    | ✅ Supported    |
 | ClickHouse    | ✅ Supported    |
+| SQLite        | 🟡 In Progress |
+| DuckDB        | 🔜 Coming Soon |
 | MySQL         | 🔜 Coming Soon |
 | Oracle        | 🔜 Coming Soon |
 | MS SQL Server | 🔜 Coming Soon |
 | IBM DB2       | 🔜 Coming Soon |
 | MariaDB       | 🔜 Coming Soon |
 
-Try it out today and let me know if it fits what you and your team need!
+Desktop app version (great for personal use)
+---------------------------------------------
 
+| Platform              | Direct Download                                                                               | App Store                                                                                                                         |
+|-----------------------|-----------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------|
+| MacOS (Apple Silicon) | [Link](https://github.com/tanin47/backdoor/releases/download/desktop-1.0.13/Backdoor-1.0.dmg) | [![Download from Mac App Store](./readme/download-button.svg)](https://apps.apple.com/us/app/backdoor-database-tool/id6755612631) |
+| Windows               | 🟡 In Progress                                                                                | 🟡 In Progress                                                                                                                    |
+| Linux                 | 🟡 In Progress                                                                                | N/A                                                                                                                               |
+| MacOS (Intel)         | 🔜 Coming Soon                                                                                | 🔜 Coming Soon                                                                                                                    |
 
-How to use
------------
+Please see our [Privacy Policy](./PRIVACY_POLICY.md)
 
-There are 3 ways of using Backdoor:
+Self-hostable version (great for teams)
+----------------------------------------
+
+There are 3 ways:
 
 1. Run as a standalone: JAR file, Docker, and Render.com.
 2. Embed into your Java application and serve on a specific port.
@@ -51,10 +66,26 @@ into your JVM application.
 
 ### 1. Run as a standalone
 
+__<ins>Use Docker</ins>__
+
+The docker image is here: https://hub.docker.com/repository/docker/tanin47/backdoor
+
+```
+docker run -p 9999:9999 \
+           --entrypoint "" \
+           --pull always \
+           tanin47/backdoor:web-2.3.0-rc4 \
+           java -jar backdoor-2.3.0-rc4.jar \
+           -port 9999 \
+           -url "postgres://127.0.0.1:5432/backdoor_test,jdbc:ch://localhost:8123?user=backdoor&password=test_ch" \
+           -secret-key SbZlbmJIXh \
+           -user test_user:test_pass,another_user:another_pass
+```
+
 __<ins>Run from the JAR file</ins>__
 
 First, you can download the `backdoor-VERSION.jar` file from
-the [Releases](https://github.com/tanin47/backdoor/releases) page.
+the [Maven Central](https://central.sonatype.com/artifact/io.github.tanin47/backdoor) page.
 
 Then, you can run the command below:
 
@@ -70,22 +101,6 @@ You can visit http://localhost:9999 and login with a Postgres user, a ClickHouse
 `test_user` and `another_user`).
 
 See FAQ for how authentication works.
-
-__<ins>Use Docker</ins>__
-
-The docker image is here: https://hub.docker.com/repository/docker/tanin47/backdoor
-
-```
-docker run -p 9999:9999 \
-           --entrypoint "" \
-           --pull always \
-           tanin47/backdoor:v2.3.0-rc4 \
-           java -jar backdoor-2.3.0-rc4.jar \
-           -port 9999 \
-           -url "postgres://127.0.0.1:5432/backdoor_test,jdbc:ch://localhost:8123?user=backdoor&password=test_ch" \
-           -secret-key SbZlbmJIXh \
-           -user test_user:test_pass,another_user:another_pass
-```
 
 __<ins>Use Render.com</ins>__
 
