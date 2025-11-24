@@ -1,4 +1,4 @@
-name: publish-jar
+name: publish-web-jar
 
 on:
   workflow_dispatch:
@@ -42,12 +42,12 @@ jobs:
           else
             TAG=${GITHUB_REF#refs/tags/}
           fi
-          if [[ ! $TAG =~ ^v ]]; then
-            echo "Error: Tag must start with 'v'"
+          if [[ ! $TAG =~ ^web- ]]; then
+            echo "Error: Tag must start with 'web-'"
             exit 1
           fi
-          if [[ ! $TAG == v${{ steps.version.outputs.VERSION }} ]]; then
-            echo "Error: Tag version ($TAG) does not match project version (v${{ steps.version.outputs.VERSION }})"
+          if [[ ! $TAG == web-${{ steps.version.outputs.VERSION }} ]]; then
+            echo "Error: Tag version ($TAG) does not match project version (web-${{ steps.version.outputs.VERSION }})"
             exit 1
           fi
       - name: Install Node modules

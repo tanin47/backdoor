@@ -1,9 +1,9 @@
-name: create-release-and-docker
+name: create-release-web
 
 on:
   push:
     tags:
-      - 'v*'
+      - 'web-*'
   workflow_dispatch:
     inputs:
       tag:
@@ -46,13 +46,12 @@ jobs:
           else
             TAG=${GITHUB_REF#refs/tags/}
           fi
-          if [[ ! "$TAG" =~ ^v ]]; then
-            echo "Error: Tag must start with 'v'"
+          if [[ ! "$TAG" =~ ^web- ]]; then
+            echo "Error: Tag must start with 'web-'"
             exit 1
           fi
-          TAG_VERSION=${TAG#v}
-          if [ "$TAG_VERSION" != "${{ steps.version.outputs.VERSION }}" ]; then
-            echo "Error: Git tag version ($TAG_VERSION) doesn't match project version (v${{ steps.version.outputs.VERSION }})"
+          if [[ ! $TAG == web-${{ steps.version.outputs.VERSION }} ]]; then
+            echo "Error: Git tag version ($TAG_VERSION) doesn't match project version (web-${{ steps.version.outputs.VERSION }})"
             exit 1
           fi
       - name: Install Node modules

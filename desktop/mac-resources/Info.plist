@@ -25,7 +25,7 @@
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.utilities</string>
     <key>CFBundleVersion</key>
-    <string>1.0.11</string>
+    <string>1.0.12</string>
     <key>NSHumanReadableCopyright</key>
     <string>Copyright (C) 2025</string>
     <key>NSSupportsAutomaticGraphicsSwitching</key>

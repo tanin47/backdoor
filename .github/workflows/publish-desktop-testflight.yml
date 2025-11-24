@@ -1,0 +1,100 @@
+name: publish-desktop-testflight
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Optional tag. Default to the tag of the selected branch.'
+        required: false
+        type: string
+
+
+permissions:
+  contents: write
+
+jobs:
+  create-release-and-docker:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+      - name: Import Signing Certificate
+        run: |
+          # Create a temporary keychain
+          security create-keychain -p "$KEYCHAIN_TEMP_PASSWORD" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$KEYCHAIN_TEMP_PASSWORD" build.keychain
+          echo "Unlock build.keychain"
+          
+          echo "$BASE64_DEV_APP_CERT" | base64 --decode > devapp.cert
+          security import devapp.cert -k build.keychain -A -T /usr/bin/codesign
+          echo "Imported dev app cert"
+          
+          echo "$BASE64_DEV_APP_PRIVATE_KEY" | base64 --decode > devapp.p12
+          security import devapp.p12 -k build.keychain -A -P opensesame -T /usr/bin/codesign
+          echo "Imported dev app private key"
+          
+          echo "$BASE64_MAC_DEV_APP_CERT" | base64 --decode > macdevapp.cert
+          security import macdevapp.cert -k build.keychain -A -T /usr/bin/codesign
+          echo "Imported mac dev app cert"
+          
+          echo "$BASE64_MAC_DEV_APP_PRIVATE_KEY" | base64 --decode > macdevapp.p12
+          security import macdevapp.p12 -k build.keychain -A -P opensesame -T /usr/bin/codesign
+          echo "Imported mac dev app private key"
+          
+          echo "$BASE64_MAC_DEV_INSTALL_CERT" | base64 --decode > macdevinstall.cert
+          security import macdevinstall.cert -k build.keychain -A -T /usr/bin/codesign
+          echo "Imported mac dev install cert"
+          
+          echo "$BASE64_MAC_DEV_INSTALL_PRIVATE_KEY" | base64 --decode > macdevinstall.p12
+          security import macdevinstall.p12 -k build.keychain -A -P opensesame -T /usr/bin/productbuild
+          echo "Imported mac dev install private key"
+          
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_TEMP_PASSWORD" build.keychain
+        env:
+          KEYCHAIN_TEMP_PASSWORD: opensesame
+          BASE64_DEV_APP_CERT: ${{ secrets.BASE64_DEV_APP_CERT }}
+          BASE64_DEV_APP_PRIVATE_KEY: ${{ secrets.BASE64_DEV_APP_PRIVATE_KEY }}
+          BASE64_MAC_DEV_APP_CERT: ${{ secrets.BASE64_MAC_DEV_APP_CERT }}
+          BASE64_MAC_DEV_APP_PRIVATE_KEY: ${{ secrets.BASE64_MAC_DEV_APP_PRIVATE_KEY }}
+          BASE64_MAC_DEV_INSTALL_CERT: ${{ secrets.BASE64_MAC_DEV_INSTALL_CERT }}
+          BASE64_MAC_DEV_INSTALL_PRIVATE_KEY: ${{ secrets.BASE64_MAC_DEV_INSTALL_PRIVATE_KEY }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: 'gradle'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+      - name: Get version
+        id: version
+        run: echo "VERSION=$(./gradlew -q :web:printVersion)" >> "$GITHUB_OUTPUT"
+      - name: Validate the tag name
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ ! -z "${{ github.event.inputs.tag }}" ]; then
+            TAG=${{ github.event.inputs.tag }}
+          else
+            TAG=${GITHUB_REF#refs/tags/}
+          fi
+          if [[ ! "$TAG" =~ ^desktop- ]]; then
+            echo "Error: Tag must start with 'v'"
+            exit 1
+          fi
+          if [[ ! $TAG == desktop-${{ steps.version.outputs.VERSION }} ]]; then
+            echo "Error: Git tag version ($TAG_VERSION) doesn't match project version (desktop-${{ steps.version.outputs.VERSION }})"
+            exit 1
+          fi
+      - name: Install Node modules
+        run: npm install
+      - name: Build a publishable JAR
+        run: ./gradlew clean :desktop:uploadPkgToAppStore
+        env:
+          APTABASE_ID: ${{ secrets.APTABASE_ID }}
