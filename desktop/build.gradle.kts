@@ -32,16 +32,21 @@ val macDeveloperApplicationCertName = if (isNotarizing) {
 } else {
     "3rd Party Mac Developer Application: Tanin Na Nakorn (S6482XAL5E)"
 }
-val appleEmail = try {
-    project.file("../secret/APPLE_EMAIL").readText().trim()
-} catch (e: Exception) {
-    System.getenv("APPLE_EMAIL") ?: "NO_EMAIL_SPECIFIED"
+val appleEmail = if (System.getenv("APPLE_EMAIL") != null) {
+    System.getenv("APPLE_EMAIL")
+} else {
+    try {
+        project.file("../secret/APPLE_EMAIL").readText().trim()
+    } catch (e: Exception) {
+        "The-apple-email-is-not-specified"
+    }
 }
 
 val codesignPackagePrefix = "tanin.backdoor.desktop."
 
 group = "tanin.backdoor.desktop"
 version = "1.0"
+val internalVersion = "1.0.11"
 
 java {
     toolchain {
@@ -199,9 +204,9 @@ tasks.named("sourcesJar") {
 }
 
 // For CI validation.
-tasks.register("printVersion") {
+tasks.register("printInternalVersion") {
     doLast {
-        print("$version")
+        print(internalVersion)
     }
 }
 
@@ -305,11 +310,11 @@ tasks.register("macosCodesignLibsInJars") {
     inputs.files(tasks.named("copyJar").get().outputs.files)
 
     val resourceNativePath = layout.buildDirectory.file("resources-native").get().asFile
-    resourceNativePath.deleteRecursively()
     val nativeLibPath = layout.buildDirectory.file("resources-native").get().asFile.resolve("app/resources")
-    nativeLibPath.mkdirs()
 
     doLast {
+        resourceNativePath.deleteRecursively()
+        nativeLibPath.mkdirs()
         inputs.files.forEach { file ->
             println("Process: ${file.absolutePath}")
 
@@ -380,9 +385,19 @@ tasks.register("jlink") {
     }
 }
 
+tasks.register("prepareInfoPlist") {
+    doLast {
+        val template = layout.projectDirectory.file("mac-resources/Info.plist.template").asFile.readText()
+        val content = template
+            .replace("{{VERSION}}", version.toString())
+            .replace("{{INTERNAL_VERSION}}", internalVersion)
+
+        layout.projectDirectory.file("mac-resources/Info.plist").asFile.writeText(content)
+    }
+}
 
 tasks.register("jpackage") {
-    dependsOn("jlink")
+    dependsOn("jlink", "prepareInfoPlist")
     val javaHome = System.getProperty("java.home")
     val jpackageBin = Paths.get(javaHome, "bin", "jpackage")
 
@@ -450,13 +465,13 @@ tasks.register("jpackageAndExtractApp") {
     inputs.file(tasks.named("jpackage").get().outputs.files.singleFile)
 
     val outputDir = layout.buildDirectory.dir("jpackage-extracted-app").get().asFile
-    outputDir.deleteRecursively()
-    outputDir.mkdirs()
     val outputFile = outputDir.resolve("Backdoor.app")
 
     outputs.dir(outputFile)
 
     doLast {
+        outputDir.deleteRecursively()
+        outputDir.mkdirs()
         var volumeName: String? = null
         val output = runCmd("/usr/bin/hdiutil", "attach", "-readonly", inputs.files.singleFile.absolutePath)
 
@@ -496,8 +511,9 @@ tasks.register<Exec>("notarize") {
         "notarytool",
         "submit",
         "--wait",
-        // TODO: Replace -p value with your notarytool profile's name. You can set it up using `xcrun notarytool store-credentials`.
-        "-p", "personal",
+        "--apple-id", appleEmail,
+        "--password", project.providers.environmentVariable("APPLE_APP_SPECIFIC_PASSWORD").get(),
+        "--team-id", "S6482XAL5E",
         inputs.files.singleFile.absolutePath,
     )
 }

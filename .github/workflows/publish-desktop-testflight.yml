@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Optional tag. Default to the tag of the selected branch.'
+        description: 'Optional tag (starts with `desktop-`). Default to the tag of the selected branch.'
         required: false
         type: string
 
@@ -13,8 +13,8 @@ permissions:
   contents: write
 
 jobs:
-  create-release-and-docker:
-    runs-on: ubuntu-latest
+  build:
+    runs-on: macos-latest
 
     steps:
       - name: Checkout
@@ -76,7 +76,7 @@ jobs:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
       - name: Get version
         id: version
-        run: echo "VERSION=$(./gradlew -q :web:printVersion)" >> "$GITHUB_OUTPUT"
+        run: echo "VERSION=$(./gradlew -q :desktop:printInternalVersion)" >> "$GITHUB_OUTPUT"
       - name: Validate the tag name
         run: |
           if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ ! -z "${{ github.event.inputs.tag }}" ]; then
@@ -98,3 +98,5 @@ jobs:
         run: ./gradlew clean :desktop:uploadPkgToAppStore
         env:
           APTABASE_ID: ${{ secrets.APTABASE_ID }}
+          APPLE_EMAIL: ${{ secrets.APPLE_EMAIL }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}

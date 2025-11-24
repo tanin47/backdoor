@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Optional tag. Default to the tag of the selected branch.'
+        description: 'Optional tag (starts with `web-`). Default to the tag of the selected branch.'
         required: false
         type: string
 
@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 jobs:
-  publish-jar:
+  build:
     runs-on: ubuntu-latest
 
     steps:
