@@ -12,7 +12,7 @@ plugins {
 }
 
 group = "tanin.backdoor"
-version = "2.3.0-rc2"
+version = "2.3.0-rc3"
 
 description = "Backdoor: Database Querying and Editing Tool"
 
