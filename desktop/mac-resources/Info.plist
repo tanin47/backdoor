@@ -1,0 +1,38 @@
+<?xml version="1.0" ?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>LSMinimumSystemVersion</key>
+    <string>12.0</string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>English</string>
+    <key>CFBundleAllowMixedLocalizations</key>
+    <string>true</string>
+    <key>CFBundleExecutable</key>
+    <string>Backdoor</string>
+    <key>CFBundleIconFile</key>
+    <string>Backdoor.icns</string>
+    <key>CFBundleIdentifier</key>
+    <string>tanin.backdoor.desktop.macos</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>Backdoor</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.utilities</string>
+    <key>CFBundleVersion</key>
+    <string>1.0.11</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>Copyright (C) 2025</string>
+    <key>NSSupportsAutomaticGraphicsSwitching</key>
+    <string>true</string>
+    <key>NSHighResolutionCapable</key>
+    <string>true</string>
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <string>false</string>
+  </dict>
+</plist>

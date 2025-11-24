@@ -156,6 +156,7 @@ async function submit() {
       class="textarea resize w-[480px]"
       disabled={isLoading || mode !== 'specified_value'}
       bind:value={specifiedValue}
+      autocorrect="off"
     ></textarea>
     <ErrorPanel {errors}/>
     <div class="flex items-center justify-between mt-2">

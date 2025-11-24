@@ -17,8 +17,7 @@ public interface WebviewNative extends Library {
   static final WebviewNative N = runSetup();
 
   private static WebviewNative runSetup() {
-    Base.prepareLib("/webview/libwebview.dylib");
-
+    Base.setUpNativeDir();
     return Native.load(
       "webview",
       WebviewNative.class,

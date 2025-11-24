@@ -47,15 +47,16 @@ public func setupMenu() {
     windowMenuItem.submenu = NSApplication.shared.windowsMenu
     mainMenu.addItem(windowMenuItem)
 
-    NSApplication.shared.helpMenu = NSMenu(title: "Help")
-
-    // TODO: Open the URL to the website.
-    let documentationItem = NSMenuItem(title: "Documentation & Support", action: #selector(NSWorkspace.shared.open(_:)), keyEquivalent: "")
-    NSApplication.shared.helpMenu!.addItem(documentationItem)
-
-    let helpMenuItem = NSMenuItem()
-    helpMenuItem.submenu = NSApplication.shared.helpMenu
-    mainMenu.addItem(helpMenuItem)
+    // NSApplication.shared.helpMenu = NSMenu(title: "Help")
+    //
+    // // TODO: Open the URL to the website.
+    // let documentationItem = NSMenuItem(title: "Documentation & Support", action: #selector(NSWorkspace.shared.open(_:)), keyEquivalent: "")
+    // documentationItem.representedObject = URL(string: "https://github.com/tanin47/backdoor")
+    // NSApplication.shared.helpMenu!.addItem(documentationItem)
+    //
+    // let helpMenuItem = NSMenuItem()
+    // helpMenuItem.submenu = NSApplication.shared.helpMenu
+    // mainMenu.addItem(helpMenuItem)
 
     NSApplication.shared.mainMenu = mainMenu
 }
