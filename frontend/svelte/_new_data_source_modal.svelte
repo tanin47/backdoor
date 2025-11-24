@@ -79,6 +79,7 @@ async function submit() {
       placeholder="Nickname"
       data-test-id="nickname"
       bind:value={form.nickname}
+      bind:this={mainInput}
       autocorrect="off"
     />
     <input
@@ -86,7 +87,6 @@ async function submit() {
       class="input w-full"
       placeholder="Database URL"
       data-test-id="url"
-      bind:this={mainInput}
       bind:value={form.url}
       autocorrect="off"
     />

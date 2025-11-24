@@ -54,6 +54,8 @@ jobs:
         run: npm install
       - name: Build a publishable JAR
         run: ./gradlew clean :web:publish
+        env:
+          APTABASE_ID: ${{ secrets.APTABASE_ID }}
       - name: Publish to Sonatype
         run: ./gradlew :web:jreleaserDeploy
         env:

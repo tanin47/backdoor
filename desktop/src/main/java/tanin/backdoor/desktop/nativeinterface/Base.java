@@ -5,42 +5,49 @@ import com.sun.jna.Library;
 import java.io.File;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.logging.Logger;
 
-public interface Base extends Library {
+public class Base {
   static final Logger logger = Logger.getLogger(WebviewNative.class.getName());
   static final File nativeDir = setUpNativeDir();
 
   static File setUpNativeDir() {
-    var dir = new File("./build/native");
-    logger.info("Preparing the native dir: " + dir.getPath());
-    if (!dir.exists()) {
-      var _ignored = dir.mkdirs();
-    }
-    System.setProperty("jna.library.path", dir.getPath());
+    boolean sandboxed = System.getenv("APP_SANDBOX_CONTAINER_ID") != null;
 
-    return dir;
-  }
 
-  static void prepareLib(String resourcePath) {
-    logger.info("Preparing " + resourcePath);
-    File target = nativeDir.toPath().resolve(new File(resourcePath).getName()).toFile();
-    if (target.exists()) {
-      var _ignored = target.delete();
-    }
+    try {
+      File nativeDir;
+      if (sandboxed) {
+        Path appPath = Paths.get(Base.class.getProtectionDomain().getCodeSource().getLocation().toURI());
 
-    try (InputStream in = MacOsApi.class.getResourceAsStream(resourcePath)) {
-      assert in != null;
-      Files.copy(in, target.toPath());
-    } catch (Exception e) {
-      if (e.getMessage() != null && e.getMessage().contains("used by another")) {
-        logger.warning(target.getAbsolutePath() + " is used by another application. Failed to replace the file. The failure can be ignored.");
+        while (appPath != null && !appPath.toString().endsWith(".app")) {
+          appPath = appPath.getParent();
+        }
+
+        assert appPath != null;
+        nativeDir = appPath.resolve("Contents/app/resources").toFile();
       } else {
-        logger.severe("Unable to extract: " + resourcePath);
-        throw new RuntimeException(e);
+        nativeDir = new File("src/main/resources/native");
       }
-    }
 
-    System.load(target.getAbsolutePath()); // Load it. This is so Native will be able to link it.
+      System.setProperty("jna.debug_load.jna", "true");
+      System.setProperty("jna.nosys", "true");
+      System.setProperty("jna.library.path", nativeDir.getAbsolutePath());
+
+      if (sandboxed) {
+        System.setProperty("jna.nounpack", "true");
+        System.setProperty("jna.noclasspath", "true");
+        System.setProperty("jna.boot.library.path", nativeDir.getAbsolutePath());
+      }
+
+      logger.info("User path: " + System.getProperty("user.dir"));
+      logger.info("Set the native library path to: " + nativeDir.getAbsolutePath());
+
+      return nativeDir;
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 }

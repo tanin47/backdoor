@@ -3,16 +3,17 @@ package tanin.backdoor.desktop.nativeinterface;
 import com.sun.jna.Library;
 import com.sun.jna.Native;
 
+import java.io.File;
 import java.util.Collections;
+import java.util.Objects;
 import java.util.logging.Logger;
 
-public interface MacOsApi extends Base {
+public interface MacOsApi extends Library {
   static final Logger logger = Logger.getLogger(WebviewNative.class.getName());
   static final MacOsApi N = runSetup();
 
   private static MacOsApi runSetup() {
-    Base.prepareLib("/libMacOsApi.dylib");
-
+    Base.setUpNativeDir();
     return Native.load(
       "MacOsApi",
       MacOsApi.class,
