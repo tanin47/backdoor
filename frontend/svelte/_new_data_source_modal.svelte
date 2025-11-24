@@ -115,7 +115,7 @@ async function submit() {
       If the URL doesn't contain the credentials, you can specify them here.
     </div>
     <ErrorPanel {errors}/>
-    <Button {isLoading} onClick={submit} dataTestId="submit-button">Connect DataSource</Button>
+    <Button {isLoading} onClick={submit} dataTestId="submit-button">Connect Data Source</Button>
     <div class="text-warning text-xs">
       The data source added here will be for you only. The credentials will be stored on your machine.
     </div>

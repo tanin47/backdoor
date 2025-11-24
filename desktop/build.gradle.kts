@@ -54,7 +54,7 @@ val codesignPackagePrefix = "tanin.backdoor.desktop."
 
 group = "tanin.backdoor.desktop"
 version = "1.0"
-val internalVersion = "1.0.12"
+val internalVersion = "1.0.13"
 
 java {
     toolchain {
