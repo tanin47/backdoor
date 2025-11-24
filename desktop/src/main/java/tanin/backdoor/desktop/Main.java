@@ -32,14 +32,14 @@ public class Main {
     var server = new BackdoorDesktopServer(
       new DatabaseConfig[0],
       0,
-      19999,
       authKey,
       new MinumBuilder.KeyStore(keyStoreFile, keyStorePassword)
     );
     logger.info("Starting...");
     var minum = server.start();
+    var sslPort = minum.getSslServer().getPort();
 
-    var browser = new Browser("https://localhost:19999/landing?authKey=" + authKey);
+    var browser = new Browser("https://localhost:" + sslPort + "/landing?authKey=" + authKey);
     browser.run();
 
     logger.info("Exiting");

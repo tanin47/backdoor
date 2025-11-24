@@ -11,7 +11,6 @@ import tanin.ejwf.MinumBuilder;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.security.SecureRandom;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;

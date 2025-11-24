@@ -68,8 +68,13 @@ public class MinumBuilder {
       props.setProperty("KEYSTORE_PASSWORD", keyStore.password);
     }
 
-    var context = new Context(Executors.newVirtualThreadPerTaskExecutor(), new Constants(props));
-    context.setLogger(new Logger(context.getConstants(), context.getExecutorService(), "primary logger"));
+    var executor = Executors.newVirtualThreadPerTaskExecutor();
+    var constants = new Constants(props);
+    var context = new Context(
+      executor,
+      constants,
+      new Logger(constants, executor, "primary logger")
+    );
     var minum = new FullSystem(context);
 
     Runtime.getRuntime().addShutdownHook(new Thread(() -> {

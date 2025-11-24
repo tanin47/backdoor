@@ -43,8 +43,7 @@ public class LoginTest extends Base {
 
     waitUntil(() -> assertEquals("/", getCurrentPath()));
 
-    click(".CodeMirror-code");
-    sendKeys("select current_user");
+    fillCodeMirror("select current_user");
     click(tid("run-sql-button"));
 
     waitUntil(() -> assertTrue(hasElem(tid("sheet-tab"))));

@@ -3,9 +3,7 @@ package tanin.backdoor.desktop.nativeinterface;
 import com.sun.jna.Library;
 import com.sun.jna.Native;
 
-import java.io.File;
 import java.util.Collections;
-import java.util.Objects;
 import java.util.logging.Logger;
 
 public interface MacOsApi extends Library {

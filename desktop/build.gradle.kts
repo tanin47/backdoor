@@ -1,5 +1,4 @@
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
-import java.io.ByteArrayOutputStream
 import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.io.path.absolutePathString
@@ -41,12 +40,21 @@ val appleEmail = if (System.getenv("APPLE_EMAIL") != null) {
         "The-apple-email-is-not-specified"
     }
 }
+val appleAppSpecificPassword = if (System.getenv("APPLE_APP_SPECIFIC_PASSWORD") != null) {
+    System.getenv("APPLE_APP_SPECIFIC_PASSWORD")
+} else {
+    try {
+        project.file("../secret/APPLE_APP_SPECIFIC_PASSWORD").readText().trim()
+    } catch (e: Exception) {
+        "The-apple-app-specific-password-is-not-specified"
+    }
+}
 
 val codesignPackagePrefix = "tanin.backdoor.desktop."
 
 group = "tanin.backdoor.desktop"
 version = "1.0"
-val internalVersion = "1.0.11"
+val internalVersion = "1.0.12"
 
 java {
     toolchain {
@@ -512,7 +520,7 @@ tasks.register<Exec>("notarize") {
         "submit",
         "--wait",
         "--apple-id", appleEmail,
-        "--password", project.providers.environmentVariable("APPLE_APP_SPECIFIC_PASSWORD").get(),
+        "--password", appleAppSpecificPassword,
         "--team-id", "S6482XAL5E",
         inputs.files.singleFile.absolutePath,
     )
@@ -560,7 +568,7 @@ tasks.register<Exec>("validatePkg") {
         "-f", inputs.files.singleFile.absolutePath,
         "-t", "osx",
         "-u", appleEmail,
-        "-p", project.providers.environmentVariable("APPLE_APP_SPECIFIC_PASSWORD").get()
+        "-p", appleAppSpecificPassword
     )
 }
 
@@ -575,6 +583,6 @@ tasks.register<Exec>("uploadPkgToAppStore") {
         "-f", inputs.files.singleFile.absolutePath,
         "-t", "osx",
         "-u", appleEmail,
-        "-p", project.providers.environmentVariable("APPLE_APP_SPECIFIC_PASSWORD").get()
+        "-p", appleAppSpecificPassword
     )
 }
