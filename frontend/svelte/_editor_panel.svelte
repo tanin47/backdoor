@@ -22,7 +22,7 @@ export let selectedQuery: Query | null
 let editorTextarea: HTMLTextAreaElement
 
 
-$: if (databases.length > 0 && selectedDatabaseName === null) {
+$: if (databases.length > 0 && !selectedDatabaseName) {
   selectedDatabaseName = databases[0].name
 }
 
@@ -57,15 +57,8 @@ $: if (editorTextarea && codeMirrorInstance === null) {
     },
   );
 
-  codeMirrorInstance.on('focus', () => {
-    // @ts-expect-error untyped testing var
-    window.CODE_MIRROR_FOCUSED_FOR_TESTING = true;
-  })
-
-  codeMirrorInstance.on('blur', () => {
-    // @ts-expect-error untyped testing var
-    window.CODE_MIRROR_FOCUSED_FOR_TESTING = false;
-  })
+  // @ts-expect-error untyped testing var
+  window.CODE_MIRROR_FOR_TESTING = codeMirrorInstance;
 }
 
 async function submit(): Promise<void> {
@@ -135,7 +128,7 @@ async function submit(): Promise<void> {
 </div>
 <div class="grow border-t border-neutral relative">
   <div class="absolute top-0 left-0 right-0 bottom-0">
-    <textarea bind:this={editorTextarea} placeholder="Compose a beautiful and useful SQL..."></textarea>
+    <textarea bind:this={editorTextarea} placeholder="Compose a beautiful SQL..."></textarea>
   </div>
 </div>
 
