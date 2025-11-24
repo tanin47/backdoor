@@ -14,16 +14,18 @@ public class Browser {
   private static final Logger logger = Logger.getLogger(Browser.class.getName());
 
   String url;
+  boolean isDebug;
   private long pointer;
 
-  public Browser(String url) {
+  public Browser(String url, boolean isDebug) {
     this.url = url;
+    this.isDebug = isDebug;
   }
 
   public void run() throws InterruptedException {
     MacOsApi.N.setupMenu();
 
-    this.pointer = N.webview_create(true, null);
+    this.pointer = N.webview_create(this.isDebug, null);
     N.webview_set_size(this.pointer, 1000, 600, WV_HINT_FIXED);
     N.webview_navigate(this.pointer, this.url);
 

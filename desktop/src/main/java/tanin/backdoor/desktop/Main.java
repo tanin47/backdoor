@@ -28,7 +28,6 @@ public class Main {
     var keyStoreFile = SelfSignedCertificate.generateKeyStoreFile(cert, keyStorePassword);
 
     var authKey = SelfSignedCertificate.generateRandomString(32);
-    logger.info("The auth key is randomly generated on each run: " + authKey);
     var server = new BackdoorDesktopServer(
       new DatabaseConfig[0],
       0,
@@ -39,7 +38,7 @@ public class Main {
     var minum = server.start();
     var sslPort = minum.getSslServer().getPort();
 
-    var browser = new Browser("https://localhost:" + sslPort + "/landing?authKey=" + authKey);
+    var browser = new Browser("https://localhost:" + sslPort + "/landing?authKey=" + authKey, MinumBuilder.IS_LOCAL_DEV);
     browser.run();
 
     logger.info("Exiting");
