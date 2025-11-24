@@ -29,7 +29,7 @@ public class LoginAdditionalTest extends Base {
         new DatabaseConfig("clickhouse", CLICKHOUSE_DATABASE_URL, null, null),
       },
       PORT,
-      0,
+      -1,
       new User[0],
       "dontcare"
     );

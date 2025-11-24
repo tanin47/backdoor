@@ -53,9 +53,19 @@ $: if (editorTextarea && codeMirrorInstance === null) {
         'Cmd-Space': 'autocomplete',
         'Ctrl-/': 'toggleComment',
         'Cmd-/': 'toggleComment'
-      }
+      },
     },
   );
+
+  codeMirrorInstance.on('focus', () => {
+    // @ts-expect-error untyped testing var
+    window.CODE_MIRROR_FOCUSED_FOR_TESTING = true;
+  })
+
+  codeMirrorInstance.on('blur', () => {
+    // @ts-expect-error untyped testing var
+    window.CODE_MIRROR_FOCUSED_FOR_TESTING = false;
+  })
 }
 
 async function submit(): Promise<void> {

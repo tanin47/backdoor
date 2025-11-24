@@ -23,12 +23,11 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
 
   BackdoorDesktopServer(
     DatabaseConfig[] databaseConfigs,
-    int port,
     int sslPort,
     String authKey,
     MinumBuilder.KeyStore keyStore
   ) {
-    super(databaseConfigs, port, sslPort, keyStore);
+    super(databaseConfigs, -1, sslPort, keyStore);
     this.authKey = authKey;
   }
 

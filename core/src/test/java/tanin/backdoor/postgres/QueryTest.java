@@ -9,8 +9,7 @@ public class QueryTest extends Base {
   @Test
   void createRenameUpdateDeleteView() throws InterruptedException {
     go("/");
-    click(".CodeMirror-code");
-    sendKeys("select * from \"user\" order by id asc limit 1");
+    fillCodeMirror("select * from \"user\" order by id asc limit 1");
     click(tid("run-sql-button"));
 
     waitUntil(() -> hasElem(tid("sheet-view-colum-header-number")));
@@ -35,9 +34,7 @@ public class QueryTest extends Base {
     waitUntil(() -> hasElem(tid("sheet-tab", "bdv_test")));
     waitUntil(() -> hasElem(tid("menu-items", "postgres", null, "menu-item-query", "bdv_test")));
 
-    click(".CodeMirror-code");
-    sendClearKeys();
-    sendKeys("select * from \"user\" order by id desc limit 1");
+    fillCodeMirror("select * from \"user\" order by id desc limit 1");
     click(tid("run-sql-button"));
 
     waitUntil(() -> {
@@ -62,8 +59,7 @@ public class QueryTest extends Base {
   @Test
   void makeNewSql() throws InterruptedException {
     go("/");
-    click(".CodeMirror-code");
-    sendKeys("select 1");
+    fillCodeMirror("select 1");
     click(tid("run-sql-button"));
 
     waitUntil(() -> hasElem(tid("sheet-view-colum-header-number")));
@@ -83,9 +79,7 @@ public class QueryTest extends Base {
 
     click(tid("make-new-sql-button"));
 
-    click(".CodeMirror-code");
-    sendClearKeys();
-    sendKeys("select 2");
+    fillCodeMirror("select 2");
     click(tid("run-sql-button"));
 
     waitUntil(() -> assertEquals(2, elems(tid("sheet-tab")).size()));

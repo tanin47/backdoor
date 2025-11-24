@@ -381,4 +381,18 @@ public class Base {
       }
     );
   }
+
+  public void fillCodeMirror(String sql) throws InterruptedException {
+    waitUntil(() -> {
+      click(".CodeMirror-code");
+      var isFocused = ((JavascriptExecutor) webDriver).executeScript("return window.CODE_MIRROR_FOCUSED_FOR_TESTING;");
+      if (isFocused instanceof Boolean && !((Boolean) isFocused)) {
+        Thread.sleep(1000);
+      }
+      assertEquals(true, isFocused);
+    });
+
+    sendClearKeys();
+    sendKeys(sql);
+  }
 }

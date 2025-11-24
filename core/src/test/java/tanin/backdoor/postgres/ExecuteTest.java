@@ -9,8 +9,7 @@ public class ExecuteTest extends Base {
   @Test
   void runExplain() throws InterruptedException {
     go("/");
-    click(".CodeMirror-code");
-    sendKeys("explain select 1");
+    fillCodeMirror("explain select 1");
     click(tid("run-sql-button"));
 
     waitUntil(() -> assertTrue(hasElem(tid("sheet-tab"))));
@@ -27,8 +26,7 @@ public class ExecuteTest extends Base {
   @Test
   void updateSql() throws InterruptedException {
     go("/");
-    click(".CodeMirror-code");
-    sendKeys("update \"user\" set username = 'test_user_3_updated' where username = 'test_user_3'");
+    fillCodeMirror("update \"user\" set username = 'test_user_3_updated' where username = 'test_user_3'");
     click(tid("run-sql-button"));
 
     waitUntil(() -> assertTrue(hasElem(tid("sheet-tab"))));
@@ -53,8 +51,7 @@ public class ExecuteTest extends Base {
   @Test
   void deleteSql() throws InterruptedException {
     go("/");
-    click(".CodeMirror-code");
-    sendKeys("delete from \"user\" where username = 'test_user_3'");
+    fillCodeMirror("delete from \"user\" where username = 'test_user_3'");
     click(tid("run-sql-button"));
 
     waitUntil(() -> assertTrue(hasElem(tid("sheet-tab"))));
@@ -78,8 +75,7 @@ public class ExecuteTest extends Base {
   @Test
   void makeViewAndThenExecute() throws InterruptedException {
     go("/");
-    click(".CodeMirror-code");
-    sendKeys("select 1");
+    fillCodeMirror("select 1");
     click(tid("run-sql-button"));
 
     waitUntil(() -> hasElem(tid("sheet-tab")));
@@ -95,9 +91,7 @@ public class ExecuteTest extends Base {
       );
     });
 
-    click(".CodeMirror-code");
-    sendClearKeys();
-    sendKeys("explain select 1");
+    fillCodeMirror("explain select 1");
     click(tid("run-sql-button"));
     waitUntil(() -> assertEquals(2, elems(tid("sheet-tab")).size()));
   }

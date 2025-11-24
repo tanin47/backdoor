@@ -7,7 +7,6 @@ import tanin.backdoor.core.*;
 
 import java.math.BigDecimal;
 import java.net.URISyntaxException;
-import java.util.UUID;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -18,6 +17,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Properties;
+import java.util.UUID;
 import java.util.logging.Logger;
 
 import static tanin.backdoor.core.BackdoorCoreServer.makeSqlLiteral;
