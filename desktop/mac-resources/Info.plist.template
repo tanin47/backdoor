@@ -13,15 +13,15 @@
     <key>CFBundleAllowMixedLocalizations</key>
     <string>true</string>
     <key>CFBundleExecutable</key>
-    <string>Backdoor</string>
+    <string>{{APP_NAME}}</string>
     <key>CFBundleIconFile</key>
-    <string>Backdoor.icns</string>
+    <string>{{APP_NAME}}.icns</string>
     <key>CFBundleIdentifier</key>
-    <string>tanin.backdoor.desktop.macos</string>
+    <string>{{PACKAGE_IDENTIFIER}}</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>Backdoor</string>
+    <string>{{APP_NAME}}</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>LSApplicationCategoryType</key>
