@@ -362,7 +362,7 @@ public class Base {
   }
 
 
-  int waitUntilTimeoutInMillis = 5000;
+  int waitUntilTimeoutInMillis = 10000;
 
   @FunctionalInterface
   public interface InterruptibleSupplier {
