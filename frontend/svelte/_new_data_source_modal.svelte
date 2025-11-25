@@ -4,6 +4,7 @@ import {type FetchError, invokeOnEnter, post} from "./common/form"
 import Button from './common/_button.svelte'
 import ErrorPanel from "./common/form/_error_panel.svelte"
 import 'altcha'
+import {trackEvent} from "./common/tracker";
 
 export let onAdded: () => Promise<void>
 
@@ -59,6 +60,7 @@ async function submit() {
 
     await onAdded()
     modal.close()
+    trackEvent('new-data-source-added')
   } catch (e) {
     isLoading = false
     errors = (e as FetchError).messages

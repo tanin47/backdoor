@@ -1,6 +1,9 @@
 // @ts-expect-error defined globally
 export const IS_LOCAL_DEV: boolean = window.IS_LOCAL_DEV;
 
+// @ts-expect-error defined globally
+export const APP_VERSION: boolean = window.APP_VERSION;
+
 export type Paradigm = 'CORE' | 'WEB' | 'DESKTOP';
 // @ts-expect-error defined globally
 export const PARADIGM: string = window.PARADIGM;

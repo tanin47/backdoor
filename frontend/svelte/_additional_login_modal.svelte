@@ -5,6 +5,7 @@ import {type FetchError, invokeOnEnter, post} from "./common/form"
 import Button from './common/_button.svelte'
 import ErrorPanel from "./common/form/_error_panel.svelte"
 import 'altcha'
+import {trackEvent} from "./common/tracker";
 
 export let onLoggedIn: () => Promise<void>
 
@@ -64,6 +65,7 @@ async function submit() {
 
     await onLoggedIn()
     modal.close()
+    trackEvent('data-source-logged-in')
   } catch (e) {
     isLoading = false
     errors = (e as FetchError).messages

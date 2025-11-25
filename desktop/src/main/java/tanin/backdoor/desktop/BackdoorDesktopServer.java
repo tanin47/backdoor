@@ -11,6 +11,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.prefs.BackingStoreException;
@@ -18,6 +19,18 @@ import java.util.prefs.Preferences;
 
 public class BackdoorDesktopServer extends BackdoorCoreServer {
   private static final Logger logger = Logger.getLogger(BackdoorDesktopServer.class.getName());
+  private static final String VERSION;
+
+  static {
+    var properties = new Properties();
+    try (var stream = BackdoorDesktopServer.class.getResourceAsStream("/version.properties")) {
+      properties.load(stream);
+      VERSION = properties.getProperty("version");
+    } catch (Exception e) {
+      logger.warning("Failed to load version.properties: " + e.getMessage());
+      throw new RuntimeException("Failed to load version.properties", e);
+    }
+  }
 
   public String authKey;
 
@@ -134,7 +147,7 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
 
   protected IResponse processIndexPage(IRequest req) throws Exception {
     return Response.htmlOk(
-      makeHtml("index.html", null, Paradigm.DESKTOP),
+      makeHtml("index.html", null, Paradigm.DESKTOP, VERSION),
       Map.of(
         "Set-Cookie", AUTH_KEY_COOKIE_KEY + "=" + this.authKey + "; Max-Age=86400; Path=/; Secure; HttpOnly"
       )
