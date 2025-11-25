@@ -55,7 +55,7 @@ val appName = "Backdoor"
 val packageIdentifier = "tanin.backdoor.desktop.macos"
 group = "tanin.backdoor.desktop"
 version = "1.0"
-val internalVersion = "1.0.13"
+val internalVersion = "1.0.14"
 
 java {
     toolchain {
@@ -95,8 +95,14 @@ tasks.register("compileSwift") {
     }
 }
 
+tasks.register("writeVersion") {
+    doLast {
+        file("src/main/resources/version.properties").writeText("version=${project.version}")
+    }
+}
+
 tasks.named<JavaCompile>("compileJava") {
-    dependsOn("compileSwift")
+    dependsOn("compileSwift", "writeVersion")
     options.compilerArgs.addAll(
         listOf(
             "--add-exports",

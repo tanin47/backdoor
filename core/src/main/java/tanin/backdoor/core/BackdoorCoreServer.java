@@ -93,11 +93,11 @@ public abstract class BackdoorCoreServer {
     return '"' + sql.replace("\"", "").replace(";", "") + '"';
   }
 
-  public static String makeHtml(String path, String csrfToken, Paradigm paradigm) throws IOException {
-    return makeHtml(path, csrfToken, paradigm, null);
+  public static String makeHtml(String path, String csrfToken, Paradigm paradigm, String appVersion) throws IOException {
+    return makeHtml(path, csrfToken, paradigm, appVersion, null);
   }
 
-  public static String makeHtml(String path, String csrfToken, Paradigm paradigm, JsonObject props) throws IOException {
+  public static String makeHtml(String path, String csrfToken, Paradigm paradigm, String appVersion, JsonObject props) throws IOException {
     var layout = TemplateProcessor.buildProcessor(new String(BackdoorCoreServer.class.getResourceAsStream("/html/layout.html").readAllBytes()));
     var targetHtml = TemplateProcessor.buildProcessor(new String(BackdoorCoreServer.class.getResourceAsStream("/html/" + path).readAllBytes()));
 
@@ -112,6 +112,7 @@ public abstract class BackdoorCoreServer {
         "content", targetHtml.renderTemplate(propsMap),
         "IS_LOCAL_DEV_JSON", Json.value(MinumBuilder.IS_LOCAL_DEV).toString(),
         "CSRF_TOKEN", Json.value(csrfToken).toString(),
+        "APP_VERSION", Json.value(appVersion).toString(),
         "PARADIGM", Json.value(paradigm.toString()).toString()
       )
     );
@@ -594,7 +595,7 @@ public abstract class BackdoorCoreServer {
 
   protected IResponse processIndexPage(IRequest req) throws Exception {
     return Response.htmlOk(
-      makeHtml("index.html", null, Paradigm.CORE)
+      makeHtml("index.html", null, Paradigm.CORE, "core")
     );
   }
 

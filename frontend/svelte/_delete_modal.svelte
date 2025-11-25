@@ -4,6 +4,7 @@ import {Sheet} from "./common/models"
 import {type FetchError, post} from "./common/form"
 import Button from './common/_button.svelte'
 import ErrorPanel from "./common/form/_error_panel.svelte"
+import {trackEvent} from "./common/tracker";
 
 export let sheet: Sheet
 export let onDeleted: (rowIndex: number) => void
@@ -59,6 +60,7 @@ async function submit(): Promise<void> {
 
     modal.close()
     onDeleted(rowIndex_)
+    trackEvent('row-deleted')
   } catch (e) {
     isLoading = false
     errors = (e as FetchError).messages

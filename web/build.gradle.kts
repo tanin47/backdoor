@@ -12,7 +12,7 @@ plugins {
 }
 
 group = "tanin.backdoor"
-version = "2.3.0-rc4"
+version = "2.3.0"
 
 description = "Backdoor: Database Querying and Editing Tool"
 
@@ -30,6 +30,8 @@ java {
         }
     }
 }
+
+
 
 repositories {
     mavenCentral()
@@ -54,6 +56,12 @@ dependencies {
     testImplementation("org.seleniumhq.selenium:selenium-java:4.36.0")
 }
 
+tasks.register("writeVersion") {
+    doLast {
+        file("src/main/resources/version.properties").writeText("version=${project.version}")
+    }
+}
+
 tasks.named<Test>("test") {
     useJUnitPlatform()
 
@@ -67,6 +75,10 @@ tasks.named<Test>("test") {
         showCauses = true
         exceptionFormat = TestExceptionFormat.FULL
     }
+}
+
+tasks.compileJava {
+    dependsOn("writeVersion")
 }
 
 application {

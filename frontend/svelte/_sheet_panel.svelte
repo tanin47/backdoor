@@ -3,6 +3,7 @@ import {post} from "./common/form";
 import {type Query, Sheet, type Table} from "./common/models";
 import SheetView from './_sheet_view.svelte'
 import {generateName} from "./common/globals";
+import {trackEvent} from "./common/tracker";
 
 export let onSheetSelected: (sheet: Sheet) => void
 export let onTableDropped: (database: string, table: string) => void
@@ -42,6 +43,7 @@ export function addOrUpdateSheet(sheet: Sheet) {
   }
   selectedSheet = sheet
   sheets = sheets
+  trackEvent('sheet-loaded', {shownRowCount: sheet.rows.length, totalRowCount: sheet.stats.numberOfRows})
 }
 
 export async function openTable(table: Table): Promise<void> {
@@ -68,6 +70,8 @@ export async function openTable(table: Table): Promise<void> {
     const newSheet = new Sheet(json.sheet)
     sheets.push(newSheet)
     sheets = sheets
+
+    trackEvent('table-loaded', {shownRowCount: newSheet.rows.length, totalRowCount: newSheet.stats.numberOfRows})
 
     selectedSheet = newSheet
   } catch (e) {

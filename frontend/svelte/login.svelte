@@ -33,7 +33,7 @@ let isLocalhost = window.location.hostname === 'localhost' || window.location.ho
 let isValidHost = isLocalhost ? true : window.location.protocol === 'https:';
 
 onMount(() => {
-  trackEvent('landing_login')
+  trackEvent('landing-login')
 })
 
 </script>

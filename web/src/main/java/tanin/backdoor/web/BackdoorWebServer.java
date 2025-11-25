@@ -19,6 +19,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.logging.Logger;
+import java.util.Properties;
 
 import static com.renomad.minum.web.RequestLine.Method.*;
 
@@ -28,6 +29,19 @@ public class BackdoorWebServer extends BackdoorCoreServer {
   private static final Logger logger = Logger.getLogger(BackdoorWebServer.class.getName());
   private static final String AUTH_COOKIE_KEY = "backdoor";
   private static final Set<RequestLine.Method> CSRF_READ_METHODS = new HashSet<>(List.of(GET, HEAD, OPTIONS));
+  private static final String VERSION;
+
+  static {
+    var properties = new Properties();
+    try (var stream = BackdoorWebServer.class.getResourceAsStream("/version.properties")) {
+      properties.load(stream);
+      VERSION = properties.getProperty("version");
+    } catch (Exception e) {
+      logger.warning("Failed to load version.properties: " + e.getMessage());
+      throw new RuntimeException("Failed to load version.properties", e);
+    }
+  }
+
 
   User[] users;
   public String secretKey;
@@ -330,7 +344,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
         var isLocalHost = req.getHeaders().valueByKey("Host").stream().findFirst().orElse("").startsWith("localhost");
         var csrfToken = extractOrMakeCsrfCookieValue(req, true);
         return Response.htmlOk(
-          makeHtml("login.html", csrfToken, Paradigm.WEB),
+          makeHtml("login.html", csrfToken, Paradigm.WEB, VERSION),
           Map.of("Set-Cookie", makeCsrfTokenSetCookieLine(csrfToken, !isLocalHost))
         );
       }
@@ -475,7 +489,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
     var isLocalHost = req.getHeaders().valueByKey("Host").stream().findFirst().orElse("").startsWith("localhost");
     var csrfToken = extractOrMakeCsrfCookieValue(req, true);
     return Response.htmlOk(
-      makeHtml("index.html", csrfToken, Paradigm.WEB),
+      makeHtml("index.html", csrfToken, Paradigm.WEB, VERSION),
       Map.of("Set-Cookie", makeCsrfTokenSetCookieLine(csrfToken, !isLocalHost))
     );
   }

@@ -20,7 +20,7 @@ let selectedDatabase: Database | null = null
 let errorModal: ErrorModal;
 let newDataSourceModal: NewDataSourceModal;
 let deleteDataSourceModal: DeleteDataSourceModal;
-let additionalLoginModal: AdditionalLoginModal |  null
+let additionalLoginModal: AdditionalLoginModal;
 
 let isLoading = false
 let databases: Database[] = []
@@ -31,7 +31,9 @@ async function load(): Promise<void> {
     const json = await post('/api/get-relations', {})
 
     databases = json.databases;
+    trackEvent('databases-loaded', {count: databases.length, totalTableCount: databases.reduce((sum, b) => (sum + (b.tables?.length ?? 0)), 0)})
   } catch (e) {
+    console.error(e)
     errorModal.open(
       (e as FetchError).messages,
       'We cannot access your database. Please confirm that the database URL is correct. You can use `psql URL` to verify that your database URL is correct.'
@@ -42,7 +44,7 @@ async function load(): Promise<void> {
 }
 
 onMount(() => {
-  trackEvent('landing_index')
+  trackEvent('landing-index')
   isLoading = true
   void load()
 })
@@ -102,7 +104,6 @@ export async function runSql(database: string, sql: string): Promise<void> {
     })
 
     const sheet = json.sheet;
-    console.log(sheet);
 
     sheetPanel.addOrUpdateSheet(new Sheet(json.sheet))
 
@@ -111,6 +112,7 @@ export async function runSql(database: string, sql: string): Promise<void> {
     } else {
       selectedQuery = null
     }
+    trackEvent('sql-run')
   } catch (e) {
     errorModal.open((e as FetchError).messages);
   }

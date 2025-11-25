@@ -4,6 +4,7 @@ import {Sheet} from "./common/models"
 import {type FetchError, post} from "./common/form"
 import Button from './common/_button.svelte'
 import ErrorPanel from "./common/form/_error_panel.svelte"
+import {trackEvent} from "./common/tracker";
 
 export let sheet: Sheet
 export let onRenamed: (newName: string) => void
@@ -57,6 +58,7 @@ async function submit() {
 
     modal.close()
     onRenamed(newName)
+    trackEvent('table-renamed')
   } catch (e) {
     isLoading = false
     errors = (e as FetchError).messages
