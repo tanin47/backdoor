@@ -12,8 +12,8 @@ public class QueryTest extends Base {
     fillCodeMirror("select * from \"user\" order by id asc limit 1");
     click(tid("run-sql-button"));
 
-    waitUntil(() -> hasElem(tid("sheet-view-colum-header-number")));
-    waitUntil(() -> hasElem(tid("menu-items", "postgres", null, "menu-item-query")));
+    waitUntil(() -> assertTrue(hasElem(tid("sheet-view-colum-header-number"))));
+    waitUntil(() -> assertTrue(hasElem(tid("menu-items", "postgres", null, "menu-item-query"))));
 
     assertEquals(
       """
@@ -31,8 +31,8 @@ public class QueryTest extends Base {
     fill(tid("new-name"), "bdv_test");
     click(tid("submit-button"));
 
-    waitUntil(() -> hasElem(tid("sheet-tab", "bdv_test")));
-    waitUntil(() -> hasElem(tid("menu-items", "postgres", null, "menu-item-query", "bdv_test")));
+    waitUntil(() -> assertTrue(hasElem(tid("sheet-tab", "bdv_test"))));
+    waitUntil(() -> assertTrue(hasElem(tid("menu-items", "postgres", null, "menu-item-query", "bdv_test"))));
 
     fillCodeMirror("select * from \"user\" order by id desc limit 1");
     click(tid("run-sql-button"));
@@ -62,8 +62,8 @@ public class QueryTest extends Base {
     fillCodeMirror("select 1");
     click(tid("run-sql-button"));
 
-    waitUntil(() -> hasElem(tid("sheet-view-colum-header-number")));
-    waitUntil(() -> hasElem(tid("menu-items", "postgres", null, "menu-item-query")));
+    waitUntil(() -> assertTrue(hasElem(tid("sheet-view-colum-header-number"))));
+    waitUntil(() -> assertTrue(hasElem(tid("menu-items", "postgres", null, "menu-item-query"))));
 
     waitUntil(() -> {
       assertEquals(

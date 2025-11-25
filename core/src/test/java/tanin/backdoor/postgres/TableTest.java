@@ -49,7 +49,7 @@ public class TableTest extends Base {
 
     click(tid("menu-items", "postgres", null, "menu-item-table", "date_time"));
 
-    waitUntil(() -> hasElem(tid("sheet-tab", "date_time")));
+    waitUntil(() -> assertTrue(hasElem(tid("sheet-tab", "date_time"))));
     assertCell(0, "timestamp", "2025-10-19T10:00:01Z");
     assertCell(0, "timestamp_with_time_zone", "2025-10-19T10:00:02Z");
     assertCell(0, "date", "2025-10-20");
@@ -145,7 +145,7 @@ public class TableTest extends Base {
 
     click(tid("menu-items", "postgres", null, "menu-item-table", "user"));
 
-    waitUntil(() -> hasElem(tid("sheet-tab", "user")));
+    waitUntil(() -> assertTrue(hasElem(tid("sheet-tab", "user"))));
     assertColumnValues("username", "test_user_1", "test_user_2", "test_user_3", "test_user_4");
 
     assertEquals("Count: 4 (Show all)", elem(tid("sheet-stats")).getText());
@@ -154,8 +154,8 @@ public class TableTest extends Base {
     fill(tid("new-name"), "user_new_name");
     click(tid("submit-button"));
 
-    waitUntil(() -> hasElem(tid("sheet-tab", "user_new_name")));
-    waitUntil(() -> hasElem(tid("menu-items", "postgres", null, "menu-item-table", "user_new_name")));
+    waitUntil(() -> assertTrue(hasElem(tid("sheet-tab", "user_new_name"))));
+    waitUntil(() -> assertTrue(hasElem(tid("menu-items", "postgres", null, "menu-item-table", "user_new_name"))));
 
     click(tid("drop-table-button"));
     click(tid("submit-button"));
@@ -170,7 +170,7 @@ public class TableTest extends Base {
 
     click(tid("menu-items", "postgres", null, "menu-item-table", "user"));
 
-    waitUntil(() -> hasElem(tid("sheet-tab", "user")));
+    waitUntil(() -> assertTrue(hasElem(tid("sheet-tab", "user"))));
     click(tid("sheet-column-value", "username", null, "edit-field-button"));
 
     fill(tid("new-value"), "new-username");
@@ -186,7 +186,7 @@ public class TableTest extends Base {
 
     click(tid("menu-items", "postgres", null, "menu-item-table", "user"));
 
-    waitUntil(() -> hasElem(tid("sheet-tab", "user")));
+    waitUntil(() -> assertTrue(hasElem(tid("sheet-tab", "user"))));
     hover(tid("sheet-column-value", "username"));
 
     click(tid("sheet-view-row", null, "delete-row-button"));
@@ -201,7 +201,7 @@ public class TableTest extends Base {
 
     click(tid("menu-items", "postgres", null, "menu-item-table", "user"));
 
-    waitUntil(() -> hasElem(tid("sheet-tab", "user")));
+    waitUntil(() -> assertTrue(hasElem(tid("sheet-tab", "user"))));
     click(tid("sheet-view-column-header", "username", null, "filter-button"));
 
     click(tid("specified-value-checkbox"));
@@ -217,7 +217,7 @@ public class TableTest extends Base {
 
     click(tid("menu-items", "postgres", null, "menu-item-table", "user"));
 
-    waitUntil(() -> hasElem(tid("sheet-tab", "user")));
+    waitUntil(() -> assertTrue(hasElem(tid("sheet-tab", "user"))));
     assertEquals(
       "none",
       elem(tid("sheet-view-column-header", "username", null, "sort-button"))

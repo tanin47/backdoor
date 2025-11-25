@@ -78,8 +78,8 @@ public class ExecuteTest extends Base {
     fillCodeMirror("select 1");
     click(tid("run-sql-button"));
 
-    waitUntil(() -> hasElem(tid("sheet-tab")));
-    waitUntil(() -> hasElem(tid("menu-items", "postgres", null, "menu-item-query")));
+    waitUntil(() -> assertTrue(hasElem(tid("sheet-tab"))));
+    waitUntil(() -> assertTrue(hasElem(tid("menu-items", "postgres", null, "menu-item-query"))));
 
     waitUntil(() -> {
       assertEquals(
