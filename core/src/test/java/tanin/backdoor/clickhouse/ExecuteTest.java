@@ -79,8 +79,8 @@ public class ExecuteTest extends Base {
     select(tid("run-sql-database-select"), "clickhouse");
     click(tid("run-sql-button"));
 
-    waitUntil(() -> hasElem(tid("sheet-tab")));
-    waitUntil(() -> hasElem(tid("menu-items", "clickhouse", null, "menu-item-query")));
+    waitUntil(() -> assertTrue(hasElem(tid("sheet-tab"))));
+    waitUntil(() -> assertTrue(hasElem(tid("menu-items", "clickhouse", null, "menu-item-query"))));
 
     assertSheetViewContent(
       """

@@ -11,6 +11,7 @@ import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.interactions.Actions;
+import org.openqa.selenium.logging.LogEntries;
 import org.openqa.selenium.logging.LogType;
 import org.openqa.selenium.logging.LoggingPreferences;
 import org.openqa.selenium.support.ui.Select;
@@ -23,6 +24,7 @@ import java.io.File;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.logging.Level;
@@ -60,6 +62,12 @@ public class Base {
         FileUtils.copyFile(scrFile, file);
 
         logger.info(testName + "failed. Captured the screenshot at: " + file.getAbsolutePath());
+
+        var logEntries = webDriver.manage().logs().get(org.openqa.selenium.logging.LogType.BROWSER);
+        logger.info("Browser logs:");
+        for (var entry : logEntries) {
+          logger.info(new Date(entry.getTimestamp()) + ": " + entry.getMessage());
+        }
       }
     }
   };
@@ -308,6 +316,7 @@ public class Base {
 
       var isFocused = ((JavascriptExecutor) webDriver).executeScript("return window.CODE_MIRROR_FOR_TESTING.hasFocus();");
       if (isFocused instanceof Boolean && !((Boolean) isFocused)) {
+        logger.info("Unable to focus on CodeMirror. Waiting 1s and retrying...");
         Thread.sleep(1000);
       }
       assertEquals(true, isFocused);
