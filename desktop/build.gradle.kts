@@ -450,16 +450,19 @@ tasks.register("jpackage") {
 
     inputs.file(tasks.named("bareJpackage").get().outputs.files.singleFile)
 
-    val outputDir = layout.buildDirectory.dir("jpackage").get().asFile
-    val outputAppFile = outputDir.resolve("$appName.app")
-    val outputDmgFile = outputDir.resolve(inputs.files.singleFile.name)
+    val outputAppDir = layout.buildDirectory.dir("extracted-dmg").get().asFile
+    val outputAppFile = outputAppDir.resolve("$appName.app")
+    val outputDmgDir = layout.buildDirectory.dir("dmg").get().asFile
+    val outputDmgFile = outputDmgDir.resolve(inputs.files.singleFile.name)
 
     outputs.dir(outputAppFile)
     outputs.file(outputDmgFile)
 
     doLast {
-        outputDir.deleteRecursively()
-        outputDir.mkdirs()
+        outputAppDir.deleteRecursively()
+        outputAppDir.mkdirs()
+        outputDmgDir.deleteRecursively()
+        outputDmgDir.mkdirs()
         var volumeName: String? = null
         val output = runCmd("/usr/bin/hdiutil", "attach", "-readonly", inputs.files.singleFile.absolutePath)
 
@@ -491,7 +494,7 @@ tasks.register("jpackage") {
             "/usr/bin/hdiutil",
             "create",
             "-ov",
-            "-srcFolder", outputDir.absolutePath,
+            "-srcFolder", outputAppDir.absolutePath,
             outputDmgFile.absolutePath,
         )
     }
