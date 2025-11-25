@@ -50,8 +50,9 @@ val appleAppSpecificPassword = if (System.getenv("APPLE_APP_SPECIFIC_PASSWORD") 
     }
 }
 
-val codesignPackagePrefix = "tanin.backdoor.desktop."
-
+val teamId = "S6482XAL5E"
+val appName = "Backdoor"
+val packageIdentifier = "tanin.backdoor.desktop.macos"
 group = "tanin.backdoor.desktop"
 version = "1.0"
 val internalVersion = "1.0.13"
@@ -118,8 +119,6 @@ tasks.jacocoTestReport {
 
 repositories {
     mavenCentral()
-    maven { url = uri("https://jitpack.io") }
-    maven { url = uri("https://repo.casterlabs.co/maven") }
 }
 
 dependencies {
@@ -167,8 +166,6 @@ tasks.jar {
 
 tasks.register<Exec>("compileTailwind") {
     workingDir = layout.projectDirectory.dir("..").asFile
-//    inputs.files(fileTree("frontend"))
-//    outputs.dir("./build/compiled-frontend-resources")
 
     environment("NODE_ENV", "production")
 
@@ -184,8 +181,6 @@ tasks.register<Exec>("compileTailwind") {
 
 tasks.register<Exec>("compileSvelte") {
     workingDir = layout.projectDirectory.dir("..").asFile
-//    inputs.files(fileTree("frontend"))
-//    outputs.dir("./build/compiled-frontend-resources")
 
     environment("NODE_ENV", "production")
     environment("ENABLE_SVELTE_CHECK", "true")
@@ -270,8 +265,6 @@ private fun codesign(file: File, useRuntimeEntitlement: Boolean = false) {
         },
         "--timestamp",
         "--force",
-//        "--prefix",
-//        codesignPackagePrefix,
         "--sign",
         macDeveloperApplicationCertName,
         file.absolutePath,
@@ -346,23 +339,21 @@ private fun codesignDir(dir: File, useRuntimeEntitlement: Boolean = false) {
         }
 }
 
-tasks.register("macosCodesignProvisionprofile") {
-    doLast {
-        codesign(provisionprofileDir.file("embedded.provisionprofile").asFile)
-        codesign(provisionprofileDir.file("runtime.provisionprofile").asFile, useRuntimeEntitlement = true)
+private fun removeQuarantine(file: File) {
+    try {
+        runCmd("/usr/bin/xattr", "-d", "com.apple.quarantine", file.absolutePath)
+    } catch (_: IllegalStateException) {
     }
 }
 
-tasks.register<Exec>("jdeps") {
-    dependsOn("assemble")
-    val jdepsBin = Paths.get(System.getProperty("java.home"), "bin", "jdeps")
-    commandLine(
-        jdepsBin,
-        "--module-path", tasks.named<JavaCompile>("compileJava").get().classpath.asPath,
-        "--multi-release", "base",
-        "--print-module-deps",
-        tasks.jar.get().outputs.files.asPath,
-    )
+tasks.register("macosCodesignProvisionprofile") {
+    doLast {
+        removeQuarantine(provisionprofileDir.file("embedded.provisionprofile").asFile)
+        codesign(provisionprofileDir.file("embedded.provisionprofile").asFile)
+
+        removeQuarantine(provisionprofileDir.file("runtime.provisionprofile").asFile)
+        codesign(provisionprofileDir.file("runtime.provisionprofile").asFile, useRuntimeEntitlement = true)
+    }
 }
 
 tasks.register("jlink") {
@@ -399,12 +390,14 @@ tasks.register("prepareInfoPlist") {
         val content = template
             .replace("{{VERSION}}", version.toString())
             .replace("{{INTERNAL_VERSION}}", internalVersion)
+            .replace("{{PACKAGE_IDENTIFIER}}", packageIdentifier)
+            .replace("{{APP_NAME}}", appName)
 
         layout.projectDirectory.file("mac-resources/Info.plist").asFile.writeText(content)
     }
 }
 
-tasks.register("jpackage") {
+tasks.register("bareJpackage") {
     dependsOn("jlink", "prepareInfoPlist")
     val javaHome = System.getProperty("java.home")
     val jpackageBin = Paths.get(javaHome, "bin", "jpackage")
@@ -414,8 +407,7 @@ tasks.register("jpackage") {
 
     inputs.files(runtimeImage, modulePath)
 
-    val appName = "Backdoor"
-    val outputDir = layout.buildDirectory.dir("jpackage")
+    val outputDir = layout.buildDirectory.dir("bare-jpackage")
     val outputFile = outputDir.get().asFile.resolve("${appName}-$version.dmg")
 
     outputs.file(outputFile)
@@ -424,58 +416,40 @@ tasks.register("jpackage") {
     doLast {
         runCmd(
             jpackageBin.absolutePathString(),
-            "--name",
-            appName,
-            "--app-version",
-            version.toString(),
-            "--main-jar",
-            modulePath.resolve("${project.name}-$version.jar").absolutePath,
-            "--main-class",
-            mainClassName,
-            "--runtime-image",
-            runtimeImage.absolutePath,
-            "--vendor",
-            "tanin.backdoor",
-            "--input",
-            modulePath.absolutePath,
-            "--dest",
-            outputDir.get().asFile.absolutePath,
-            "--mac-package-identifier",
-            "tanin.backdoor.desktop.macos",
-            "--mac-package-name",
-            "Backdoor",
-            "--mac-package-signing-prefix",
-            codesignPackagePrefix,
+            "--name", appName,
+            "--app-version", version.toString(),
+            "--main-jar", modulePath.resolve("${project.name}-$version.jar").absolutePath,
+            "--main-class", mainClassName,
+            "--runtime-image", runtimeImage.absolutePath,
+            "--input", modulePath.absolutePath,
+            "--dest", outputDir.get().asFile.absolutePath,
+            "--mac-package-identifier", packageIdentifier,
+            "--mac-package-name", appName,
             "--mac-sign",
             "--mac-app-store",
-            "--mac-signing-key-user-name",
-            macDeveloperApplicationCertName,
-            "--mac-entitlements",
-            "entitlements.plist",
-            "--resource-dir",
-            layout.projectDirectory.dir("mac-resources").asFile.absolutePath,
-            "--app-content",
-            provisionprofileDir.file("embedded.provisionprofile").asFile.absolutePath,
-            "--app-content",
-            layout.buildDirectory.file("resources-native").get().asFile.resolve("app").absolutePath,
+            "--mac-signing-key-user-name", macDeveloperApplicationCertName,
+            "--mac-entitlements", "entitlements.plist",
+            "--resource-dir", layout.projectDirectory.dir("mac-resources").asFile.absolutePath,
+            "--app-content", provisionprofileDir.file("embedded.provisionprofile").asFile.absolutePath,
+            "--app-content", layout.buildDirectory.file("resources-native").get().asFile.resolve("app").absolutePath,
             // -XstartOnFirstThread requires for MacOs
             "--java-options",
             "-XstartOnFirstThread --add-exports java.base/sun.security.x509=ALL-UNNAMED --add-exports java.base/sun.security.tools.keytool=ALL-UNNAMED"
         )
-
     }
-
 }
 
-tasks.register("jpackageAndExtractApp") {
-    dependsOn("jpackage")
+tasks.register("jpackage") {
+    dependsOn("bareJpackage")
 
-    inputs.file(tasks.named("jpackage").get().outputs.files.singleFile)
+    inputs.file(tasks.named("bareJpackage").get().outputs.files.singleFile)
 
-    val outputDir = layout.buildDirectory.dir("jpackage-extracted-app").get().asFile
-    val outputFile = outputDir.resolve("Backdoor.app")
+    val outputDir = layout.buildDirectory.dir("jpackage").get().asFile
+    val outputAppFile = outputDir.resolve("$appName.app")
+    val outputDmgFile = outputDir.resolve(inputs.files.singleFile.name)
 
-    outputs.dir(outputFile)
+    outputs.dir(outputAppFile)
+    outputs.file(outputDmgFile)
 
     doLast {
         outputDir.deleteRecursively()
@@ -492,27 +466,35 @@ tasks.register("jpackageAndExtractApp") {
             throw Exception("Unable to extract the volumn name from the hdiutil command. Output: $output")
         }
 
-        runCmd("cp", "-R", "/Volumes/$volumeName/.", outputs.files.singleFile.parentFile.absolutePath)
+        runCmd("cp", "-R", "/Volumes/$volumeName/.", outputAppFile.parentFile.absolutePath)
         runCmd("/usr/bin/hdiutil", "detach", "/Volumes/$volumeName")
-        runCmd("/usr/bin/open", outputs.files.singleFile.parentFile.absolutePath)
+        runCmd("/usr/bin/open", outputAppFile.parentFile.absolutePath)
 
         // Prepare runtime
         Files.copy(
             provisionprofileDir.file("runtime.provisionprofile").asFile.toPath(),
-            outputFile.resolve("Contents/runtime/Contents/embedded.provisionprofile").toPath()
+            outputAppFile.resolve("Contents/runtime/Contents/embedded.provisionprofile").toPath()
         )
 
-        codesignDir(outputFile.resolve("Contents/runtime"), useRuntimeEntitlement = true)
+        codesignDir(outputAppFile.resolve("Contents/runtime"), useRuntimeEntitlement = true)
 
-        codesign(outputFile.resolve("Contents/runtime"), useRuntimeEntitlement = true)
-        codesign(outputFile)
+        codesign(outputAppFile.resolve("Contents/runtime"), useRuntimeEntitlement = true)
+        codesign(outputAppFile)
+
+        runCmd(
+            "/usr/bin/hdiutil",
+            "create",
+            "-ov",
+            "-srcFolder", outputDir.absolutePath,
+            outputDmgFile.absolutePath,
+        )
     }
 }
 
 tasks.register<Exec>("notarize") {
     dependsOn("jpackage")
 
-    inputs.file(tasks.named("jpackage").get().outputs.files.singleFile)
+    inputs.file(tasks.named("jpackage").get().outputs.files.filter { it.extension == "dmg" }.first())
 
     commandLine(
         "/usr/bin/xcrun",
@@ -521,7 +503,7 @@ tasks.register<Exec>("notarize") {
         "--wait",
         "--apple-id", appleEmail,
         "--password", appleAppSpecificPassword,
-        "--team-id", "S6482XAL5E",
+        "--team-id", teamId,
         inputs.files.singleFile.absolutePath,
     )
 }
@@ -530,7 +512,7 @@ tasks.register<Exec>("notarize") {
 tasks.register<Exec>("staple") {
     dependsOn("notarize")
 
-    inputs.file(tasks.named("jpackage").get().outputs.files.singleFile)
+    inputs.file(tasks.named("jpackage").get().outputs.files.filter { it.extension == "dmg" }.first())
 
     commandLine(
         "/usr/bin/xcrun",
@@ -544,10 +526,10 @@ tasks.register<Exec>("staple") {
 
 
 tasks.register<Exec>("convertToPkg") {
-    dependsOn("jpackageAndExtractApp")
-    val app = tasks.named("jpackageAndExtractApp").get().outputs.files.singleFile
+    dependsOn("jpackage")
+    val app = tasks.named("jpackage").get().outputs.files.filter { it.extension == "app" }.first()
     inputs.dir(app)
-    outputs.file(layout.buildDirectory.dir("pkg").get().file("Backdoor.pkg"))
+    outputs.file(layout.buildDirectory.dir("pkg").get().file("$appName.pkg"))
     commandLine(
         "/usr/bin/productbuild",
         "--sign", "3rd Party Mac Developer Installer: Tanin Na Nakorn (S6482XAL5E)",
