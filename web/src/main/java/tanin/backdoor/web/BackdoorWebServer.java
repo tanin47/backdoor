@@ -19,7 +19,6 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.logging.Logger;
-import java.util.Properties;
 
 import static com.renomad.minum.web.RequestLine.Method.*;
 
