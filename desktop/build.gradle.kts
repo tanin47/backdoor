@@ -55,7 +55,7 @@ val appName = "Backdoor"
 val packageIdentifier = "tanin.backdoor.desktop.macos"
 group = "tanin.backdoor.desktop"
 version = "1.0"
-val internalVersion = "1.0.14"
+val internalVersion = "1.0.19"
 
 java {
     toolchain {
@@ -294,7 +294,10 @@ private fun codesignInJar(jarFile: File, nativeLibPath: File) {
             println("")
             codesign(libFile)
 
-            if (libFile.absolutePath.contains("darwin-x86-64")) {
+            if (
+                libFile.absolutePath.contains("darwin-x86-64") || // for libjnidispatch.jnilib
+                libFile.absolutePath.contains("x86_64") // for liblz4-java.dylib
+            ) {
                 // Skip the jna's x86-64 lib
             } else {
                 runCmd("cp", libFile.absolutePath, nativeLibPath.absolutePath)
@@ -440,7 +443,7 @@ tasks.register("bareJpackage") {
             "--app-content", layout.buildDirectory.file("resources-native").get().asFile.resolve("app").absolutePath,
             // -XstartOnFirstThread requires for MacOs
             "--java-options",
-            "-XstartOnFirstThread --add-exports java.base/sun.security.x509=ALL-UNNAMED --add-exports java.base/sun.security.tools.keytool=ALL-UNNAMED"
+            "-XstartOnFirstThread -Djava.library.path=\$APPDIR/resources --add-exports java.base/sun.security.x509=ALL-UNNAMED --add-exports java.base/sun.security.tools.keytool=ALL-UNNAMED"
         )
     }
 }
@@ -461,8 +464,6 @@ tasks.register("jpackage") {
     doLast {
         outputAppDir.deleteRecursively()
         outputAppDir.mkdirs()
-        outputDmgDir.deleteRecursively()
-        outputDmgDir.mkdirs()
         var volumeName: String? = null
         val output = runCmd("/usr/bin/hdiutil", "attach", "-readonly", inputs.files.singleFile.absolutePath)
 
@@ -489,6 +490,13 @@ tasks.register("jpackage") {
 
         codesign(outputAppFile.resolve("Contents/runtime"), useRuntimeEntitlement = true)
         codesign(outputAppFile)
+
+        outputDmgDir.deleteRecursively()
+        outputDmgDir.mkdirs()
+
+        // Sometimes we need to unlock the *.app file in order to allow hdiutil to package it into DMG.
+        // It seems to happen when TestFlight is reusing the file.
+        runCmd("chflags", "nouchg,noschg", outputAppFile.absolutePath)
 
         runCmd(
             "/usr/bin/hdiutil",

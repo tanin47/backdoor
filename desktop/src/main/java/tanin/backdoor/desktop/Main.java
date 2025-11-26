@@ -1,6 +1,7 @@
 package tanin.backdoor.desktop;
 
 import tanin.backdoor.core.DatabaseConfig;
+import tanin.backdoor.desktop.nativeinterface.Base;
 import tanin.ejwf.MinumBuilder;
 
 import java.io.IOException;
@@ -17,6 +18,9 @@ public class Main {
     } catch (IOException e) {
       logger.warning("Could not load the log config file (logging.properties): " + e.getMessage());
     }
+
+    // Setting up the native lib path must be the first thing we do.
+    logger.info("Native lib path: " + Base.nativeDir.getAbsolutePath());
   }
 
   public static void main(String[] args) throws Exception {

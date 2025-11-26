@@ -7,23 +7,14 @@ import java.util.logging.Logger;
 
 public class Base {
   static final Logger logger = Logger.getLogger(WebviewNative.class.getName());
-  static final File nativeDir = setUpNativeDir();
+  public static final File nativeDir;
 
-  static File setUpNativeDir() {
+  static {
     boolean sandboxed = System.getenv("APP_SANDBOX_CONTAINER_ID") != null;
 
-
     try {
-      File nativeDir;
       if (sandboxed) {
-        Path appPath = Paths.get(Base.class.getProtectionDomain().getCodeSource().getLocation().toURI());
-
-        while (appPath != null && !appPath.toString().endsWith(".app")) {
-          appPath = appPath.getParent();
-        }
-
-        assert appPath != null;
-        nativeDir = appPath.resolve("Contents/app/resources").toFile();
+        nativeDir = new File(System.getProperty("java.library.path"));
       } else {
         nativeDir = new File("src/main/resources/native");
       }
@@ -33,15 +24,13 @@ public class Base {
       System.setProperty("jna.library.path", nativeDir.getAbsolutePath());
 
       if (sandboxed) {
+        logger.info("Run in sandbox.");
         System.setProperty("jna.nounpack", "true");
         System.setProperty("jna.noclasspath", "true");
         System.setProperty("jna.boot.library.path", nativeDir.getAbsolutePath());
       }
 
-      logger.info("User path: " + System.getProperty("user.dir"));
       logger.info("Set the native library path to: " + nativeDir.getAbsolutePath());
-
-      return nativeDir;
     } catch (Exception e) {
       throw new RuntimeException(e);
     }

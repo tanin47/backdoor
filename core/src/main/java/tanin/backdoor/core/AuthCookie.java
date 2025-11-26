@@ -1,9 +1,7 @@
-package tanin.backdoor.core.engine;
+package tanin.backdoor.core;
 
 import com.eclipsesource.json.Json;
 import com.eclipsesource.json.JsonValue;
-import tanin.backdoor.core.DatabaseConfig;
-import tanin.backdoor.core.User;
 
 import java.time.Instant;
 import java.util.ArrayList;
