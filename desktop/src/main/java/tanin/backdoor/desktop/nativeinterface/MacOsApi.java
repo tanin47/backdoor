@@ -11,7 +11,7 @@ public interface MacOsApi extends Library {
   static final MacOsApi N = runSetup();
 
   private static MacOsApi runSetup() {
-    Base.setUpNativeDir();
+    logger.info("Load MacOsApi library");
     return Native.load(
       "MacOsApi",
       MacOsApi.class,

@@ -8,7 +8,7 @@ import tanin.backdoor.core.BackdoorCoreServer;
 import tanin.backdoor.core.DatabaseConfig;
 import tanin.backdoor.core.EncryptionHelper;
 import tanin.backdoor.core.User;
-import tanin.backdoor.core.engine.AuthCookie;
+import tanin.backdoor.core.AuthCookie;
 import tanin.backdoor.core.engine.Engine;
 
 import javax.crypto.BadPaddingException;
