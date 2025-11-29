@@ -29,6 +29,12 @@ export interface Query {
   sql: string;
 }
 
+export interface SqlHistoryEntry {
+  sql: string;
+  database: string;
+  executedAt: number;
+}
+
 export type SheetType = 'table' | 'query' | 'execute';
 
 export type SortDirection = 'asc' | 'desc';

@@ -11,6 +11,7 @@ import NewDataSourceModal from "./_new_data_source_modal.svelte"
 import DeleteDataSourceModal from "./_delete_data_source_modal.svelte"
 import AdditionalLoginModal from "./_additional_login_modal.svelte";
 import {trackEvent} from "./common/tracker";
+import {saveNewSqlHistoryEntry} from "./history/web_engine";
 
 let sheetPanel: SheetPanel;
 
@@ -102,6 +103,8 @@ export async function runSql(database: string, sql: string): Promise<void> {
       sorts: [],
       offset: 0
     })
+
+    saveNewSqlHistoryEntry(sql, database);
 
     const sheet = json.sheet;
 
