@@ -54,8 +54,8 @@ val teamId = "S6482XAL5E"
 val appName = "Backdoor"
 val packageIdentifier = "tanin.backdoor.desktop.macos"
 group = "tanin.backdoor.desktop"
-version = "1.0"
-val internalVersion = "1.0.19"
+version = "1.1"
+val internalVersion = "1.1.0"
 
 java {
     toolchain {

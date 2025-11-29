@@ -12,6 +12,7 @@ import 'codemirror/addon/hint/sql-hint'
 import 'codemirror/addon/hint/anyword-hint'
 import 'codemirror/addon/comment/comment'
 import type {Database, Query} from "./common/models";
+import HistoryModal from "./_history_modal.svelte";
 
 export let onRunSql: (database: string, sql: string) => Promise<void>
 export let onUnselectingQuery: () => void
@@ -20,10 +21,15 @@ export let databases: Database[]
 export let selectedQuery: Query | null
 
 let editorTextarea: HTMLTextAreaElement
+let historyModal: HistoryModal
+let validDatabases: Database[] = []
 
+$: {
+  validDatabases = databases.filter(d => !d.requireLogin)
+}
 
-$: if (databases.length > 0 && !selectedDatabaseName) {
-  selectedDatabaseName = databases[0].name
+$: if (validDatabases.length > 0 && !selectedDatabaseName) {
+  selectedDatabaseName = validDatabases[0].name
 }
 
 let isLoading: boolean = false
@@ -81,6 +87,15 @@ async function submit(): Promise<void> {
 }
 </script>
 
+<HistoryModal
+  bind:this={historyModal}
+  onSetEditorPanel={(sql) => {
+    if (codeMirrorInstance) {
+      codeMirrorInstance.setValue(sql)
+    }
+    historyModal.close()
+  }}
+/>
 {#if selectedQuery}
   <div class="flex gap-2 items-center text-xs p-2 bg-info-content border-b border-neutral"
        data-test-id="update-sql-label">
@@ -114,16 +129,28 @@ async function submit(): Promise<void> {
       </span>
     </Button>
   </div>
-  <div class="pe-2 pb-[2px] flex items-center">
-    {#if selectedQuery}
-      <span class="text-xs">[{selectedQuery.database}]</span>
-    {:else}
-      <select class="select-sm outline-0" bind:value={selectedDatabaseName} data-test-id="run-sql-database-select">
-        {#each databases as database (database.name)}
-          <option value={database.name}>{database.name}</option>
-        {/each}
-      </select>
-    {/if}
+  <div class="flex items-center gap-1">
+    <Button
+      class="btn btn-xs btn-ghost flex items-center gap-2 px-2"
+      onClick={async () => { historyModal.open() }}
+      dataTestId="history-button"
+    >
+      <i class="ph ph-clock-counter-clockwise"></i>
+      <span>History</span>
+    </Button>
+    <div class="pe-2 pb-[2px] flex items-center gap-0">
+      {#if selectedQuery}
+        <span class="text-xs">[{selectedQuery.database}]</span>
+      {:else}
+        <select class="select-sm outline-0 hover:bg-base-200 rounded py-1 cursor-pointer"
+                bind:value={selectedDatabaseName}
+                data-test-id="run-sql-database-select">
+          {#each validDatabases as database (database.name)}
+            <option value={database.name}>{database.name}</option>
+          {/each}
+        </select>
+      {/if}
+    </div>
   </div>
 </div>
 <div class="grow border-t border-neutral relative">
@@ -133,5 +160,4 @@ async function submit(): Promise<void> {
 </div>
 
 <style>
-
 </style>
