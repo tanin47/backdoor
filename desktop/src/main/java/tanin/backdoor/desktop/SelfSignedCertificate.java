@@ -25,6 +25,7 @@ public record SelfSignedCertificate(X509Certificate cert, PrivateKey privateKey)
       params
     );
     var file = File.createTempFile("keystore", ".jks");
+    file.deleteOnExit();
     try (var fos = new FileOutputStream(file)) {
       keyStore.store(fos, pass);
     }
