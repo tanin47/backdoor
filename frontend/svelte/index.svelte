@@ -166,6 +166,8 @@ export async function runSql(database: string, sql: string): Promise<void> {
           <i class="ph ph-plus-circle text-sm"></i>
           <span class="overflow-hidden text-ellipsis font-mono text-xs whitespace-nowrap">Add Data Source</span>
         </div>
+      </div>
+      <div class="grow-1 overflow-y-auto">
         {#each databases as database, index (index)}
           <TableMenuList
             {database}
