@@ -1,10 +1,9 @@
-package tanin.backdoor.postgres;
+package tanin.backdoor.desktop.sqlite;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.JavascriptExecutor;
-import tanin.backdoor.Base;
-import tanin.backdoor.core.engine.Engine;
+import tanin.backdoor.desktop.Base;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -12,7 +11,7 @@ public class TableTest extends Base {
   @Disabled("Timezone doesn't work correctly on CI")
   @Test
   void dateTimeColumn() throws Exception {
-    try (var engine = server.engineProvider.createEngine(postgresConfig, null)) {
+    try (var engine = server.engineProvider.createEngine(sqliteConfig, null)) {
       engine.connection.createStatement().execute("""
             CREATE TABLE "date_time" (
               id INT PRIMARY KEY,
@@ -47,7 +46,7 @@ public class TableTest extends Base {
     }
     go("/");
 
-    click(tid("menu-items", "postgres", null, "menu-item-table", "date_time"));
+    click(tid("menu-items", "sqlite", null, "menu-item-table", "date_time"));
 
     waitUntil(() -> assertTrue(hasElem(tid("sheet-tab", "date_time"))));
     assertCell(0, "timestamp", "2025-10-19T10:00:01Z");
@@ -85,65 +84,10 @@ public class TableTest extends Base {
   }
 
   @Test
-  void jsonAndPgvectorColumn() throws Exception {
-    try (var engine = server.engineProvider.createEngine(postgresConfig, null)) {
-      engine.connection.createStatement().execute("CREATE EXTENSION vector;");
-      engine.connection.createStatement().execute("""
-            CREATE TABLE "json_pgvector" (
-              id INT PRIMARY KEY,
-              data_jsonb JSONB NOT NULL,
-              data_json JSON NOT NULL,
-              data_vector vector(3) NOT NULL
-            )
-        """);
-
-      engine.connection.createStatement().execute(
-        """
-          INSERT INTO "json_pgvector" (
-            id,
-            data_jsonb,
-            data_json,
-            data_vector
-          ) VALUES (
-            '1',
-            '{"a": "c"}'::jsonb,
-            '{"b": "d"}'::json,
-            '[1, 2, 3]'
-          )
-          """
-      );
-    }
-
-    go("/");
-
-    click(tid("menu-items", "postgres", null, "menu-item-table", "json_pgvector"));
-
-    waitUntil(() -> hasElem(tid("sheet-tab", "json_pgvector")));
-    assertCell(0, "data_jsonb", "{\"a\": \"c\"}");
-    assertCell(0, "data_json", "{\"b\": \"d\"}");
-    assertCell(0, "data_vector", "[1,2,3]");
-
-    click(tid("sheet-column-value", "data_jsonb", null, "edit-field-button"));
-    fill(tid("new-value"), "{\"a\": 1}");
-    click(tid("submit-button"));
-    waitUntil(() -> assertCell(0, "data_jsonb", "{\"a\": 1}"));
-
-    click(tid("sheet-column-value", "data_json", null, "edit-field-button"));
-    fill(tid("new-value"), "{\"b\": 2}");
-    click(tid("submit-button"));
-    waitUntil(() -> assertCell(0, "data_json", "{\"b\": 2}"));
-
-    click(tid("sheet-column-value", "data_vector", null, "edit-field-button"));
-    fill(tid("new-value"), "[4, 5, 6]");
-    click(tid("submit-button"));
-    waitUntil(() -> assertCell(0, "data_vector", "[4,5,6]"));
-  }
-
-  @Test
   void createUpdateDropTable() throws InterruptedException {
     go("/");
 
-    click(tid("menu-items", "postgres", null, "menu-item-table", "user"));
+    click(tid("menu-items", "sqlite", null, "menu-item-table", "user"));
 
     waitUntil(() -> assertTrue(hasElem(tid("sheet-tab", "user"))));
     assertColumnValues("username", "test_user_1", "test_user_2", "test_user_3", "test_user_4");
@@ -155,20 +99,20 @@ public class TableTest extends Base {
     click(tid("submit-button"));
 
     waitUntil(() -> assertTrue(hasElem(tid("sheet-tab", "user_new_name"))));
-    waitUntil(() -> assertTrue(hasElem(tid("menu-items", "postgres", null, "menu-item-table", "user_new_name"))));
+    waitUntil(() -> assertTrue(hasElem(tid("menu-items", "sqlite", null, "menu-item-table", "user_new_name"))));
 
     click(tid("drop-table-button"));
     click(tid("submit-button"));
 
     waitUntil(() -> assertFalse(hasElem(tid("sheet-tab", "user_new_name"))));
-    waitUntil(() -> assertFalse(hasElem(tid("menu-items", "postgres", null, "menu-item-table", "user_new_name"))));
+    waitUntil(() -> assertFalse(hasElem(tid("menu-items", "sqlite", null, "menu-item-table", "user_new_name"))));
   }
 
   @Test
   void editField() throws InterruptedException {
     go("/");
 
-    click(tid("menu-items", "postgres", null, "menu-item-table", "user"));
+    click(tid("menu-items", "sqlite", null, "menu-item-table", "user"));
 
     waitUntil(() -> assertTrue(hasElem(tid("sheet-tab", "user"))));
     click(tid("sheet-column-value", "username", null, "edit-field-button"));
@@ -184,7 +128,7 @@ public class TableTest extends Base {
   void deleteRow() throws InterruptedException {
     go("/");
 
-    click(tid("menu-items", "postgres", null, "menu-item-table", "user"));
+    click(tid("menu-items", "sqlite", null, "menu-item-table", "user"));
 
     waitUntil(() -> assertTrue(hasElem(tid("sheet-tab", "user"))));
     hover(tid("sheet-column-value", "username"));
@@ -199,7 +143,7 @@ public class TableTest extends Base {
   void filterRow() throws InterruptedException {
     go("/");
 
-    click(tid("menu-items", "postgres", null, "menu-item-table", "user"));
+    click(tid("menu-items", "sqlite", null, "menu-item-table", "user"));
 
     waitUntil(() -> assertTrue(hasElem(tid("sheet-tab", "user"))));
     click(tid("sheet-view-column-header", "username", null, "filter-button"));
@@ -215,7 +159,7 @@ public class TableTest extends Base {
   void sortRow() throws InterruptedException {
     go("/");
 
-    click(tid("menu-items", "postgres", null, "menu-item-table", "user"));
+    click(tid("menu-items", "sqlite", null, "menu-item-table", "user"));
 
     waitUntil(() -> assertTrue(hasElem(tid("sheet-tab", "user"))));
     assertEquals(
@@ -263,7 +207,7 @@ public class TableTest extends Base {
 
   @Test
   void loadMore() throws Exception {
-    try (var engine = server.engineProvider.createEngine(postgresConfig, null)) {
+    try (var engine = server.engineProvider.createEngine(sqliteConfig, null)) {
       for (int i = 5; i <= 247; i++) {
         engine.connection.createStatement().execute(String.format(
           "INSERT INTO \"user\" (id, username, password) VALUES ('%d', 'test_user_%d', 'password%d')",
@@ -274,7 +218,7 @@ public class TableTest extends Base {
 
     go("/");
 
-    click(tid("menu-items", "postgres", null, "menu-item-table", "user"));
+    click(tid("menu-items", "sqlite", null, "menu-item-table", "user"));
 
     assertEquals("Count: 247 (Show 100 rows)", elem(tid("sheet-stats")).getText());
 

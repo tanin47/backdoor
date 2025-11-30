@@ -56,5 +56,39 @@ export function generateName(prefix: string, existingNames: string[], suffix: st
     return generateName(prefix, existingNames, suffix + "_1")
   }
   return makeName(availableNames[0]);
+}
 
+
+let fileSelectedCallback: ((content: string) => void) | null = null;
+
+export function registerFileSelected(callback: (resp: any) => void) {
+  fileSelectedCallback = callback;
+}
+
+// @ts-ignore
+window.triggerFileSelected = (content: any) => {
+  if (fileSelectedCallback) {
+    fileSelectedCallback(content);
+    fileSelectedCallback = null;
+  }
+}
+
+export async function openFileDialog(isSaved: boolean): Promise<any> {
+  return new Promise(async (resolve, reject) => {
+    try {
+      registerFileSelected((resp: any) => {
+        resolve(resp);
+        fileSelectedCallback = null;
+      })
+
+      const _resp = await (fetch('/select-file', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({isSaved}),
+      }))
+    } catch (e) {
+      console.error(e)
+      reject(e)
+    }
+  })
 }

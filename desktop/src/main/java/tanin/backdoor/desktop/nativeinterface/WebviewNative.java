@@ -18,6 +18,7 @@ public interface WebviewNative extends Library {
 
   private static WebviewNative runSetup() {
     logger.info("Load webview library");
+    var _ignored = Base.nativeDir;
     return Native.load(
       "webview",
       WebviewNative.class,

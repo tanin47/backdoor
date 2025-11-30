@@ -6,8 +6,12 @@ import com.renomad.minum.web.*;
 import tanin.backdoor.core.BackdoorCoreServer;
 import tanin.backdoor.core.DatabaseConfig;
 import tanin.backdoor.core.User;
+import tanin.backdoor.desktop.engine.EngineProvider;
+import tanin.backdoor.desktop.nativeinterface.MacOsApi;
 import tanin.ejwf.MinumBuilder;
 
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Map;
@@ -21,6 +25,13 @@ import java.util.prefs.Preferences;
 import static com.renomad.minum.web.RequestLine.Method.POST;
 
 public class BackdoorDesktopServer extends BackdoorCoreServer {
+
+  public enum Mode {
+    Prod,
+    Dev,
+    Test
+  }
+
   private static final Logger logger = Logger.getLogger(BackdoorDesktopServer.class.getName());
   private static final String VERSION;
 
@@ -37,14 +48,22 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
 
   public String authKey;
 
+  Browser.JsInvoker jsInvoker;
+  Mode mode;
+
   BackdoorDesktopServer(
     DatabaseConfig[] databaseConfigs,
     int sslPort,
     String authKey,
-    MinumBuilder.KeyStore keyStore
+    MinumBuilder.KeyStore keyStore,
+    Mode mode,
+    Browser.JsInvoker jsInvoker
   ) {
     super(databaseConfigs, -1, sslPort, keyStore);
     this.authKey = authKey;
+    this.jsInvoker = jsInvoker;
+    this.engineProvider = new EngineProvider();
+    this.mode = mode;
   }
 
   public User getUserByDatabaseConfig(DatabaseConfig databaseConfig) {
@@ -53,7 +72,9 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
 
   public static final String AUTH_KEY_COOKIE_KEY = "Auth";
 
-  public FullSystem start() throws SQLException {
+  private MacOsApi.OnFileSelected onFileSelected = null;
+
+  public FullSystem start() throws SQLException, NoSuchAlgorithmException, KeyManagementException {
     var minum = super.start();
 
     var wf = minum.getWebFramework();
@@ -64,7 +85,11 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
       var authKeyFromCookie = Optional.ofNullable(extractCookieByKey(AUTH_KEY_COOKIE_KEY, request.getHeaders().valueByKey("Cookie")))
         .map(v -> v.substring((AUTH_KEY_COOKIE_KEY + "=").length())).orElse(null);
 
-      if (this.authKey.equals(authKeyFromQueryString) || this.authKey.equals(authKeyFromCookie)) {
+      if (
+        this.authKey.equals(authKeyFromQueryString) ||
+          this.authKey.equals(authKeyFromCookie) ||
+          request.getRequestLine().getPathDetails().getIsolatedPath().equals("__webpack_hmr")
+      ) {
         // ok
       } else {
         logger.info("The auth key is invalid. Got: " + authKeyFromQueryString + " and " + authKeyFromCookie);
@@ -135,12 +160,40 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
       }
     );
 
+    // We cannot use webview_bind due to the synchronous nature of it. The callback has to be blocked.
+    // However, if the callback is blocked, then the file dialog which needs to run on the main thread wouldn't show.
+    wf.registerPath(
+      POST,
+      "select-file",
+      req -> {
+        var json = Json.parse(req.getBody().asString());
+        var isSaved = json.asObject().get("isSaved").asBoolean();
+        onFileSelected = filePath -> {
+          System.out.println("Opening file: " + filePath);
+
+          jsInvoker.invoke("window.triggerFileSelected(" + Json.object().add("filePath", filePath).toString() + ")");
+        };
+
+        if (isSaved) {
+          MacOsApi.N.saveFile(onFileSelected);
+        } else {
+          MacOsApi.N.openFile(onFileSelected);
+        }
+
+        return Response.buildResponse(
+          StatusLine.StatusCode.CODE_200_OK,
+          Map.of("Content-Type", "application/json"),
+          Json.object().toString()
+        );
+      }
+    );
+
     return minum;
   }
 
   @Override
   protected DatabaseConfig[] getAdHocDatabaseConfigs() throws BackingStoreException {
-    var preferences = Preferences.userNodeForPackage(BackdoorDesktopServer.class);
+    var preferences = Preferences.userNodeForPackage(mode.getClass());
     var configs = new ArrayList<DatabaseConfig>();
 
     for (String key : preferences.keys()) {

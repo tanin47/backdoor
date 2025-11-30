@@ -25,14 +25,19 @@ let expanded = true
       <span class="overflow-hidden text-ellipsis font-mono text-xs whitespace-nowrap underline">{database.name}</span>
     </div>
   {:else}
-    <div class="flex items-center gap-2 p-2 justify-between">
-      <div class="flex items-center gap-2 cursor-pointer overflow-hidden" onclick={() => {expanded = !expanded}}>
+    <div class="flex items-center gap-2 p-2 justify-between cursor-pointer" onclick={() => {expanded = !expanded}}>
+      <div class="flex items-center gap-2 overflow-hidden">
         <i class="ph {expanded ? 'ph-caret-down' : 'ph-caret-right' } text-sm"></i>
         <span class="overflow-hidden text-ellipsis font-mono text-xs whitespace-nowrap underline">{database.name}</span>
       </div>
       {#if database.isAdHoc}
-        <i class="ph ph-trash text-sm z-10 cursor-pointer" onclick={onDeleting}
-           data-test-id="delete-data-source-button"></i>
+        <i
+          class="ph ph-trash text-sm z-10 cursor-pointer"
+          onclick={(ev) => {
+            ev.stopPropagation();
+            onDeleting()
+          }}
+          data-test-id="delete-data-source-button"></i>
       {/if}
     </div>
     <ul

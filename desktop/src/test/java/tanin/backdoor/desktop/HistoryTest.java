@@ -17,7 +17,7 @@ public class HistoryTest extends Base {
     waitUntil(() -> {
       assertEquals(
         """
-            ?column?
+            1
           1
            1""",
         elem(tid("sheet-view-content")).getText()
@@ -30,7 +30,7 @@ public class HistoryTest extends Base {
     waitUntil(() -> {
       assertEquals(
         """
-            ?column?
+            2
           1
            2""",
         elem(tid("sheet-view-content")).getText()

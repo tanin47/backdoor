@@ -30,6 +30,12 @@ public abstract class Engine implements AutoCloseable {
     }
   }
 
+  public static class GenericConnectionException extends Exception {
+    public GenericConnectionException(String message) {
+      super(message);
+    }
+  }
+
   public static class UnreachableServerException extends Exception {
     public UnreachableServerException(String message) {
       super(message);
@@ -46,7 +52,7 @@ public abstract class Engine implements AutoCloseable {
   public DatabaseConfig databaseConfig;
   public Connection connection;
 
-  Engine(DatabaseConfig config, User overwritingUser) throws SQLException, URISyntaxException, InvalidCredentialsException, OverwritingUserAndCredentialedJdbcConflictedException, UnreachableServerException, InvalidDatabaseNameProbablyException {
+  protected Engine(DatabaseConfig config, User overwritingUser) throws SQLException, URISyntaxException, InvalidCredentialsException, OverwritingUserAndCredentialedJdbcConflictedException, UnreachableServerException, InvalidDatabaseNameProbablyException, GenericConnectionException {
     this.databaseConfig = config;
 
     try {
@@ -65,7 +71,7 @@ public abstract class Engine implements AutoCloseable {
     }
   }
 
-  protected abstract void connect(DatabaseConfig config, User overwritingUser) throws SQLException, InvalidCredentialsException, URISyntaxException, UnreachableServerException, InvalidDatabaseNameProbablyException;
+  protected abstract void connect(DatabaseConfig config, User overwritingUser) throws SQLException, InvalidCredentialsException, URISyntaxException, UnreachableServerException, InvalidDatabaseNameProbablyException, GenericConnectionException;
 
   public abstract Column[] getColumns(String table) throws SQLException;
 
@@ -155,17 +161,6 @@ public abstract class Engine implements AutoCloseable {
   public boolean execute(String sql) throws SQLException {
     logger.info("Executing: " + sql);
     return connection.createStatement().execute(sql);
-  }
-
-
-  public static Engine createEngine(DatabaseConfig config, User overwritingUser) throws SQLException, URISyntaxException, InvalidCredentialsException, OverwritingUserAndCredentialedJdbcConflictedException, UnreachableServerException, InvalidDatabaseNameProbablyException {
-    if (config.jdbcUrl.startsWith("jdbc:postgres") || config.jdbcUrl.startsWith("postgres")) {
-      return new PostgresEngine(config, overwritingUser);
-    } else if (config.jdbcUrl.startsWith("jdbc:ch:")) {
-      return new ClickHouseEngine(config, overwritingUser);
-    } else {
-      throw new UnsupportedOperationException(config.jdbcUrl + " is not supported. Please make your feature request at https://github.com/tanin47/backdoor.");
-    }
   }
 
   public int executeUpdate(String sql) throws SQLException {

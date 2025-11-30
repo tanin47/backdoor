@@ -1,9 +1,12 @@
-package tanin.backdoor.core.engine;
+package tanin.backdoor.desktop.engine;
 
 import com.eclipsesource.json.Json;
 import com.eclipsesource.json.JsonValue;
 import org.postgresql.util.PSQLException;
+import org.sqlite.SQLiteException;
 import tanin.backdoor.core.*;
+import tanin.backdoor.core.engine.Engine;
+import tanin.backdoor.desktop.nativeinterface.MacOsApi;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -13,13 +16,15 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import static org.sqlite.SQLiteErrorCode.SQLITE_NOTADB;
 import static tanin.backdoor.core.BackdoorCoreServer.makeSqlLiteral;
 import static tanin.backdoor.core.BackdoorCoreServer.makeSqlName;
 
-public class PostgresEngine extends Engine {
-  private static final Logger logger = Logger.getLogger(PostgresEngine.class.getName());
+public class SqliteEngine extends Engine {
+  private static final Logger logger = Logger.getLogger(SqliteEngine.class.getName());
 
   static {
     try {
@@ -31,97 +36,50 @@ public class PostgresEngine extends Engine {
     }
   }
 
-  PostgresEngine(DatabaseConfig config, User overwritingUser) throws SQLException, URISyntaxException, InvalidCredentialsException, OverwritingUserAndCredentialedJdbcConflictedException, UnreachableServerException, InvalidDatabaseNameProbablyException, GenericConnectionException {
+  SqliteEngine(DatabaseConfig config, User overwritingUser) throws SQLException, URISyntaxException, InvalidCredentialsException, OverwritingUserAndCredentialedJdbcConflictedException, UnreachableServerException, InvalidDatabaseNameProbablyException, GenericConnectionException {
     super(config, overwritingUser);
   }
 
+  String filePath;
+
   @Override
-  protected void connect(DatabaseConfig config, User overwritingUser) throws SQLException, InvalidCredentialsException, URISyntaxException, UnreachableServerException, InvalidDatabaseNameProbablyException {
-
-    var url = config.jdbcUrl;
-    var props = new Properties();
-
-    if (config.username != null) {
-      props.setProperty("user", config.username);
-    }
-    if (config.password != null) {
-      props.setProperty("password", config.password);
-    }
-
-    if (url.startsWith("jdbc:postgres")) {
-      // do nothing
-    } else if (url.startsWith("postgresql://") || url.startsWith("postgres://")) {
-      var uri = new URI(url);
-      var host = uri.getHost();
-      var port = uri.getPort();
-      var database = uri.getPath().substring(1);
-      var portStr = port == -1 ? "" : ":" + port;
-
-      var userInfo = uri.getUserInfo();
-
-      if (userInfo != null) {
-        var userAndPassword = userInfo.split(":");
-
-        if (userAndPassword.length == 2) {
-          props.setProperty("user", userAndPassword[0]);
-          props.setProperty("password", userAndPassword[1]);
-        }
-      }
-
-      url = "jdbc:postgresql://" + host + portStr + "/" + database;
-    } else {
-      throw new IllegalArgumentException("Postgres or JDBC URL is invalid for Postgres");
-    }
-
-    if (overwritingUser != null) {
-      props.setProperty("user", overwritingUser.username());
-      props.setProperty("password", overwritingUser.password());
-    }
-
+  protected void connect(DatabaseConfig config, User overwritingUser) throws SQLException, InvalidCredentialsException, URISyntaxException, UnreachableServerException, InvalidDatabaseNameProbablyException, GenericConnectionException {
+    filePath = config.jdbcUrl.substring("jdbc:sqlite:".length());
     try {
-      connection = DriverManager.getConnection(url, props);
-      execute("SELECT 'backdoor_test_connection_for_postgres'");
-    } catch (PSQLException e) {
-      if (e.getSQLState().equals("28P01") || e.getSQLState().equals("08004")) {
-        throw new InvalidCredentialsException(e.getMessage());
-      } else if (e.getSQLState().equals("28000")) {
-        throw new InvalidDatabaseNameProbablyException(e.getMessage());
-      } else if (e.getSQLState().equals("08001")) {
-        throw new UnreachableServerException(e.getMessage());
+      MacOsApi.N.startAccessingSecurityScopedResource(filePath);
+      connection = DriverManager.getConnection(config.jdbcUrl);
+      execute("SELECT 'backdoor_test_connection_for_sqlite'");
+    } catch (SQLiteException e) {
+      if (e.getResultCode() == SQLITE_NOTADB) {
+        throw new GenericConnectionException("The selected file isn't a SQLite database");
       } else {
         throw e;
       }
     }
+    logger.info("CONNECTED");
   }
 
   @Override
   public Column[] getColumns(String table) throws SQLException {
-    var rs = executeQuery(
-      "SELECT c.column_name, c.data_type, c.is_nullable, " +
-        "CASE WHEN tc.constraint_type = 'PRIMARY KEY' THEN true ELSE false END as is_primary_key " +
-        "FROM information_schema.columns c " +
-        "LEFT JOIN information_schema.key_column_usage kcu " +
-        "ON c.table_schema = kcu.table_schema " +
-        "AND c.table_name = kcu.table_name " +
-        "AND c.column_name = kcu.column_name " +
-        "LEFT JOIN information_schema.table_constraints tc " +
-        "ON kcu.constraint_name = tc.constraint_name " +
-        "AND kcu.table_schema = tc.table_schema " +
-        "AND kcu.table_name = tc.table_name " +
-        "WHERE c.table_schema = 'public' AND c.table_name = " + makeSqlLiteral(table) + ";"
-    );
-    var columns = new ArrayList<>(List.<Column>of());
-    while (rs.next()) {
-      var name = rs.getString("column_name");
-      var rawType = rs.getString("data_type");
-      columns.add(new Column(
-        name,
-        convertRawType(rawType),
-        rawType,
-        name.length(),
-        rs.getBoolean("is_primary_key"),
-        rs.getString("is_nullable").equals("YES")
-      ));
+    var columns = new ArrayList<Column>();
+    try (var rs = executeQuery(
+      "SELECT name, type, \"notnull\", pk FROM pragma_table_info('" + table + "')"
+    )) {
+      while (rs.next()) {
+        var name = rs.getString("name");
+        var type = rs.getString("type");
+        var nullable = rs.getInt("notnull") == 0;
+        var isPrimaryKey = rs.getInt("pk") > 0;
+
+        columns.add(new Column(
+          name,
+          convertRawType(type),
+          type,
+          name.length(),
+          isPrimaryKey,
+          nullable
+        ));
+      }
     }
     return columns.toArray(new Column[0]);
   }
@@ -129,11 +87,12 @@ public class PostgresEngine extends Engine {
   @Override
   public String[] getTables() throws SQLException {
     var tables = new ArrayList<String>();
-    var rs = executeQuery(
-      "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' ORDER BY table_name ASC;"
-    );
-    while (rs.next()) {
-      tables.add(rs.getString("table_name"));
+    try (var rs = executeQuery(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+    )) {
+      while (rs.next()) {
+        tables.add(rs.getString("name"));
+      }
     }
     return tables.toArray(new String[0]);
   }
@@ -190,8 +149,10 @@ public class PostgresEngine extends Engine {
   @Override
   public void close() throws Exception {
     if (connection != null) {
+      logger.info("CLOSED");
       connection.close();
     }
+    MacOsApi.N.stopAccessingSecurityScopedResource(filePath);
   }
 
   @Override
@@ -211,10 +172,15 @@ public class PostgresEngine extends Engine {
       return BackdoorCoreServer.SqlType.ADMINISTRATIVE;
     }
 
-    var rs = executeQuery("explain (format json) " + sql);
-    rs.next();
-    var result = Json.parse(rs.getString(1));
-    var isModifyingTable = result.asArray().get(0).asObject().get("Plan").asObject().get("Node Type").asString().equals("ModifyTable");
+    boolean isModifyingTable = false;
+    try (var rs = executeQuery("explain " + sql)) {
+      while (rs.next()) {
+        if (rs.getString("opcode").equals("OpenWrite")) {
+          isModifyingTable = true;
+          break;
+        }
+      }
+    }
 
     return isModifyingTable ? BackdoorCoreServer.SqlType.MODIFY : BackdoorCoreServer.SqlType.SELECT;
   }

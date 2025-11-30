@@ -10,6 +10,8 @@ import tanin.backdoor.core.engine.Engine;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import java.security.InvalidKeyException;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -140,7 +142,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
     if (found == null) {
       for (var databaseConfig : databaseConfigs) {
         var potentialDatabaseUser = new User(username, password, databaseConfig.nickname);
-        try (var engine = Engine.createEngine(databaseConfig, potentialDatabaseUser)) {
+        try (var engine = engineProvider.createEngine(databaseConfig, potentialDatabaseUser)) {
           var rs = engine.executeQuery("SELECT 123");
           rs.next();
           if (rs.getInt(1) == 123) {
@@ -241,7 +243,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
     }
   }
 
-  public FullSystem start() throws SQLException {
+  public FullSystem start() throws SQLException, NoSuchAlgorithmException, KeyManagementException {
     var minum = super.start();
 
     var wf = minum.getWebFramework();
@@ -395,7 +397,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
         var databaseConfig = Arrays.stream(databaseConfigs).filter(d -> d.nickname.equals(database)).findFirst().orElse(null);
         var potentialUser = new User(username, password, database);
 
-        try (var ignored = Engine.createEngine(databaseConfig, potentialUser)) {
+        try (var ignored = engineProvider.createEngine(databaseConfig, potentialUser)) {
           var users = new ArrayList<>(List.of(auth.get().users()));
           users.add(potentialUser);
 
