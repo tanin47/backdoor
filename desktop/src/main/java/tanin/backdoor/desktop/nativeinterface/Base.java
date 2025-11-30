@@ -1,8 +1,6 @@
 package tanin.backdoor.desktop.nativeinterface;
 
 import java.io.File;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.logging.Logger;
 
 public class Base {
@@ -28,6 +26,8 @@ public class Base {
         System.setProperty("jna.nounpack", "true");
         System.setProperty("jna.noclasspath", "true");
         System.setProperty("jna.boot.library.path", nativeDir.getAbsolutePath());
+
+        System.setProperty("org.sqlite.lib.path", nativeDir.getAbsolutePath());
       }
 
       logger.info("Set the native library path to: " + nativeDir.getAbsolutePath());

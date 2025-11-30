@@ -1,6 +1,7 @@
 package tanin.backdoor.desktop;
 
 import com.eclipsesource.json.Json;
+import com.eclipsesource.json.JsonValue;
 import com.renomad.minum.web.*;
 import tanin.backdoor.core.BackdoorCoreServer;
 import tanin.backdoor.core.DatabaseConfig;
@@ -16,6 +17,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
+
+import static com.renomad.minum.web.RequestLine.Method.POST;
 
 public class BackdoorDesktopServer extends BackdoorCoreServer {
   private static final Logger logger = Logger.getLogger(BackdoorDesktopServer.class.getName());
@@ -90,6 +93,47 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
         throw e;
       }
     });
+
+    wf.registerPath(
+      POST,
+      "api/save-sql-history-entry",
+      req -> {
+        var json = Json.parse(req.getBody().asString());
+        var sql = json.asObject().get("sql").asString();
+        var database = json.asObject().get("database").asString();
+        var executedAt = json.asObject().get("executedAt").asLong();
+
+        SqlHistoryManager.addEntry(new SqlHistoryEntry(sql, database, executedAt));
+
+        return Response.buildResponse(
+          StatusLine.StatusCode.CODE_200_OK,
+          Map.of("Content-Type", "application/json"),
+          Json.object().toString()
+        );
+      }
+    );
+
+    wf.registerPath(
+      POST,
+      "api/get-sql-history-entries",
+      req -> {
+        var json = Json.parse(req.getBody().asString());
+        var keyword = Optional.ofNullable(json.asObject().get("keyword")).filter(JsonValue::isString).map(JsonValue::asString).orElse(null);
+
+        var entries = SqlHistoryManager.getEntries(keyword);
+
+        var entriesJson = Json.array();
+        for (var entry : entries) {
+          entriesJson.add(entry.toJson());
+        }
+
+        return Response.buildResponse(
+          StatusLine.StatusCode.CODE_200_OK,
+          Map.of("Content-Type", "application/json"),
+          Json.object().add("entries", entriesJson).toString()
+        );
+      }
+    );
 
     return minum;
   }
