@@ -58,7 +58,13 @@ $: if (editorTextarea && codeMirrorInstance === null) {
         'Ctrl-Space': 'autocomplete',
         'Cmd-Space': 'autocomplete',
         'Ctrl-/': 'toggleComment',
-        'Cmd-/': 'toggleComment'
+        'Cmd-/': 'toggleComment',
+        'Cmd-Enter': () => {
+          submit()
+        },
+        'Ctrl-Enter': () => {
+          submit()
+        },
       },
     },
   );
@@ -126,6 +132,7 @@ async function submit(): Promise<void> {
         {:else}
           Run SQL
         {/if}
+        <span class="text-xs text-gray-400 tracking-[1px] ps-1">⌘⏎</span>
       </span>
     </Button>
   </div>
