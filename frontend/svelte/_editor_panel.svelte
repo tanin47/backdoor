@@ -139,7 +139,7 @@ async function submit(): Promise<void> {
   <div class="flex items-center gap-1">
     <Button
       class="btn btn-xs btn-ghost flex items-center gap-2 px-2"
-      onClick={async () => { historyModal.open() }}
+      onClick={async () => { await historyModal.open() }}
       dataTestId="history-button"
     >
       <i class="ph ph-clock-counter-clockwise"></i>

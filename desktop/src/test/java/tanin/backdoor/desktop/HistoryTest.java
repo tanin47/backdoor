@@ -1,4 +1,4 @@
-package tanin.backdoor.web;
+package tanin.backdoor.desktop;
 
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.WebElement;

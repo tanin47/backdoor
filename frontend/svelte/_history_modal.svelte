@@ -2,8 +2,7 @@
 
 import HistoryModalEntry from './_history_modal_entry.svelte';
 import type {SqlHistoryEntry} from "./common/models";
-import {getSqlHistoryEntries} from "./history/web_engine";
-import Button from "./common/_button.svelte"
+import {getSqlHistoryEntries} from "./history";
 
 export let onSetEditorPanel: (sql: string) => void
 
@@ -13,15 +12,19 @@ let mainInput: HTMLInputElement | null
 let keyword = ''
 let queries: SqlHistoryEntry[] = [];
 
-export function open(): void {
-  queries = getSqlHistoryEntries(keyword)
+async function load(keyword: string): Promise<void> {
+  queries = await getSqlHistoryEntries(keyword)
+}
+
+export async function open(): Promise<void> {
+  await load(keyword);
   modal.showModal()
 
   void focusOnMainInput()
 }
 
 $: {
-  queries = getSqlHistoryEntries(keyword)
+  void load(keyword)
 }
 
 async function focusOnMainInput(): Promise<void> {

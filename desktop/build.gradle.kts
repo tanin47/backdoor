@@ -137,8 +137,12 @@ dependencies {
 }
 
 tasks.named<Test>("test") {
-    // TODO: Remove after we support tests.
-    enabled = false
+    jvmArgs = listOf(
+        "--add-exports",
+        "java.base/sun.security.x509=ALL-UNNAMED",
+        "--add-exports",
+        "java.base/sun.security.tools.keytool=ALL-UNNAMED",
+    )
     useJUnitPlatform()
 
     maxHeapSize = "1G"

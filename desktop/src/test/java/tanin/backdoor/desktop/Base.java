@@ -1,12 +1,6 @@
-package tanin.backdoor;
+package tanin.backdoor.desktop;
 
-import com.renomad.minum.web.IRequest;
-import com.renomad.minum.web.IResponse;
-import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.*;
-import org.junit.jupiter.api.extension.AfterTestExecutionCallback;
-import org.junit.jupiter.api.extension.ExtensionContext;
-import org.junit.jupiter.api.extension.RegisterExtension;
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
@@ -14,63 +8,34 @@ import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.logging.LogType;
 import org.openqa.selenium.logging.LoggingPreferences;
 import org.openqa.selenium.support.ui.Select;
-import tanin.backdoor.core.BackdoorCoreServer;
 import tanin.backdoor.core.DatabaseConfig;
 import tanin.backdoor.core.User;
 import tanin.backdoor.core.engine.Engine;
+import tanin.ejwf.MinumBuilder;
 
-import java.io.File;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
-import java.util.Optional;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class Base {
-  static final Logger logger = Logger.getLogger(Base.class.getName());
+  User loggedInUser = new User("backdoor", "test");
   static String POSTGRES_DATABASE_URL = "postgres://127.0.0.1:5432/backdoor_test";
   static String CLICKHOUSE_DATABASE_URL = "jdbc:ch://127.0.0.1:8123/backdoor_test";
 
   public DatabaseConfig postgresConfig = new DatabaseConfig("postgres", POSTGRES_DATABASE_URL, "backdoor_test_user", "test");
   public DatabaseConfig clickHouseConfig = new DatabaseConfig("clickhouse", CLICKHOUSE_DATABASE_URL, "backdoor", "test_ch");
   static int PORT = 9091;
+  static String TEST_AUTH_KEY = "test-auth-key";
   static boolean IS_MAC = System.getProperty("os.name").toLowerCase().contains("mac");
 
   public WebDriver webDriver;
-  BackdoorCoreServer server;
-
-  @RegisterExtension
-  AfterTestExecutionCallback afterTestExecutionCallback = new AfterTestExecutionCallback() {
-    @Override
-    public void afterTestExecution(ExtensionContext context) throws Exception {
-      Optional<Throwable> exception = context.getExecutionException();
-
-      if (exception.isPresent()) { // has exception
-        var testName = context.getRequiredTestClass().getCanonicalName() + "." + context.getRequiredTestMethod().getName();
-        var dir = new File("./build/failed-screenshots");
-        var _ignored = dir.mkdirs();
-
-        var scrFile = ((TakesScreenshot) webDriver).getScreenshotAs(OutputType.FILE);
-        var file = dir.toPath().resolve(testName + ".png").toFile();
-        FileUtils.copyFile(scrFile, file);
-
-        logger.info(testName + "failed. Captured the screenshot at: " + file.getAbsolutePath());
-
-        var logEntries = webDriver.manage().logs().get(org.openqa.selenium.logging.LogType.BROWSER);
-        logger.info("Browser logs:");
-        for (var entry : logEntries) {
-          logger.info(new Date(entry.getTimestamp()) + ": " + entry.getMessage());
-        }
-      }
-    }
-  };
-
+  BackdoorDesktopServer server;
+  boolean shouldLoggedIn = true;
 
   @BeforeAll
   void setUpAll() throws SQLException, URISyntaxException, InterruptedException {
@@ -86,12 +51,15 @@ public class Base {
     if (System.getenv("HEADLESS") != null) {
       options.addArguments("--headless");
     }
-    options.addArguments("--guest");
-    options.addArguments("--disable-extensions");
-    options.addArguments("--disable-web-security");
-    options.addArguments("--window-size=1280,800");
-    options.addArguments("--disable-dev-shm-usage");
-    options.addArguments("--disable-smooth-scrolling");
+    options.addArguments(
+      "--guest",
+      "--disable-extensions",
+      "--disable-web-security",
+      "--window-size=1280,800",
+      "--disable-dev-shm-usage",
+      "--disable-smooth-scrolling",
+      "--ignore-certificate-errors"
+    );
 
     var logPrefs = new LoggingPreferences();
     logPrefs.enable(LogType.BROWSER, Level.ALL);
@@ -101,6 +69,8 @@ public class Base {
   }
 
   void resetDatabase() throws Exception {
+    SqlHistoryManager.resetForTesting();
+
     try (var pg = Engine.createEngine(postgresConfig, null)) {
       var conn = pg.connection;
       conn.createStatement().execute("DROP SCHEMA IF EXISTS public CASCADE");
@@ -183,39 +153,26 @@ public class Base {
   @BeforeEach
   void setUp() throws Exception {
     resetDatabase();
-    server = new BackdoorCoreServer(
+    var cert = SelfSignedCertificate.generate("localhost");
+    var keyStorePassword = SelfSignedCertificate.generateRandomString(64);
+    var keyStoreFile = SelfSignedCertificate.generateKeyStoreFile(cert, keyStorePassword);
+    server = new BackdoorDesktopServer(
       new DatabaseConfig[]{
         new DatabaseConfig(postgresConfig.nickname, postgresConfig.jdbcUrl, postgresConfig.username, postgresConfig.password),
         new DatabaseConfig(clickHouseConfig.nickname, clickHouseConfig.jdbcUrl, clickHouseConfig.username, clickHouseConfig.password)
       },
       PORT,
-      0,
-      null
-    ) {
-      @Override
-      protected User getUserByDatabaseConfig(DatabaseConfig databaseConfig) {
-        return null;
-      }
-
-      @Override
-      protected DatabaseConfig[] getAdHocDatabaseConfigs() {
-        return new DatabaseConfig[0];
-      }
-
-      @Override
-      protected IResponse handleAddingValidDataSource(IRequest req, DatabaseConfig adHocDatabaseConfig) throws Exception {
-        return null;
-      }
-
-      @Override
-      protected IResponse handleRemovingValidDataSource(IRequest req, DatabaseConfig removedDatabaseConfig) throws Exception {
-        return null;
-      }
-    };
+      TEST_AUTH_KEY,
+      new MinumBuilder.KeyStore(keyStoreFile, keyStorePassword)
+    );
     server.start();
 
     go("/");
     webDriver.manage().deleteAllCookies();
+    webDriver.manage().addCookie(new Cookie(
+      BackdoorDesktopServer.AUTH_KEY_COOKIE_KEY,
+      TEST_AUTH_KEY
+    ));
   }
 
   @AfterEach
@@ -231,11 +188,11 @@ public class Base {
   }
 
   public void go(String path) {
-    webDriver.get("http://localhost:" + PORT + path);
+    webDriver.get("https://localhost:" + PORT + path);
   }
 
   String getCurrentPath() {
-    return webDriver.getCurrentUrl().substring(("http://localhost:" + PORT).length());
+    return webDriver.getCurrentUrl().substring(("https://localhost:" + PORT).length());
   }
 
   public String tid(String... args) {
@@ -266,23 +223,16 @@ public class Base {
   }
 
   WebElement elem(String cssSelector, boolean checkDisplay) throws InterruptedException {
-    WebElement candidate = null;
     try {
       if (checkDisplay) {
         waitUntil(() -> assertTrue(elems(cssSelector).stream().anyMatch(WebElement::isDisplayed)));
-        candidate = elems(cssSelector).stream().filter(WebElement::isDisplayed).findFirst().orElse(null);
+        return elems(cssSelector).stream().filter(WebElement::isDisplayed).findFirst().orElse(null);
       } else {
-        candidate = elems(cssSelector).getFirst();
+        return elems(cssSelector).getFirst();
       }
     } catch (StaleElementReferenceException e) {
       Thread.sleep(100);
-      candidate = elem(cssSelector, checkDisplay);
-    }
-
-    if (candidate == null) {
       return elem(cssSelector, checkDisplay);
-    } else {
-      return candidate;
     }
   }
 
@@ -307,22 +257,6 @@ public class Base {
 
     // Last try
     fn.invoke();
-  }
-
-  public void fillCodeMirror(String sql) throws InterruptedException {
-    waitUntil(() -> {
-      click(".CodeMirror-code");
-
-      var isFocused = ((JavascriptExecutor) webDriver).executeScript("return window.CODE_MIRROR_FOR_TESTING.hasFocus();");
-      if (isFocused instanceof Boolean && !((Boolean) isFocused)) {
-        logger.info("Unable to focus on CodeMirror. Waiting 1s and retrying...");
-        Thread.sleep(1000);
-      }
-      assertEquals(true, isFocused);
-    });
-
-    sendClearKeys();
-    sendKeys(sql);
   }
 
   public void click(String cssSelector) throws InterruptedException {
@@ -369,9 +303,6 @@ public class Base {
     actions.sendKeys(text).perform();
   }
 
-
-  int waitUntilTimeoutInMillis = 10000;
-
   @FunctionalInterface
   public interface InterruptibleSupplier {
     boolean get() throws InterruptedException;
@@ -383,6 +314,10 @@ public class Base {
   }
 
   public void waitUntil(VoidFn fn) throws InterruptedException {
+    waitUntil(5000, fn);
+  }
+
+  public void waitUntil(long waitUntilTimeoutInMillis, VoidFn fn) throws InterruptedException {
     InterruptibleSupplier newFn = () -> {
       try {
         fn.invoke();
@@ -437,8 +372,31 @@ public class Base {
   }
 
   void checkErrorPanel(String... errors) throws InterruptedException {
-    var actualErrors = elems(tid("error-panel") + " p").stream().map(p -> p.getText().trim());
+    checkErrorPanel(5000, errors);
+  }
 
-    assertArrayEquals(errors, actualErrors.toArray());
+  void checkErrorPanel(long waitTimeoutInMillis, String... errors) throws InterruptedException {
+    waitUntil(
+      waitTimeoutInMillis,
+      () -> {
+        var actualErrors = elems(tid("error-panel") + " p").stream().map(p -> p.getText().trim());
+        assertArrayEquals(errors, actualErrors.toArray());
+      }
+    );
+  }
+
+  public void fillCodeMirror(String sql) throws InterruptedException {
+    waitUntil(() -> {
+      click(".CodeMirror-code");
+
+      var isFocused = ((JavascriptExecutor) webDriver).executeScript("return window.CODE_MIRROR_FOR_TESTING.hasFocus();");
+      if (isFocused instanceof Boolean && !((Boolean) isFocused)) {
+        Thread.sleep(1000);
+      }
+      assertEquals(true, isFocused);
+    });
+
+    sendClearKeys();
+    sendKeys(sql);
   }
 }
