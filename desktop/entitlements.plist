@@ -10,6 +10,8 @@
     <true/>
     <key>com.apple.security.cs.allow-jit</key>
     <true/>
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
     <key>com.apple.application-identifier</key>
     <string>S6482XAL5E.tanin.backdoor.desktop.macos</string>
     <key>com.apple.developer.team-identifier</key>
