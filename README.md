@@ -29,9 +29,9 @@ Backdoor is a database querying and editing tool for you and your team.
 
 | Database      | Status         |
 |---------------|----------------|
-| PostgreSQL    | ✅ Supported    |
-| ClickHouse    | ✅ Supported    |
-| SQLite        | 🟡 In Progress |
+| PostgreSQL    | ✅ Supported   |
+| ClickHouse    | ✅ Supported   |
+| SQLite        | ✅ Supported   |
 | DuckDB        | 🔜 Coming Soon |
 | MySQL         | 🔜 Coming Soon |
 | Oracle        | 🔜 Coming Soon |
