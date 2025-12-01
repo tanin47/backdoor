@@ -97,7 +97,7 @@ jobs:
           fi
       - name: Install Node modules
         run: npm install
-      - name: Build a publishable JAR
+      - name: Build a DMG
         run: ./gradlew clean :desktop:staple
         env:
           APTABASE_ID: ${{ secrets.APTABASE_ID }}
