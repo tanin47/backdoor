@@ -283,12 +283,21 @@ This flow has been set up as a part of the Github Actions workflow: `create-rele
 4. Run: `docker push tanin47/backdoor:web-2.4.0-rc1`
 5. Go to Render.com, sync the blueprint, and test that it works
 
-Release a new version
-----------------------
+Release a new self-hostable version
+------------------------------------
 
-1. Create an empty release with a new tag. The tag must follow the format: `vX.Y.Z`.
-2. Go to Actions and wait for the `create-release-and-docker` (which is triggered automatically) workflow to finish.
+1. Create an empty release with a new tag. The tag must follow the format: `web-X.Y.Z`.
+2. Go to Actions and wait for the `create-release-web` (which is triggered automatically) workflow to finish.
 3. Test the docker with
    `docker run -p 9090:9090 --entrypoint "" tanin47/backdoor:web-2.4.0-rc1 java -jar backdoor-2.4.0-rc1.jar -port 9090`.
-4. Go to Actions and trigger the workflow `publish-jar` on the tag `vX.Y.Z` in order to publish the JAR to Central
-   Sonatype.
+4. Go to Actions and trigger the workflow `publish-web-jar` on the tag `web-X.Y.Z` in order to publish the JAR to
+   Central Sonatype.
+
+Release a new desktop version
+------------------------------------
+
+1. Create an empty release with a new tag. The tag must follow the format: `desktop-X.Y.Z`.
+2. Go to Actions and wait for the `create-release-desktop` (which is triggered automatically) workflow to finish.
+3. Download the DMG and test it locally.
+4. Go to Actions and trigger the workflow `publish-desktop-testflight` on the tag `desktop-X.Y.Z` in order to publish
+   the JAR to Central Sonatype.

@@ -94,7 +94,7 @@ jobs:
           fi
       - name: Install Node modules
         run: npm install
-      - name: Build a publishable JAR
+      - name: Upload to TestFlight
         run: ./gradlew clean :desktop:uploadPkgToAppStore
         env:
           APTABASE_ID: ${{ secrets.APTABASE_ID }}
