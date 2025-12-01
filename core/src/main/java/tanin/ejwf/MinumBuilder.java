@@ -7,13 +7,17 @@ import com.renomad.minum.web.FullSystem;
 import com.renomad.minum.web.Response;
 import com.renomad.minum.web.StatusLine;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.io.File;
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executors;
@@ -47,14 +51,12 @@ public class MinumBuilder {
   public static record KeyStore(File file, String password) {
   }
 
-  public static FullSystem start(int port, int sslPort, KeyStore keyStore) {
+  public static FullSystem start(int port, int sslPort, KeyStore keyStore) throws NoSuchAlgorithmException, KeyManagementException {
     if (IS_LOCAL_DEV) {
       logger.info("Running in the local development mode. Hot-Reload Module is enabled. `npm run hmr` must be running in a separate terminal");
     } else {
       logger.info("Running in the production mode.");
     }
-
-    HttpClient httpClient = HttpClient.newHttpClient();
 
     var props = new Properties();
     props.setProperty("SERVER_PORT", "" + port);
@@ -98,13 +100,34 @@ public class MinumBuilder {
     var wf = minum.getWebFramework();
 
     if (IS_LOCAL_DEV) {
+      var trustAllCerts = new TrustManager[]{
+        new X509TrustManager() {
+          public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+            return null;
+          }
+
+          public void checkClientTrusted(java.security.cert.X509Certificate[] certs, String authType) {
+          }
+
+          public void checkServerTrusted(java.security.cert.X509Certificate[] certs, String authType) {
+          }
+        }
+      };
+
+      var sslContext = SSLContext.getInstance("TLS");
+      sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
+
+      var httpClient = java.net.http.HttpClient.newBuilder()
+        .sslContext(sslContext)
+        .build();
+
       wf.registerPartialPath(
         GET,
         "__webpack_hmr",
         request -> {
           var httpRequest = HttpRequest
             .newBuilder()
-            .uri(URI.create("http://localhost:8090/__webpack_hmr"))
+            .uri(URI.create("https://localhost:8090/__webpack_hmr"))
             .GET()
             .build();
           var response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofByteArray());
@@ -142,7 +165,7 @@ public class MinumBuilder {
 
           var httpRequest = HttpRequest
             .newBuilder()
-            .uri(URI.create("http://localhost:8090/assets/" + assetPath))
+            .uri(URI.create("https://localhost:8090/assets/" + assetPath))
             .GET()
             .build();
           var response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofByteArray());

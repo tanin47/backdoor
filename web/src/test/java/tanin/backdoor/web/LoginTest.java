@@ -4,6 +4,8 @@ import org.junit.jupiter.api.Test;
 import tanin.backdoor.core.DatabaseConfig;
 import tanin.backdoor.core.User;
 
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 import java.util.List;
 
@@ -73,7 +75,7 @@ public class LoginTest extends Base {
   }
 
   @Test
-  void usePassthroughUser() throws InterruptedException, SQLException {
+  void usePassthroughUser() throws InterruptedException, SQLException, NoSuchAlgorithmException, KeyManagementException {
     server.stop();
 
     server = new BackdoorWebServer(
@@ -111,7 +113,7 @@ public class LoginTest extends Base {
   }
 
   @Test
-  void forbidPostgresUserWhenDatabaseIsAlreadyCredentialed() throws InterruptedException, SQLException {
+  void forbidPostgresUserWhenDatabaseIsAlreadyCredentialed() throws InterruptedException, SQLException, NoSuchAlgorithmException, KeyManagementException {
     server.stop();
 
     server = new BackdoorWebServer(
@@ -162,7 +164,7 @@ public class LoginTest extends Base {
   }
 
   @Test
-  void forbidClickHouseUserWhenDatabaseIsAlreadyCredentialed() throws InterruptedException, SQLException {
+  void forbidClickHouseUserWhenDatabaseIsAlreadyCredentialed() throws InterruptedException, SQLException, NoSuchAlgorithmException, KeyManagementException {
     server.stop();
 
     server = new BackdoorWebServer(
@@ -213,7 +215,7 @@ public class LoginTest extends Base {
   }
 
   @Test
-  void incorrectPassthroughUser() throws InterruptedException, SQLException {
+  void incorrectPassthroughUser() throws InterruptedException, SQLException, NoSuchAlgorithmException, KeyManagementException {
     server.stop();
 
     server = new BackdoorWebServer(

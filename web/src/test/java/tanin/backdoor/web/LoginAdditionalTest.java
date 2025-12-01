@@ -21,19 +21,10 @@ public class LoginAdditionalTest extends Base {
 
   @BeforeEach
   void beforeEach() throws Exception {
-    server.stop();
-
-    server = new BackdoorWebServer(
-      new DatabaseConfig[]{
-        new DatabaseConfig("postgres", POSTGRES_DATABASE_URL, null, null),
-        new DatabaseConfig("clickhouse", CLICKHOUSE_DATABASE_URL, null, null),
-      },
-      PORT,
-      -1,
-      new User[0],
-      "dontcare"
-    );
-    server.start();
+    server.databaseConfigs = new DatabaseConfig[]{
+      new DatabaseConfig("postgres", POSTGRES_DATABASE_URL, null, null),
+      new DatabaseConfig("clickhouse", CLICKHOUSE_DATABASE_URL, null, null),
+    };
 
     go("/login");
     webDriver.manage().deleteAllCookies();

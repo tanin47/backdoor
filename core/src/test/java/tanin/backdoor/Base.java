@@ -43,7 +43,7 @@ public class Base {
   static boolean IS_MAC = System.getProperty("os.name").toLowerCase().contains("mac");
 
   public WebDriver webDriver;
-  BackdoorCoreServer server;
+  public BackdoorCoreServer server;
 
   @RegisterExtension
   AfterTestExecutionCallback afterTestExecutionCallback = new AfterTestExecutionCallback() {
@@ -101,7 +101,7 @@ public class Base {
   }
 
   void resetDatabase() throws Exception {
-    try (var pg = Engine.createEngine(postgresConfig, null)) {
+    try (var pg = server.engineProvider.createEngine(postgresConfig, null)) {
       var conn = pg.connection;
       conn.createStatement().execute("DROP SCHEMA IF EXISTS public CASCADE");
       conn.createStatement().execute("CREATE SCHEMA public");
@@ -134,7 +134,7 @@ public class Base {
         );
       }
 
-      try (var clickhouse = Engine.createEngine(clickHouseConfig, null)) {
+      try (var clickhouse = server.engineProvider.createEngine(clickHouseConfig, null)) {
         conn = clickhouse.connection;
         var tables = clickhouse.getTables();
         for (var table : tables) {
@@ -182,7 +182,6 @@ public class Base {
 
   @BeforeEach
   void setUp() throws Exception {
-    resetDatabase();
     server = new BackdoorCoreServer(
       new DatabaseConfig[]{
         new DatabaseConfig(postgresConfig.nickname, postgresConfig.jdbcUrl, postgresConfig.username, postgresConfig.password),
@@ -212,6 +211,7 @@ public class Base {
         return null;
       }
     };
+    resetDatabase();
     server.start();
 
     go("/");

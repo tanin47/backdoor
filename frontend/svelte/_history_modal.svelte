@@ -23,7 +23,7 @@ export async function open(): Promise<void> {
   void focusOnMainInput()
 }
 
-$: {
+$: if (modal && modal.open) {
   void load(keyword)
 }
 

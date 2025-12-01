@@ -6,6 +6,8 @@ import tanin.backdoor.core.User;
 import tanin.ejwf.MinumBuilder;
 
 import java.net.URISyntaxException;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
@@ -13,7 +15,7 @@ import static tanin.backdoor.core.BackdoorCoreServer.stripeSurroundingDoubleQuot
 
 public class Main {
 
-  public static void main(String[] args) throws SQLException, URISyntaxException {
+  public static void main(String[] args) throws SQLException, NoSuchAlgorithmException, KeyManagementException {
     var databaseConfigs = new ArrayList<DatabaseConfig>();
     int port = 0;
     int sslPort = 0;

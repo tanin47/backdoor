@@ -23,6 +23,9 @@ public class Main {
     logger.info("Native lib path: " + Base.nativeDir.getAbsolutePath());
   }
 
+  private MinumBuilder minumBuilder;
+  private static Browser browser;
+
   public static void main(String[] args) throws Exception {
     var cert = SelfSignedCertificate.generate("localhost");
     logger.info("The SSL cert is randomly generated on each run:");
@@ -36,13 +39,24 @@ public class Main {
       new DatabaseConfig[0],
       0,
       authKey,
-      new MinumBuilder.KeyStore(keyStoreFile, keyStorePassword)
+      new MinumBuilder.KeyStore(keyStoreFile, keyStorePassword),
+      MinumBuilder.IS_LOCAL_DEV ? BackdoorDesktopServer.Mode.Dev : BackdoorDesktopServer.Mode.Prod,
+      js -> browser.eval(js)
     );
     logger.info("Starting...");
     var minum = server.start();
-    var sslPort = minum.getSslServer().getPort();
 
-    var browser = new Browser("https://localhost:" + sslPort + "/landing?authKey=" + authKey, MinumBuilder.IS_LOCAL_DEV);
+    var sslPort = minum.getSslServer().getPort();
+    var url = "https://localhost:" + sslPort + "/?authKey=" + authKey;
+    if (MinumBuilder.IS_LOCAL_DEV) {
+      logger.info("[dev] You can access the UI in a browser at: " + url);
+    }
+
+    browser = new Browser(
+      url,
+      true
+//      MinumBuilder.IS_LOCAL_DEV
+    );
     browser.run();
 
     logger.info("Exiting");

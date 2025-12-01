@@ -72,3 +72,68 @@ public func nsWindowMakeKeyAndOrderFront() {
         window.styleMask.insert([.resizable, .titled])
     }
 }
+
+
+@_cdecl("openFile")
+public func openFile(
+    _ onFileSelected: @escaping @convention(c) (UnsafePointer<CChar>) -> Void
+) {
+    DispatchQueue.main.async {
+        NSLog("Opening the file dialog")
+        let openPanel = NSOpenPanel()
+        openPanel.canChooseFiles = true
+        openPanel.canChooseDirectories = false
+        openPanel.allowsMultipleSelection = false
+
+        openPanel.begin { response in
+            if response == .OK {
+                guard let url = openPanel.url else {
+                    return
+                }
+
+                NSLog("Selected file: \(url)");
+                onFileSelected(url.path.cString(using: .utf8)!)
+            }
+        }
+    }
+}
+
+@_cdecl("saveFile")
+public func saveFile(
+    _ onFileSelected: @escaping @convention(c) (UnsafePointer<CChar>) -> Void
+) {
+    DispatchQueue.main.async {
+        NSLog("Opening the save dialog")
+        let savePanel = NSSavePanel()
+        savePanel.canCreateDirectories = true
+
+        savePanel.begin { response in
+            if response == .OK {
+                guard let url = savePanel.url else {
+                    return
+                }
+
+                NSLog("Save location selected: \(url)")
+                onFileSelected(url.path.cString(using: .utf8)!)
+            }
+        }
+    }
+}
+
+@_cdecl("startAccessingSecurityScopedResource")
+public func startAccessingSecurityScopedResource(
+    _ filePath: UnsafePointer<CChar>
+) -> Bool {
+    let path = String(cString: filePath)
+    let url = URL(fileURLWithPath: path)
+    return url.startAccessingSecurityScopedResource()
+}
+
+@_cdecl("stopAccessingSecurityScopedResource")
+public func stopAccessingSecurityScopedResource(
+    _ filePath: UnsafePointer<CChar>
+) -> Void {
+    let path = String(cString: filePath)
+    let url = URL(fileURLWithPath: path)
+    url.stopAccessingSecurityScopedResource()
+}

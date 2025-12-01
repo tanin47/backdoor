@@ -7,10 +7,13 @@ import com.eclipsesource.json.JsonValue;
 import com.renomad.minum.templating.TemplateProcessor;
 import com.renomad.minum.web.*;
 import tanin.backdoor.core.engine.Engine;
+import tanin.backdoor.core.engine.EngineProvider;
 import tanin.ejwf.MinumBuilder;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -70,6 +73,7 @@ public abstract class BackdoorCoreServer {
   MinumBuilder.KeyStore keyStore;
   private FullSystem minum;
 
+  public EngineProvider engineProvider;
 
   public BackdoorCoreServer(
     DatabaseConfig[] databaseConfigs,
@@ -81,6 +85,8 @@ public abstract class BackdoorCoreServer {
     this.port = port;
     this.sslPort = sslPort;
     this.keyStore = keyStore;
+    this.engineProvider = new EngineProvider() {
+    };
   }
 
   protected abstract User getUserByDatabaseConfig(DatabaseConfig databaseConfig);
@@ -130,7 +136,7 @@ public abstract class BackdoorCoreServer {
       .orElse(null);
   }
 
-  Engine makeEngine(String databaseNickname) throws SQLException, URISyntaxException, Engine.InvalidCredentialsException, Engine.OverwritingUserAndCredentialedJdbcConflictedException, Engine.UnreachableServerException, Engine.InvalidDatabaseNameProbablyException, BackingStoreException {
+  Engine makeEngine(String databaseNickname) throws SQLException, URISyntaxException, Engine.InvalidCredentialsException, Engine.OverwritingUserAndCredentialedJdbcConflictedException, Engine.UnreachableServerException, Engine.InvalidDatabaseNameProbablyException, BackingStoreException, Engine.GenericConnectionException {
     var databaseConfig = Arrays.stream(getAllDatabaseConfigs()).filter(d -> d.nickname.equals(databaseNickname)).findFirst().orElse(null);
 
     if (databaseConfig == null) {
@@ -141,15 +147,14 @@ public abstract class BackdoorCoreServer {
   }
 
 
-  Engine makeEngine(DatabaseConfig databaseConfig) throws SQLException, URISyntaxException, Engine.InvalidCredentialsException, Engine.OverwritingUserAndCredentialedJdbcConflictedException, Engine.UnreachableServerException, Engine.InvalidDatabaseNameProbablyException {
+  Engine makeEngine(DatabaseConfig databaseConfig) throws SQLException, URISyntaxException, Engine.InvalidCredentialsException, Engine.OverwritingUserAndCredentialedJdbcConflictedException, Engine.UnreachableServerException, Engine.InvalidDatabaseNameProbablyException, Engine.GenericConnectionException {
     var user = getUserByDatabaseConfig(databaseConfig);
-    return Engine.createEngine(databaseConfig, user);
+    return this.engineProvider.createEngine(databaseConfig, user);
   }
 
-  public FullSystem start() throws SQLException {
+  public FullSystem start() throws SQLException, NoSuchAlgorithmException, KeyManagementException {
     minum = MinumBuilder.start(this.port, this.sslPort, this.keyStore);
     var wf = minum.getWebFramework();
-
 
     wf.registerPath(
       POST,
@@ -477,13 +482,6 @@ public abstract class BackdoorCoreServer {
       }
     );
 
-    // TODO: Remove after switching to a new minum version
-    wf.registerPath(
-      GET,
-      "landing",
-      this::processIndexPage
-    );
-
     wf.registerPath(
       GET,
       "",
@@ -499,6 +497,17 @@ public abstract class BackdoorCoreServer {
         var url = json.asObject().get("url").asString().trim();
         var username = json.asObject().get("username").asString().trim();
         var password = json.asObject().get("password").asString().trim();
+
+        if (nickname.isBlank()) {
+          return Response.buildResponse(
+            StatusLine.StatusCode.CODE_400_BAD_REQUEST,
+            Map.of("Content-Type", "application/json"),
+            Json
+              .object()
+              .add("errors", Json.array().add("The nickname cannot be blank."))
+              .toString()
+          );
+        }
 
         if (Arrays.stream(getAllDatabaseConfigs()).anyMatch(d -> d.nickname.equals(nickname))) {
           return Response.buildResponse(
@@ -519,10 +528,10 @@ public abstract class BackdoorCoreServer {
           true
         );
 
-        try (var _engine = Engine.createEngine(adHocDatabaseConfig, null)) {
+        try (var _engine = this.engineProvider.createEngine(adHocDatabaseConfig, null)) {
           return handleAddingValidDataSource(req, adHocDatabaseConfig);
         } catch (Engine.InvalidCredentialsException | Engine.UnreachableServerException |
-                 Engine.InvalidDatabaseNameProbablyException e) {
+                 Engine.InvalidDatabaseNameProbablyException | Engine.GenericConnectionException e) {
           var message = "Unknown error. Please contact your administrator.";
 
           if (e instanceof Engine.InvalidCredentialsException) {
@@ -531,6 +540,8 @@ public abstract class BackdoorCoreServer {
             message = "The server is unreachable.";
           } else if (e instanceof Engine.InvalidDatabaseNameProbablyException) {
             message = "The server is reachable but it's likely that the database name is invalid, but it could be wrong username or password too.";
+          } else if (e instanceof Engine.GenericConnectionException) {
+            message = e.getMessage();
           }
 
           return Response.buildResponse(
@@ -616,10 +627,7 @@ public abstract class BackdoorCoreServer {
   }
 
   public void stop() {
-    try {
-      minum.shutdown();
-    } catch (Exception e) {
-    }
+    minum.shutdown();
   }
 
   private int getValueLength(JsonValue value, Column column) {

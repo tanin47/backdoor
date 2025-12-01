@@ -9,33 +9,44 @@ import org.openqa.selenium.logging.LogType;
 import org.openqa.selenium.logging.LoggingPreferences;
 import org.openqa.selenium.support.ui.Select;
 import tanin.backdoor.core.DatabaseConfig;
-import tanin.backdoor.core.User;
-import tanin.backdoor.core.engine.Engine;
 import tanin.ejwf.MinumBuilder;
 
+import java.io.File;
+import java.io.IOException;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Level;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static tanin.backdoor.core.BackdoorCoreServer.makeSqlName;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class Base {
-  User loggedInUser = new User("backdoor", "test");
-  static String POSTGRES_DATABASE_URL = "postgres://127.0.0.1:5432/backdoor_test";
-  static String CLICKHOUSE_DATABASE_URL = "jdbc:ch://127.0.0.1:8123/backdoor_test";
 
-  public DatabaseConfig postgresConfig = new DatabaseConfig("postgres", POSTGRES_DATABASE_URL, "backdoor_test_user", "test");
-  public DatabaseConfig clickHouseConfig = new DatabaseConfig("clickhouse", CLICKHOUSE_DATABASE_URL, "backdoor", "test_ch");
+  static File sqliteFile;
+
+  static {
+    try {
+      sqliteFile = File.createTempFile("test", ".sqlite");
+      sqliteFile.deleteOnExit();
+      var _ignored = sqliteFile.delete();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  static String SQLITE_DATABASE_URL = "jdbc:sqlite:" + sqliteFile.getAbsolutePath();
+
+  public DatabaseConfig sqliteConfig = new DatabaseConfig("sqlite", SQLITE_DATABASE_URL, null, null);
   static int PORT = 9091;
   static String TEST_AUTH_KEY = "test-auth-key";
   static boolean IS_MAC = System.getProperty("os.name").toLowerCase().contains("mac");
 
   public WebDriver webDriver;
-  BackdoorDesktopServer server;
-  boolean shouldLoggedIn = true;
+  public BackdoorDesktopServer server;
 
   @BeforeAll
   void setUpAll() throws SQLException, URISyntaxException, InterruptedException {
@@ -68,13 +79,27 @@ public class Base {
     webDriver = new ChromeDriver(options);
   }
 
+  void clearPreferences() {
+    try {
+      java.util.prefs.Preferences.userNodeForPackage(BackdoorDesktopServer.Mode.Test.getClass()).removeNode();
+    } catch (Exception ignored) {
+    }
+  }
+
   void resetDatabase() throws Exception {
     SqlHistoryManager.resetForTesting();
+    clearPreferences();
 
-    try (var pg = Engine.createEngine(postgresConfig, null)) {
-      var conn = pg.connection;
-      conn.createStatement().execute("DROP SCHEMA IF EXISTS public CASCADE");
-      conn.createStatement().execute("CREATE SCHEMA public");
+    try (var sqlite = server.engineProvider.createEngine(sqliteConfig, null)) {
+      var conn = sqlite.connection;
+      List<String> tableNames = new ArrayList<>();
+      var rs = conn.getMetaData().getTables(null, null, "%", new String[]{"TABLE"});
+      while (rs.next()) {
+        tableNames.add(rs.getString("TABLE_NAME"));
+      }
+      for (String tableName : tableNames) {
+        conn.createStatement().execute("DROP TABLE IF EXISTS " + makeSqlName(tableName));
+      }
 
       conn.createStatement().execute(
         """
@@ -103,68 +128,28 @@ public class Base {
           )
         );
       }
-
-      try (var clickhouse = Engine.createEngine(clickHouseConfig, null)) {
-        conn = clickhouse.connection;
-        var tables = clickhouse.getTables();
-        for (var table : tables) {
-          conn.createStatement().execute("DROP TABLE IF EXISTS " + table);
-        }
-
-        conn.createStatement().execute(
-          """
-            CREATE TABLE project_setting
-            (
-                user_id              String,
-                project_id           String,
-                item_id              Nullable(String),
-                some_value           Int
-            )
-            ENGINE = ReplacingMergeTree()
-            ORDER BY (user_id, project_id, item_id)
-            PRIMARY KEY (user_id, project_id, item_id)
-            SETTINGS allow_nullable_key = 1;
-            """
-        );
-
-        for (int i = 1; i <= 4; i++) {
-          conn.createStatement().execute(String.format(
-              """
-                  INSERT INTO "project_setting" (
-                    user_id,
-                    project_id,
-                    item_id,
-                    some_value
-                  ) VALUES (
-                    'user_%1$d',
-                    'project_%1$d',
-                    'item_%1$d',
-                    '%1$d'
-                  )
-                """,
-              i
-            )
-          );
-        }
-      }
     }
+
+
   }
 
   @BeforeEach
   void setUp() throws Exception {
-    resetDatabase();
     var cert = SelfSignedCertificate.generate("localhost");
     var keyStorePassword = SelfSignedCertificate.generateRandomString(64);
     var keyStoreFile = SelfSignedCertificate.generateKeyStoreFile(cert, keyStorePassword);
     server = new BackdoorDesktopServer(
       new DatabaseConfig[]{
-        new DatabaseConfig(postgresConfig.nickname, postgresConfig.jdbcUrl, postgresConfig.username, postgresConfig.password),
-        new DatabaseConfig(clickHouseConfig.nickname, clickHouseConfig.jdbcUrl, clickHouseConfig.username, clickHouseConfig.password)
+        new DatabaseConfig(sqliteConfig.nickname, sqliteConfig.jdbcUrl, sqliteConfig.username, sqliteConfig.password),
       },
       PORT,
       TEST_AUTH_KEY,
-      new MinumBuilder.KeyStore(keyStoreFile, keyStorePassword)
+      new MinumBuilder.KeyStore(keyStoreFile, keyStorePassword),
+      BackdoorDesktopServer.Mode.Test,
+      js -> {
+      }
     );
+    resetDatabase();
     server.start();
 
     go("/");
@@ -250,7 +235,7 @@ public class Base {
       try {
         fn.invoke();
         return;
-      } catch (ElementNotInteractableException ex) {
+      } catch (ElementNotInteractableException | NullPointerException ex) {
         Thread.sleep(1000);
       }
     }

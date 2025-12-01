@@ -12,7 +12,7 @@ public class TableTest extends Base {
   @Disabled("Timezone doesn't work correctly on CI")
   @Test
   void dateTimeColumn() throws Exception {
-    try (var engine = Engine.createEngine(clickHouseConfig, null)) {
+    try (var engine = server.engineProvider.createEngine(clickHouseConfig, null)) {
       engine.connection.createStatement().execute("""
             CREATE TABLE "date_time" (
               id Int,
@@ -87,7 +87,7 @@ public class TableTest extends Base {
 
   @Test
   void jsonColumn() throws Exception {
-    try (var engine = Engine.createEngine(clickHouseConfig, null)) {
+    try (var engine = server.engineProvider.createEngine(clickHouseConfig, null)) {
       engine.connection.createStatement().execute("""
             CREATE TABLE "json_test" (
               id INT PRIMARY KEY,
@@ -247,7 +247,7 @@ public class TableTest extends Base {
 
   @Test
   void loadMore() throws Exception {
-    try (var engine = Engine.createEngine(clickHouseConfig, null)) {
+    try (var engine = server.engineProvider.createEngine(clickHouseConfig, null)) {
       for (int i = 5; i <= 247; i++) {
         engine.connection.createStatement().execute(String.format(
           "INSERT INTO \"project_setting\" (user_id, project_id, item_id, some_value) VALUES ('user_%d', 'project_%d', 'item_%d', '%d')",
