@@ -1,16 +1,13 @@
 {
-  "browserslist": [
-    "> 1%",
-    "last 2 versions",
-    "not ie <= 8"
-  ],
   "devDependencies": {
     "@babel/core": "^7.12.10",
+    "@babel/preset-env": "^7.28.5",
+    "@babel/preset-typescript": "^7.28.5",
     "@tailwindcss/postcss": "^4.1.11",
     "@types/codemirror": "5.60.16",
     "@types/node": "^14.14.16",
     "altcha": "2.2.4",
-    "babel-loader": "^8.2.1",
+    "babel-loader": "^8.4.1",
     "codemirror": "5.65.20",
     "cors": "2.8.5",
     "css-loader": "^5.0.1",
@@ -28,7 +25,7 @@
     "svelte": "5.41.1",
     "svelte-check": "4.2.1",
     "svelte-loader": "3.2.4",
-    "svelte-preprocess": "6.0.3",
+    "svelte-preprocess": "^6.0.3",
     "svelte-virtual-table-by-tanin": "1.0.0",
     "tailwindcss": "^4.1.11",
     "ts-loader": "9.5.2",

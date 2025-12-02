@@ -92,7 +92,12 @@ const config = {
           loader: 'svelte-loader',
           options: {
             emitCss: false,
-            preprocess: sveltePreprocess({}),
+            preprocess: sveltePreprocess({
+              typescript: true, // Enable TypeScript preprocessing
+              babel: {
+                configFile: './babel.config.js', // Link to your Babel config
+              },
+            }),
             compilerOptions: {
               dev: false,
               compatibility: {
