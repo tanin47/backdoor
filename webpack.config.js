@@ -34,7 +34,7 @@ function buildEntry(mode) {
   }
 
   if (mode === 'development') {
-    entry['stylesheets/tailwindbase'] = [
+    entry[pathModule.join('stylesheets', 'tailwindbase')] = [
       `webpack-hot-middleware/client?path=/__webpack_hmr&timeout=5000&reload=true`,
       './frontend/stylesheets/tailwindbase.css',
     ]

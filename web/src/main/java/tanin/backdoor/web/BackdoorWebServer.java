@@ -40,7 +40,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
   }
 
 
-  User[] users;
+  public User[] users;
   public String secretKey;
   ThreadLocal<AuthCookie> auth = new ThreadLocal<>();
 

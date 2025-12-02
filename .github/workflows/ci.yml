@@ -79,6 +79,7 @@ jobs:
         with:
           name: failed-screenshots
           path: '**/build/failed-screenshots/'
+
   build-desktop-mac:
     runs-on: macos-latest
 
@@ -147,6 +148,53 @@ jobs:
       - name: Run tests
         run: |
           npm run hmr &
+          ./gradlew --no-daemon :desktop:jacocoTestReport
+        env:
+          HEADLESS: true
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_ORG_TOKEN }}
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v5
+        if: ${{ !cancelled() }}
+        with:
+          require_tests: true
+          report_paths: '**/build/test-results/test/*.xml'
+      - name: Upload Failed Screenshots
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: failed-screenshots
+          path: '**/build/failed-screenshots/'
+
+  build-desktop-win:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: 'gradle'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: browser-actions/setup-chrome@v2
+        with:
+          chrome-version: 'stable'
+          install-chromedriver: true
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/master' }}
+      - name: Install Node modules
+        run: npm install
+      - name: Run tests
+        run: |
+          NODE_PATH=./node_modules ENABLE_HMR=true node hmr.js &
           ./gradlew --no-daemon :desktop:jacocoTestReport
         env:
           HEADLESS: true

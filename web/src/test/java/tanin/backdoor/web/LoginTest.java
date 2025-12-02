@@ -76,20 +76,11 @@ public class LoginTest extends Base {
 
   @Test
   void usePassthroughUser() throws InterruptedException, SQLException, NoSuchAlgorithmException, KeyManagementException {
-    server.stop();
-
-    server = new BackdoorWebServer(
-      new DatabaseConfig[]{
-        new DatabaseConfig("postgres", POSTGRES_DATABASE_URL, null, null),
-        new DatabaseConfig("clickhouse", CLICKHOUSE_DATABASE_URL, null, null),
-
-      },
-      PORT,
-      0,
-      new User[0],
-      "dontcare"
-    );
-    server.start();
+    server.databaseConfigs = new DatabaseConfig[]{
+      new DatabaseConfig("postgres", POSTGRES_DATABASE_URL, null, null),
+      new DatabaseConfig("clickhouse", CLICKHOUSE_DATABASE_URL, null, null),
+    };
+    server.users = new User[0];
 
     go("/");
     waitUntil(() -> assertEquals("/login", getCurrentPath()));
@@ -114,20 +105,11 @@ public class LoginTest extends Base {
 
   @Test
   void forbidPostgresUserWhenDatabaseIsAlreadyCredentialed() throws InterruptedException, SQLException, NoSuchAlgorithmException, KeyManagementException {
-    server.stop();
-
-    server = new BackdoorWebServer(
-      new DatabaseConfig[]{
-        new DatabaseConfig("postgres", POSTGRES_DATABASE_URL, "backdoor_test_user", "test"),
-        new DatabaseConfig("clickhouse", CLICKHOUSE_DATABASE_URL, null, null),
-
-      },
-      PORT,
-      0,
-      new User[0],
-      "dontcare"
-    );
-    server.start();
+    server.databaseConfigs = new DatabaseConfig[]{
+      new DatabaseConfig("postgres", POSTGRES_DATABASE_URL, "backdoor_test_user", "test"),
+      new DatabaseConfig("clickhouse", CLICKHOUSE_DATABASE_URL, null, null),
+    };
+    server.users = new User[0];
 
     go("/");
     waitUntil(() -> assertEquals("/login", getCurrentPath()));
@@ -165,20 +147,11 @@ public class LoginTest extends Base {
 
   @Test
   void forbidClickHouseUserWhenDatabaseIsAlreadyCredentialed() throws InterruptedException, SQLException, NoSuchAlgorithmException, KeyManagementException {
-    server.stop();
-
-    server = new BackdoorWebServer(
-      new DatabaseConfig[]{
-        new DatabaseConfig("postgres", POSTGRES_DATABASE_URL, null, null),
-        new DatabaseConfig("clickhouse", CLICKHOUSE_DATABASE_URL, "backdoor", "test_ch"),
-
-      },
-      PORT,
-      0,
-      new User[0],
-      "dontcare"
-    );
-    server.start();
+    server.databaseConfigs = new DatabaseConfig[]{
+      new DatabaseConfig("postgres", POSTGRES_DATABASE_URL, null, null),
+      new DatabaseConfig("clickhouse", CLICKHOUSE_DATABASE_URL, "backdoor", "test_ch"),
+    };
+    server.users = new User[0];
 
     go("/");
     waitUntil(() -> assertEquals("/login", getCurrentPath()));
@@ -216,16 +189,8 @@ public class LoginTest extends Base {
 
   @Test
   void incorrectPassthroughUser() throws InterruptedException, SQLException, NoSuchAlgorithmException, KeyManagementException {
-    server.stop();
-
-    server = new BackdoorWebServer(
-      new DatabaseConfig[]{new DatabaseConfig("test_db", POSTGRES_DATABASE_URL, null, null)},
-      PORT,
-      0,
-      new User[0],
-      "dontcare"
-    );
-    server.start();
+    server.databaseConfigs = new DatabaseConfig[]{new DatabaseConfig("test_db", POSTGRES_DATABASE_URL, null, null)};
+    server.users = new User[0];
 
     go("/");
 

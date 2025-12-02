@@ -145,9 +145,7 @@ public class Base {
       PORT,
       TEST_AUTH_KEY,
       new MinumBuilder.KeyStore(keyStoreFile, keyStorePassword),
-      BackdoorDesktopServer.Mode.Test,
-      js -> {
-      }
+      BackdoorDesktopServer.Mode.Test
     );
     resetDatabase();
     server.start();
