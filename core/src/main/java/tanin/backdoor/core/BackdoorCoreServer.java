@@ -238,8 +238,20 @@ public abstract class BackdoorCoreServer {
         try (var engine = makeEngine(database)) {
           var column = Arrays.stream(engine.getColumns(tableName)).filter(c -> c.name.equals(columnName)).findFirst().orElse(null);
 
-          engine.update(tableName, column, setToNull ? null : newValue, primaryKeyFilters);
-          var rs = engine.select(tableName, column, primaryKeyFilters);
+          var newSantiziedValue = setToNull ? null : newValue;
+          engine.update(tableName, column, newSantiziedValue, primaryKeyFilters);
+          assert column != null;
+          var rs = engine.select(
+            tableName,
+            column,
+            Arrays.stream(primaryKeyFilters)
+              .peek(p -> {
+                if (p.name.equals(columnName)) {
+                  p.value = newSantiziedValue;
+                }
+              })
+              .toArray(Filter[]::new)
+          );
 
           JsonValue newFetchedValue = Json.NULL;
           while (rs.next()) {

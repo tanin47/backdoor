@@ -48,20 +48,18 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
 
   public String authKey;
 
-  Browser.JsInvoker jsInvoker;
   Mode mode;
+  public Browser browser;
 
   BackdoorDesktopServer(
     DatabaseConfig[] databaseConfigs,
     int sslPort,
     String authKey,
     MinumBuilder.KeyStore keyStore,
-    Mode mode,
-    Browser.JsInvoker jsInvoker
+    Mode mode
   ) {
     super(databaseConfigs, -1, sslPort, keyStore);
     this.authKey = authKey;
-    this.jsInvoker = jsInvoker;
     this.engineProvider = new EngineProvider();
     this.mode = mode;
   }
@@ -72,7 +70,7 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
 
   public static final String AUTH_KEY_COOKIE_KEY = "Auth";
 
-  private MacOsApi.OnFileSelected onFileSelected = null;
+  private Browser.OnFileSelected onFileSelected = null;
 
   public FullSystem start() throws SQLException, NoSuchAlgorithmException, KeyManagementException {
     var minum = super.start();
@@ -167,18 +165,14 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
       "select-file",
       req -> {
         var json = Json.parse(req.getBody().asString());
-        var isSaved = json.asObject().get("isSaved").asBoolean();
+        boolean isSaved = json.asObject().get("isSaved").asBoolean();
         onFileSelected = filePath -> {
           System.out.println("Opening file: " + filePath);
 
-          jsInvoker.invoke("window.triggerFileSelected(" + Json.object().add("filePath", filePath).toString() + ")");
+          browser.eval("window.triggerFileSelected(" + Json.object().add("filePath", filePath).toString() + ")");
         };
 
-        if (isSaved) {
-          MacOsApi.N.saveFile(onFileSelected);
-        } else {
-          MacOsApi.N.openFile(onFileSelected);
-        }
+        browser.openFileDialog(isSaved, onFileSelected);
 
         return Response.buildResponse(
           StatusLine.StatusCode.CODE_200_OK,

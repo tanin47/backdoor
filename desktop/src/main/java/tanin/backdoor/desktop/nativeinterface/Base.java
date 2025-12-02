@@ -4,6 +4,22 @@ import java.io.File;
 import java.util.logging.Logger;
 
 public class Base {
+  public enum OperatingSystem {
+    MAC,
+    WINDOWS,
+    LINUX
+  }
+
+  public static final OperatingSystem CURRENT_OS = determineOS();
+
+  private static OperatingSystem determineOS() {
+    var _ignored = nativeDir;
+    String os = System.getProperty("os.name").toLowerCase();
+    if (os.contains("mac")) return OperatingSystem.MAC;
+    if (os.contains("win")) return OperatingSystem.WINDOWS;
+    return OperatingSystem.LINUX;
+  }
+
   static final Logger logger = Logger.getLogger(WebviewNative.class.getName());
   public static final File nativeDir;
 
@@ -20,6 +36,7 @@ public class Base {
       System.setProperty("jna.debug_load.jna", "true");
       System.setProperty("jna.nosys", "true");
       System.setProperty("jna.library.path", nativeDir.getAbsolutePath());
+      System.setProperty("java.library.path", nativeDir.getAbsolutePath());
 
       if (sandboxed) {
         logger.info("Run in sandbox.");

@@ -6,6 +6,7 @@ import org.postgresql.util.PSQLException;
 import org.sqlite.SQLiteException;
 import tanin.backdoor.core.*;
 import tanin.backdoor.core.engine.Engine;
+import tanin.backdoor.desktop.nativeinterface.Base;
 import tanin.backdoor.desktop.nativeinterface.MacOsApi;
 
 import java.net.URI;
@@ -46,7 +47,9 @@ public class SqliteEngine extends Engine {
   protected void connect(DatabaseConfig config, User overwritingUser) throws SQLException, InvalidCredentialsException, URISyntaxException, UnreachableServerException, InvalidDatabaseNameProbablyException, GenericConnectionException {
     filePath = config.jdbcUrl.substring("jdbc:sqlite:".length());
     try {
-      MacOsApi.N.startAccessingSecurityScopedResource(filePath);
+      if (Base.CURRENT_OS == Base.OperatingSystem.MAC) {
+        MacOsApi.N.startAccessingSecurityScopedResource(filePath);
+      }
       connection = DriverManager.getConnection(config.jdbcUrl);
       execute("SELECT 'backdoor_test_connection_for_sqlite'");
     } catch (SQLiteException e) {
@@ -56,7 +59,6 @@ public class SqliteEngine extends Engine {
         throw e;
       }
     }
-    logger.info("CONNECTED");
   }
 
   @Override
@@ -149,10 +151,12 @@ public class SqliteEngine extends Engine {
   @Override
   public void close() throws Exception {
     if (connection != null) {
-      logger.info("CLOSED");
       connection.close();
     }
-    MacOsApi.N.stopAccessingSecurityScopedResource(filePath);
+
+    if (Base.CURRENT_OS == Base.OperatingSystem.MAC) {
+      MacOsApi.N.stopAccessingSecurityScopedResource(filePath);
+    }
   }
 
   @Override

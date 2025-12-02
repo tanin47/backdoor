@@ -11,6 +11,16 @@ plugins {
     jacoco
 }
 
+enum class OS {
+    MAC, WINDOWS, LINUX
+}
+
+val currentOS = when {
+    System.getProperty("os.name").lowercase().contains("mac") -> OS.MAC
+    System.getProperty("os.name").lowercase().contains("windows") -> OS.WINDOWS
+    else -> OS.LINUX
+}
+
 val isNotarizing = System.getenv("NOTARIZE") != null || gradle.startParameter.taskNames.find { s ->
     s.lowercase().contains("notarize") || s.lowercase().contains("jpackage") || s.lowercase().contains("staple")
 } != null
@@ -71,14 +81,34 @@ java {
     }
 }
 
+
+tasks.register<Exec>("compileWindowsApi") {
+    onlyIf {
+        currentOS == OS.WINDOWS
+    }
+    group = "build"
+    description = "Compile C code and output the dll to the resource directory."
+
+    commandLine(
+        "gcc",
+        "-shared",
+        "-o",
+        "./src/main/resources/native/WindowsApi.dll",
+        "./src/main/c/WindowsApi.c",
+        "-lcomdlg32",
+        "-lgdi32"
+    )
+}
+
 tasks.register("compileSwift") {
+    onlyIf {
+        currentOS == OS.MAC
+    }
     group = "build"
     description = "Compile Swift code and output the dylib to the resource directory."
 
     val inputFile = layout.projectDirectory.file("src/main/swift/MacOsApi.swift").asFile
     val outputFile = layout.projectDirectory.file("src/main/resources/native/libMacOsApi.dylib").asFile
-
-    println("Compiling Swift code to $outputFile")
 
     doLast {
         runCmd(
@@ -102,7 +132,12 @@ tasks.register("writeVersion") {
 }
 
 tasks.named<JavaCompile>("compileJava") {
-    dependsOn("compileSwift", "writeVersion")
+    if (currentOS == OS.MAC) {
+        dependsOn("compileSwift")
+    } else if (currentOS == OS.WINDOWS) {
+        dependsOn("compileWindowsApi")
+    }
+    dependsOn("writeVersion")
     options.compilerArgs.addAll(
         listOf(
             "--add-exports",
@@ -161,18 +196,22 @@ tasks.named<Test>("test") {
 var mainClassName = "tanin.backdoor.desktop.Main"
 application {
     mainClass.set(mainClassName)
-    applicationDefaultJvmArgs = listOf(
-        "-XstartOnFirstThread",
-        "--add-exports",
-        "java.base/sun.security.x509=ALL-UNNAMED",
-        "--add-exports",
-        "java.base/sun.security.tools.keytool=ALL-UNNAMED",
-    )
+    applicationDefaultJvmArgs = buildList {
+        if (currentOS == OS.MAC) {
+            add("-XstartOnFirstThread")
+        }
+        add("--add-exports")
+        add("java.base/sun.security.x509=ALL-UNNAMED")
+        add("--add-exports")
+        add("java.base/sun.security.tools.keytool=ALL-UNNAMED")
+    }
 }
 
 tasks.jar {
     manifest.attributes["Main-Class"] = mainClassName
 }
+
+val executableExt = if (currentOS == OS.WINDOWS) ".cmd" else ""
 
 tasks.register<Exec>("compileTailwind") {
     workingDir = layout.projectDirectory.dir("..").asFile
@@ -180,7 +219,7 @@ tasks.register<Exec>("compileTailwind") {
     environment("NODE_ENV", "production")
 
     commandLine(
-        "./node_modules/.bin/postcss",
+        "./node_modules/.bin/postcss$executableExt",
         "./frontend/stylesheets/tailwindbase.css",
         "--config",
         ".",
@@ -196,7 +235,7 @@ tasks.register<Exec>("compileSvelte") {
     environment("ENABLE_SVELTE_CHECK", "true")
 
     commandLine(
-        "./node_modules/webpack/bin/webpack.js",
+        "./node_modules/.bin/webpack${executableExt}",
         "--config",
         "./webpack.config.js",
         "--output-path",
