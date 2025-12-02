@@ -26,11 +26,6 @@ import static com.renomad.minum.web.RequestLine.Method.POST;
 
 public class BackdoorDesktopServer extends BackdoorCoreServer {
 
-  public enum Mode {
-    Prod,
-    Dev,
-    Test
-  }
 
   private static final Logger logger = Logger.getLogger(BackdoorDesktopServer.class.getName());
   private static final String VERSION;
@@ -48,20 +43,17 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
 
   public String authKey;
 
-  Mode mode;
   public Browser browser;
 
   BackdoorDesktopServer(
     DatabaseConfig[] databaseConfigs,
     int sslPort,
     String authKey,
-    MinumBuilder.KeyStore keyStore,
-    Mode mode
+    MinumBuilder.KeyStore keyStore
   ) {
     super(databaseConfigs, -1, sslPort, keyStore);
     this.authKey = authKey;
     this.engineProvider = new EngineProvider();
-    this.mode = mode;
   }
 
   public User getUserByDatabaseConfig(DatabaseConfig databaseConfig) {
@@ -187,7 +179,7 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
 
   @Override
   protected DatabaseConfig[] getAdHocDatabaseConfigs() throws BackingStoreException {
-    var preferences = Preferences.userNodeForPackage(mode.getClass());
+    var preferences = Preferences.userNodeForPackage(MinumBuilder.MODE.getClass());
     var configs = new ArrayList<DatabaseConfig>();
 
     for (String key : preferences.keys()) {

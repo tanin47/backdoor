@@ -116,7 +116,7 @@ public abstract class BackdoorCoreServer {
     return layout.renderTemplate(
       Map.of(
         "content", targetHtml.renderTemplate(propsMap),
-        "IS_LOCAL_DEV_JSON", Json.value(MinumBuilder.IS_LOCAL_DEV).toString(),
+        "MODE", Json.value(MinumBuilder.MODE.toString()).toString(),
         "CSRF_TOKEN", Json.value(csrfToken).toString(),
         "APP_VERSION", Json.value(appVersion).toString(),
         "PARADIGM", Json.value(paradigm.toString()).toString()

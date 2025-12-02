@@ -26,6 +26,12 @@ import java.util.regex.Pattern;
 import static com.renomad.minum.web.RequestLine.Method.GET;
 
 public class MinumBuilder {
+  public enum Mode {
+    Prod,
+    Dev,
+    Test
+  }
+
   private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(MinumBuilder.class.getName());
 
   private static String inferContentType(String assetPath) {
@@ -46,13 +52,21 @@ public class MinumBuilder {
     };
   }
 
-  public static final boolean IS_LOCAL_DEV = Files.exists(Path.of("./local_dev_marker.ejwf")) || Files.exists(Path.of("../local_dev_marker.ejwf"));
+  public static Mode MODE = getMode();
+
+  static Mode getMode() {
+    if (Files.exists(Path.of("./local_dev_marker.ejwf")) || Files.exists(Path.of("../local_dev_marker.ejwf"))) {
+      return Mode.Dev;
+    } else {
+      return Mode.Prod;
+    }
+  }
 
   public static record KeyStore(File file, String password) {
   }
 
   public static FullSystem start(int port, int sslPort, KeyStore keyStore) throws NoSuchAlgorithmException, KeyManagementException {
-    if (IS_LOCAL_DEV) {
+    if (MODE == Mode.Dev) {
       logger.info("Running in the local development mode. Hot-Reload Module is enabled. `npm run hmr` must be running in a separate terminal");
     } else {
       logger.info("Running in the production mode.");
@@ -99,7 +113,7 @@ public class MinumBuilder {
     minum.start();
     var wf = minum.getWebFramework();
 
-    if (IS_LOCAL_DEV) {
+    if (MODE == Mode.Dev) {
       var trustAllCerts = new TrustManager[]{
         new X509TrustManager() {
           public java.security.cert.X509Certificate[] getAcceptedIssuers() {

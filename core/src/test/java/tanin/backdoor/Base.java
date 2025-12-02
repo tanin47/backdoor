@@ -18,6 +18,7 @@ import tanin.backdoor.core.BackdoorCoreServer;
 import tanin.backdoor.core.DatabaseConfig;
 import tanin.backdoor.core.User;
 import tanin.backdoor.core.engine.Engine;
+import tanin.ejwf.MinumBuilder;
 
 import java.io.File;
 import java.net.URISyntaxException;
@@ -74,6 +75,7 @@ public class Base {
 
   @BeforeAll
   void setUpAll() throws SQLException, URISyntaxException, InterruptedException {
+    MinumBuilder.MODE = MinumBuilder.Mode.Test;
     initializeWebDriver();
   }
 

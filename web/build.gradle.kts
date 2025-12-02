@@ -16,22 +16,26 @@ version = "2.4.0-rc1"
 
 description = "Backdoor: Database Querying and Editing Tool"
 
+
 java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(21))
     }
     withSourcesJar()
     withJavadocJar()
+
     sourceSets {
         main {
             resources {
-                srcDir("build/compiled-frontend-resources")
+                srcDir(project(":core").sourceSets.main.get().resources)
             }
         }
     }
 }
 
-
+tasks.processResources {
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
 
 repositories {
     mavenCentral()
@@ -148,52 +152,6 @@ jreleaser {
             }
         }
     }
-}
-
-tasks.register<Exec>("compileTailwind") {
-    workingDir = layout.projectDirectory.dir("..").asFile
-    inputs.files(fileTree("frontend"))
-    outputs.dir("build/compiled-frontend-resources")
-
-    environment("NODE_ENV", "production")
-
-    commandLine(
-        "./node_modules/.bin/postcss",
-        "./frontend/stylesheets/tailwindbase.css",
-        "--config",
-        ".",
-        "--output",
-        "./web/build/compiled-frontend-resources/assets/stylesheets/tailwindbase.css"
-    )
-}
-
-tasks.register<Exec>("compileSvelte") {
-    workingDir = layout.projectDirectory.dir("..").asFile
-    inputs.files(fileTree("frontend"))
-    outputs.dir("build/compiled-frontend-resources")
-
-    environment("NODE_ENV", "production")
-    environment("ENABLE_SVELTE_CHECK", "true")
-
-    commandLine(
-        "./node_modules/webpack/bin/webpack.js",
-        "--config",
-        "./webpack.config.js",
-        "--output-path",
-        "./web/build/compiled-frontend-resources/assets",
-        "--mode",
-        "production"
-    )
-}
-
-tasks.processResources {
-    dependsOn("compileTailwind")
-    dependsOn("compileSvelte")
-}
-
-tasks.named("sourcesJar") {
-    dependsOn("compileTailwind")
-    dependsOn("compileSvelte")
 }
 
 tasks.shadowJar {
