@@ -36,15 +36,14 @@ public class Main {
       new DatabaseConfig[0],
       0,
       authKey,
-      new MinumBuilder.KeyStore(keyStoreFile, keyStorePassword),
-      MinumBuilder.IS_LOCAL_DEV ? BackdoorDesktopServer.Mode.Dev : BackdoorDesktopServer.Mode.Prod
+      new MinumBuilder.KeyStore(keyStoreFile, keyStorePassword)
     );
     logger.info("Starting...");
     var minum = server.start();
 
     var sslPort = minum.getSslServer().getPort();
     var url = "https://localhost:" + sslPort + "/?authKey=" + authKey;
-    if (MinumBuilder.IS_LOCAL_DEV) {
+    if (MinumBuilder.MODE == MinumBuilder.Mode.Dev) {
       logger.info("[dev] You can access the UI in a browser at: " + url);
     }
 

@@ -50,6 +50,7 @@ public class Base {
 
   @BeforeAll
   void setUpAll() throws SQLException, URISyntaxException, InterruptedException {
+    MinumBuilder.MODE = MinumBuilder.Mode.Test;
     initializeWebDriver();
   }
 
@@ -81,7 +82,7 @@ public class Base {
 
   void clearPreferences() {
     try {
-      java.util.prefs.Preferences.userNodeForPackage(BackdoorDesktopServer.Mode.Test.getClass()).removeNode();
+      java.util.prefs.Preferences.userNodeForPackage(MinumBuilder.Mode.Test.getClass()).removeNode();
     } catch (Exception ignored) {
     }
   }
@@ -144,8 +145,7 @@ public class Base {
       },
       PORT,
       TEST_AUTH_KEY,
-      new MinumBuilder.KeyStore(keyStoreFile, keyStorePassword),
-      BackdoorDesktopServer.Mode.Test
+      new MinumBuilder.KeyStore(keyStoreFile, keyStorePassword)
     );
     resetDatabase();
     server.start();

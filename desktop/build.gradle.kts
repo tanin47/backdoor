@@ -72,15 +72,19 @@ java {
         languageVersion.set(JavaLanguageVersion.of(21))
     }
     withSourcesJar()
+
     sourceSets {
         main {
             resources {
-                srcDir("build/compiled-frontend-resources")
+                srcDir(project(":core").sourceSets.main.get().resources)
             }
         }
     }
 }
 
+tasks.processResources {
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
 
 tasks.register<Exec>("compileWindowsApi") {
     onlyIf {
@@ -211,49 +215,6 @@ tasks.jar {
     manifest.attributes["Main-Class"] = mainClassName
 }
 
-val executableExt = if (currentOS == OS.WINDOWS) ".cmd" else ""
-
-tasks.register<Exec>("compileTailwind") {
-    workingDir = layout.projectDirectory.dir("..").asFile
-
-    environment("NODE_ENV", "production")
-
-    commandLine(
-        "./node_modules/.bin/postcss$executableExt",
-        "./frontend/stylesheets/tailwindbase.css",
-        "--config",
-        ".",
-        "--output",
-        "./desktop/build/compiled-frontend-resources/assets/stylesheets/tailwindbase.css"
-    )
-}
-
-tasks.register<Exec>("compileSvelte") {
-    workingDir = layout.projectDirectory.dir("..").asFile
-
-    environment("NODE_ENV", "production")
-    environment("ENABLE_SVELTE_CHECK", "true")
-
-    commandLine(
-        "./node_modules/.bin/webpack${executableExt}",
-        "--config",
-        "./webpack.config.js",
-        "--output-path",
-        "./desktop/build/compiled-frontend-resources/assets",
-        "--mode",
-        "production"
-    )
-}
-
-tasks.processResources {
-    dependsOn("compileTailwind")
-    dependsOn("compileSvelte")
-}
-
-tasks.named("sourcesJar") {
-    dependsOn("compileTailwind")
-    dependsOn("compileSvelte")
-}
 
 // For CI validation.
 tasks.register("printInternalVersion") {

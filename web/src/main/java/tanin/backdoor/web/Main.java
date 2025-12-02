@@ -22,7 +22,7 @@ public class Main {
     var users = new ArrayList<User>();
     var secretKey = EncryptionHelper.generateRandomString(32);
 
-    if (MinumBuilder.IS_LOCAL_DEV) {
+    if (MinumBuilder.MODE == MinumBuilder.Mode.Dev) {
 //      databaseConfigs.add(new DatabaseConfig("postgres", "postgres://127.0.0.1:5432/backdoor_test", "backdoor_test_user", "test"));
 //      databaseConfigs.add(new DatabaseConfig("clickhouse", "jdbc:ch://localhost:8123", "abacus_dev_user", "dev"));
       databaseConfigs.add(new DatabaseConfig("postgres", "postgres://127.0.0.1:5432/backdoor_test", null, null));

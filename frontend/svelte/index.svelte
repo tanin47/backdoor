@@ -5,7 +5,7 @@ import {FetchError, post} from "./common/form";
 import {onMount} from "svelte";
 import EditorPanel from "./_editor_panel.svelte";
 import {type Database, type Query, Sheet} from "./common/models";
-import {generateName, IS_LOCAL_DEV, PARADIGM} from "./common/globals";
+import {generateName, MODE, PARADIGM} from "./common/globals";
 import ErrorModal from "./common/_error_modal.svelte"
 import NewDataSourceModal from "./_new_data_source_modal.svelte"
 import DeleteDataSourceModal from "./_delete_data_source_modal.svelte"
@@ -155,7 +155,7 @@ export async function runSql(database: string, sql: string): Promise<void> {
           rel="noopener noreferrer"
           class="flex flex-row items-center p-2 gap-1 bg-black  text-gray-400 text-sm"
         >
-          {#if IS_LOCAL_DEV}
+          {#if MODE === 'Dev'}
             <div class="text-accent">[dev]</div>
           {/if}
           <i class="ph ph-door-open"></i>

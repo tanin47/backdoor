@@ -6,6 +6,16 @@ plugins {
     jacoco
 }
 
+enum class OS {
+    MAC, WINDOWS, LINUX
+}
+
+val currentOS = when {
+    System.getProperty("os.name").lowercase().contains("mac") -> OS.MAC
+    System.getProperty("os.name").lowercase().contains("windows") -> OS.WINDOWS
+    else -> OS.LINUX
+}
+
 group = "tanin.backdoor.core"
 description = "Backdoor: Database Querying and Editing Tool"
 
@@ -67,38 +77,46 @@ tasks.named<Test>("test") {
     }
 }
 
+val executableExt = if (currentOS == OS.WINDOWS) ".cmd" else ""
+
 tasks.register<Exec>("compileTailwind") {
     workingDir = layout.projectDirectory.dir("..").asFile
-    inputs.files(fileTree("frontend"))
-    outputs.dir("build/compiled-frontend-resources")
 
     environment("NODE_ENV", "production")
 
     commandLine(
-        "./node_modules/.bin/postcss",
+        "./node_modules/.bin/postcss$executableExt",
         "./frontend/stylesheets/tailwindbase.css",
         "--config",
         ".",
         "--output",
-        "./build/compiled-frontend-resources/assets/stylesheets/tailwindbase.css"
+        "./core/build/compiled-frontend-resources/assets/stylesheets/tailwindbase.css"
     )
 }
 
 tasks.register<Exec>("compileSvelte") {
     workingDir = layout.projectDirectory.dir("..").asFile
-    inputs.files(fileTree("frontend"))
-    outputs.dir("build/compiled-frontend-resources")
 
     environment("NODE_ENV", "production")
     environment("ENABLE_SVELTE_CHECK", "true")
 
     commandLine(
-        "./node_modules/webpack/bin/webpack.js",
+        "./node_modules/.bin/webpack${executableExt}",
         "--config",
         "./webpack.config.js",
         "--output-path",
-        "./build/compiled-frontend-resources/assets",
+        "./core/build/compiled-frontend-resources/assets",
         "--mode",
         "production"
     )
+}
+
+tasks.processResources {
+    dependsOn("compileTailwind")
+    dependsOn("compileSvelte")
+}
+
+tasks.named("sourcesJar") {
+    dependsOn("compileTailwind")
+    dependsOn("compileSvelte")
 }
