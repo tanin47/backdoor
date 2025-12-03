@@ -200,7 +200,7 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
 
   @Override
   protected IResponse handleAddingValidDataSource(IRequest req, DatabaseConfig adHocDatabaseConfig) throws Exception {
-    var preferences = Preferences.userNodeForPackage(BackdoorDesktopServer.class);
+    var preferences = Preferences.userNodeForPackage(MinumBuilder.MODE.getClass());
     preferences.put(adHocDatabaseConfig.nickname + ".jdbcUrl", adHocDatabaseConfig.jdbcUrl);
     preferences.put(adHocDatabaseConfig.nickname + ".username", adHocDatabaseConfig.username);
     preferences.put(adHocDatabaseConfig.nickname + ".password", adHocDatabaseConfig.password);
@@ -215,7 +215,7 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
 
   @Override
   protected IResponse handleRemovingValidDataSource(IRequest req, DatabaseConfig removedDatabaseConfig) throws Exception {
-    var preferences = Preferences.userNodeForPackage(BackdoorDesktopServer.class);
+    var preferences = Preferences.userNodeForPackage(MinumBuilder.MODE.getClass());
     preferences.remove(removedDatabaseConfig.nickname + ".jdbcUrl");
     preferences.remove(removedDatabaseConfig.nickname + ".username");
     preferences.remove(removedDatabaseConfig.nickname + ".password");

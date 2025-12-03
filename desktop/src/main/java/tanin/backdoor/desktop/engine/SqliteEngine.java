@@ -30,9 +30,9 @@ public class SqliteEngine extends Engine {
   static {
     try {
       DriverManager.registerDriver(new org.postgresql.Driver());
-      logger.info("Registered the Postgres driver");
+      logger.info("Registered the SQLite driver");
     } catch (SQLException e) {
-      logger.severe("Unable to register the Postgres driver: " + e);
+      logger.severe("Unable to register the SQLite driver: " + e);
       throw new RuntimeException(e);
     }
   }

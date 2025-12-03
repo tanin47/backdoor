@@ -37,6 +37,10 @@ tasks.processResources {
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }
 
+tasks.named<Jar>("sourcesJar") {
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
+
 repositories {
     mavenCentral()
 }
