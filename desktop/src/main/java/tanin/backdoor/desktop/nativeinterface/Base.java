@@ -24,10 +24,10 @@ public class Base {
   public static final File nativeDir;
 
   static {
-    boolean sandboxed = System.getenv("APP_SANDBOX_CONTAINER_ID") != null;
+    boolean packaged = System.getProperty("backdoor.packaged") != null;
 
     try {
-      if (sandboxed) {
+      if (packaged) {
         nativeDir = new File(System.getProperty("java.library.path"));
       } else {
         nativeDir = new File("src/main/resources/native");
@@ -38,8 +38,8 @@ public class Base {
       System.setProperty("jna.library.path", nativeDir.getAbsolutePath());
       System.setProperty("java.library.path", nativeDir.getAbsolutePath());
 
-      if (sandboxed) {
-        logger.info("Run in sandbox.");
+      if (packaged) {
+        logger.info("Run in a packaged environment.");
         System.setProperty("jna.nounpack", "true");
         System.setProperty("jna.noclasspath", "true");
         System.setProperty("jna.boot.library.path", nativeDir.getAbsolutePath());

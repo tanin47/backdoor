@@ -55,7 +55,14 @@ public class MinumBuilder {
   public static Mode MODE = getMode();
 
   static Mode getMode() {
-    if (Files.exists(Path.of("./local_dev_marker.ejwf")) || Files.exists(Path.of("../local_dev_marker.ejwf"))) {
+    var isPackaged = System.getProperty("backdoor.packaged") != null;
+
+    if (
+      !isPackaged && (
+        Files.exists(Path.of("./local_dev_marker.ejwf")) ||
+          Files.exists(Path.of("../local_dev_marker.ejwf"))
+        )
+    ) {
       return Mode.Dev;
     } else {
       return Mode.Prod;
