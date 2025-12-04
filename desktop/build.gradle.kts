@@ -506,6 +506,8 @@ tasks.register("bareJpackage") {
             "--runtime-image", runtimeImage.absolutePath,
             "--input", modulePath.absolutePath,
             "--dest", outputDir.get().asFile.absolutePath,
+            "--vendor", "Tanin Na Nakorn",
+            "--copyright", "2025 Tanin Na Nakorn",
             "--app-content", layout.buildDirectory.file("resources-native").get().asFile.resolve("app").absolutePath,
         ) + javaOptionsArg
 
