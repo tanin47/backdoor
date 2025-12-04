@@ -1,0 +1,105 @@
+name: create-release-win
+
+on:
+  push:
+    tags:
+      - 'desktop-*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Optional tag (starts with `desktop-`). Default to the tag of the selected branch.'
+        required: false
+        type: string
+
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          install: >-
+            curl
+            git 
+            gcc
+            unzip
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: 'gradle'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+      - name: Get version
+        id: version
+        run: echo "VERSION=$(./gradlew -q :desktop:printInternalVersion)" >> "$GITHUB_OUTPUT"
+      - name: Validate the tag name
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ ! -z "${{ github.event.inputs.tag }}" ]; then
+            TAG=${{ github.event.inputs.tag }}
+          else
+            TAG=${GITHUB_REF#refs/tags/}
+          fi
+          if [[ ! "$TAG" =~ ^desktop- ]]; then
+            echo "Error: Tag must start with 'v'"
+            exit 1
+          fi
+          if [[ ! $TAG == desktop-${{ steps.version.outputs.VERSION }} ]]; then
+            echo "Error: Git tag version ($TAG_VERSION) doesn't match project version (desktop-${{ steps.version.outputs.VERSION }})"
+            exit 1
+          fi
+      - name: Install Node modules
+        run: |
+          export PATH="${PATH}:/c/hostedtoolcache/windows/node/22.21.1/x64"
+          npm install
+      - name: Download CodeSignTool and extract
+        run: |
+          $ProgressPreference = 'SilentlyContinue'
+          New-Item -ItemType Directory -Force -Path "./build-tools/codesign"
+          Invoke-WebRequest -Uri "https://www.ssl.com/download/codesigntool-for-windows/" -OutFile "./build-tools/CodeSignTool.zip"
+          Expand-Archive -Path "./build-tools/CodeSignTool.zip" -DestinationPath "./build-tools/codesign" -Force
+          Remove-Item "./build-tools/CodeSignTool.zip"
+        shell: powershell
+      - name: Download wixtool 3 and extract
+        run: |
+          $ProgressPreference = 'SilentlyContinue'
+          New-Item -ItemType Directory -Force -Path "./build-tools/wixtool"
+          Invoke-WebRequest -Uri "https://github.com/wixtoolset/wix3/releases/download/wix3141rtm/wix314-binaries.zip" -OutFile "./build-tools/wix-binaries.zip"
+          Expand-Archive -Path "./build-tools/wix-binaries.zip" -DestinationPath "./build-tools/wixtool" -Force
+          Remove-Item "./build-tools/wix-binaries.zip"
+        shell: powershell
+      - name: Build an MSI
+        run: |
+          export PATH="${PATH}:$PWD/build-tools/wixtool:/c/hostedtoolcache/windows/node/22.21.1/x64"
+          export CODESIGN_TOOL_DIR="$PWD/build-tools/codesign"
+          ./gradlew clean :desktop:jpackage
+        env:
+          SSL_COM_USERNAME: ${{ secrets.SSL_COM_USERNAME }}
+          SSL_COM_PASSWORD: ${{ secrets.SSL_COM_PASSWORD }}
+          SSL_COM_TOTP_SECRET: ${{ secrets.SSL_COM_TOTP_SECRET }}
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          prerelease: true
+          files: ./desktop/build/msi/*.msi
+          overwrite_files: true
+          append_body: false
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}

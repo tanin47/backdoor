@@ -1,9 +1,6 @@
-name: create-release-desktop
+name: publish-mac-testflight
 
 on:
-  push:
-    tags:
-      - 'desktop-*'
   workflow_dispatch:
     inputs:
       tag:
@@ -22,8 +19,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
       - name: Import Signing Certificate
         run: |
           # Create a temporary keychain
@@ -97,19 +92,9 @@ jobs:
           fi
       - name: Install Node modules
         run: npm install
-      - name: Build a DMG
-        run: ./gradlew clean :desktop:staple
+      - name: Upload to TestFlight
+        run: ./gradlew clean :desktop:uploadPkgToAppStore
         env:
           APTABASE_ID: ${{ secrets.APTABASE_ID }}
           APPLE_EMAIL: ${{ secrets.APPLE_EMAIL }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-      - name: Upload Release Asset
-        uses: softprops/action-gh-release@v2
-        with:
-          draft: true
-          prerelease: true
-          files: ./desktop/build/dmg/*.dmg
-          overwrite_files: true
-          fail_on_unmatched_files: true
-          generate_release_notes: true
-          tag_name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
