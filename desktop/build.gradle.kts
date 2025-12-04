@@ -1,5 +1,6 @@
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.gradle.internal.extensions.stdlib.toDefaultLowerCase
 import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.io.path.absolutePathString
@@ -236,8 +237,19 @@ tasks.register("copyJar", Copy::class) {
     from(tasks.jar).into(layout.buildDirectory.dir("jmods"))
 }
 
+private fun maskSecret(commandLine: String): String {
+    return commandLine.split(" ").joinToString(" ") { arg ->
+        val sanitized = arg.toDefaultLowerCase()
+        if (sanitized.contains("password") || sanitized.contains("secret")) {
+            "<REDACTED>"
+        } else {
+            arg
+        }
+    }
+}
+
 private fun runCmd(currentDir: File, env: Map<String, String>, vararg args: String): String {
-    println("Executing command: ${args.joinToString(" ")}")
+    println("Executing command: ${maskSecret(args.joinToString(" "))}")
 
     val output = StringBuilder()
     val builder = ProcessBuilder(*args)
@@ -598,18 +610,18 @@ tasks.register("jpackageForWindows") {
         outputAppDir.mkdirs()
 
         runCmd(
-            File("c:\\Users\\tanin\\projects\\CodeSignTool-v1.3.2-windows"),
-            "bash",
-            "-c",
+            File(System.getenv("CODESIGN_TOOL_DIR")).canonicalFile,
+            "cmd",
+            "/c",
             listOf(
                 "CodeSignTool.bat",
                 "sign",
                 "-input_file_path=${inputs.files.singleFile.absolutePath}",
                 "-output_dir_path=${outputAppDir.absolutePath}",
-                "-program_name=Backdoor",
-                $$"-username=$SSL_COM_USERNAME",
-                $$"-password=$SSL_COM_PASSWORD",
-                $$"-totp_secret=$SSL_COM_TOTP_SECRET",
+                "-program_name=${appName}",
+                "-username=${System.getenv("SSL_COM_USERNAME")}",
+                "-password=${System.getenv("SSL_COM_PASSWORD")}",
+                "-totp_secret=${System.getenv("SSL_COM_TOTP_SECRET")}",
             )
                 .joinToString(" ")
                 .replace("\\", "/")

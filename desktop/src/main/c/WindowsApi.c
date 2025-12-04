@@ -17,7 +17,7 @@ __declspec(dllexport) char* openFileDialog(long hwnd, bool isSaved) {
 
   ZeroMemory(&ofn, sizeof(ofn));
   ofn.lStructSize = sizeof(ofn);
-  ofn.hwndOwner = (HWND) (uintptr_t) hwnd;
+  ofn.hwndOwner = (HWND) (size_t) hwnd;
   ofn.lpstrFile = szFile;
   ofn.lpstrFile[0] = '\0';
   ofn.nMaxFile = sizeof(szFile);
