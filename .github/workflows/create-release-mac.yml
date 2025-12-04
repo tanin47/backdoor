@@ -86,7 +86,7 @@ jobs:
             TAG=${GITHUB_REF#refs/tags/}
           fi
           if [[ ! "$TAG" =~ ^desktop- ]]; then
-            echo "Error: Tag must start with 'v'"
+            echo "Error: Tag must start with 'desktop-'"
             exit 1
           fi
           if [[ ! $TAG == desktop-${{ steps.version.outputs.VERSION }} ]]; then
