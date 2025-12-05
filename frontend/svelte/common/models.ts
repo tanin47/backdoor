@@ -1,8 +1,18 @@
+export type DatabaseType = 'postgres' | 'clickhouse' | 'sqlite'
+
+export interface DatabaseAdHocInfo {
+  url: string;
+  username: string;
+  password: string;
+}
+
 export interface Database {
-  name: string;
+  nickname: string;
   isAdHoc: boolean;
   requireLogin: boolean;
   tables: string[];
+  adHocInfo: DatabaseAdHocInfo | null;
+  status: 'loaded' | 'unloaded'
 }
 
 export interface Table {

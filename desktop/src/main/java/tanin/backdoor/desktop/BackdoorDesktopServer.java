@@ -7,7 +7,6 @@ import tanin.backdoor.core.BackdoorCoreServer;
 import tanin.backdoor.core.DatabaseConfig;
 import tanin.backdoor.core.User;
 import tanin.backdoor.desktop.engine.EngineProvider;
-import tanin.backdoor.desktop.nativeinterface.MacOsApi;
 import tanin.ejwf.MinumBuilder;
 
 import java.security.KeyManagementException;
@@ -19,7 +18,6 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 
 import static com.renomad.minum.web.RequestLine.Method.POST;
@@ -177,48 +175,41 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
     return minum;
   }
 
+  private static final String PREFERENCES_API_DATABASE_CONFIG_KEY = "DATABASE_CONFIGS";
+
   @Override
-  protected DatabaseConfig[] getAdHocDatabaseConfigs() throws BackingStoreException {
+  protected DatabaseConfig[] getAdHocDatabaseConfigs() {
     var preferences = Preferences.userNodeForPackage(MinumBuilder.MODE.getClass());
+    var databaseConfigsJson = preferences.get(PREFERENCES_API_DATABASE_CONFIG_KEY, null);
+
+    if (databaseConfigsJson == null) {
+      return new DatabaseConfig[0];
+    }
+
+    var json = Json.parse(databaseConfigsJson);
     var configs = new ArrayList<DatabaseConfig>();
 
-    for (String key : preferences.keys()) {
-      if (key.endsWith(".jdbcUrl")) {
-        var nickname = key.substring(0, key.length() - ".jdbcUrl".length());
-        var jdbcUrl = preferences.get(nickname + ".jdbcUrl", null);
-        var username = preferences.get(nickname + ".username", null);
-        var password = preferences.get(nickname + ".password", null);
-
-        if (jdbcUrl != null) {
-          configs.add(new DatabaseConfig(nickname, jdbcUrl, username, password, true));
-        }
+    json.asArray().forEach(c -> {
+      var config = DatabaseConfig.parse(c);
+      if (config != null) {
+        configs.add(config);
       }
-    }
+    });
 
     return configs.toArray(new DatabaseConfig[0]);
   }
 
   @Override
-  protected IResponse handleAddingValidDataSource(IRequest req, DatabaseConfig adHocDatabaseConfig) throws Exception {
+  protected IResponse handleUpdatingAdHocDataSourceConfigs(IRequest req, DatabaseConfig[] allAdHocDatabaseConfigs) throws Exception {
     var preferences = Preferences.userNodeForPackage(MinumBuilder.MODE.getClass());
-    preferences.put(adHocDatabaseConfig.nickname + ".jdbcUrl", adHocDatabaseConfig.jdbcUrl);
-    preferences.put(adHocDatabaseConfig.nickname + ".username", adHocDatabaseConfig.username);
-    preferences.put(adHocDatabaseConfig.nickname + ".password", adHocDatabaseConfig.password);
-    preferences.flush();
-
-    return Response.buildResponse(
-      StatusLine.StatusCode.CODE_200_OK,
-      Map.of("Content-Type", "application/json"),
-      Json.object().toString()
+    var configsJson = Json.array();
+    for (var config : allAdHocDatabaseConfigs) {
+      configsJson.add(config.toJson());
+    }
+    preferences.put(
+      PREFERENCES_API_DATABASE_CONFIG_KEY,
+      configsJson.toString()
     );
-  }
-
-  @Override
-  protected IResponse handleRemovingValidDataSource(IRequest req, DatabaseConfig removedDatabaseConfig) throws Exception {
-    var preferences = Preferences.userNodeForPackage(MinumBuilder.MODE.getClass());
-    preferences.remove(removedDatabaseConfig.nickname + ".jdbcUrl");
-    preferences.remove(removedDatabaseConfig.nickname + ".username");
-    preferences.remove(removedDatabaseConfig.nickname + ".password");
     preferences.flush();
 
     return Response.buildResponse(

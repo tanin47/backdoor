@@ -6,7 +6,7 @@ import Button from './common/_button.svelte'
 import ErrorPanel from "./common/form/_error_panel.svelte"
 import {trackEvent} from "./common/tracker";
 
-export let onDeleted: (database: Database) => void
+export let onDeleted: (database: Database) => Promise<void>
 
 let modal: HTMLDialogElement;
 
@@ -38,12 +38,12 @@ async function submit(): Promise<void> {
 
   try {
     const json = await post('/api/delete-data-source', {
-      database: database_.name,
+      database: database_.nickname,
     })
 
-    modal.close()
-    onDeleted(database_)
     trackEvent('data-source-deleted')
+    await onDeleted(database_)
+    modal.close()
   } catch (e) {
     isLoading = false
     errors = (e as FetchError).messages
@@ -55,7 +55,7 @@ async function submit(): Promise<void> {
 <dialog bind:this={modal} class="modal2">
   <div class="modal-box !max-w-[480px] !w-auto flex flex-col gap-4">
     {#if database_}
-      <div>Are you sure you want to remove: <code>{database_.name}</code>?</div>
+      <div>Are you sure you want to remove: <code>{database_.nickname}</code>?</div>
       <div class="text-sm">
         This will only remove the data source connection from Backdoor. It doesn't destroy nor modify the data source.
       </div>

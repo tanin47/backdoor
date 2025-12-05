@@ -59,7 +59,7 @@ async function submit() {
 
   try {
     const json = await post('/api/login-additional', {
-      database: database_!.name,
+      database: database_!.nickname,
       ...form
     })
 
@@ -82,7 +82,7 @@ async function submit() {
 >
   <div class="modal-box !max-w-[480px] !w-auto flex flex-col gap-4" onkeydown={invokeOnEnter(submit)}>
     <div class="text-neutral-content text-sm">
-      Login to the database: <span class="font-bold">{database_?.name}</span>
+      Login to the database: <span class="font-bold">{database_?.nickname}</span>
     </div>
     <input
       type="text"

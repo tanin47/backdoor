@@ -7,9 +7,9 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
-public class AddDataSourceTest extends Base {
+public class AdHocDataSourceTest extends Base {
   @Test
-  void addAndDeletePostgres() throws InterruptedException {
+  void addEditAndDeletePostgres() throws InterruptedException {
     go("/");
     click(tid("add-new-data-source-button"));
     fill(tid("url"), "postgres://backdoor_test_user:test@127.0.0.1:5432/backdoor_test");
@@ -29,6 +29,18 @@ public class AddDataSourceTest extends Base {
       elems(tid("menu-items", "adhoc-test", null, "menu-item-table")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()
     );
 
+    click(tid("more-option-data-source-button"));
+    click(tid("edit-data-source-button"));
+    fill(tid("nickname"), "adhoc-test-updated");
+    click(tid("submit-button"));
+    waitUntil(() -> assertFalse(hasElem(tid("submit-button"))));
+
+    assertEquals(
+      List.of("postgres", "clickhouse", "adhoc-test-updated"),
+      elems(tid("menu-items")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()
+    );
+
+    click(tid("more-option-data-source-button"));
     click(tid("delete-data-source-button"));
     click(tid("submit-button"));
     waitUntil(() -> assertFalse(hasElem(tid("submit-button"))));
@@ -40,7 +52,7 @@ public class AddDataSourceTest extends Base {
   }
 
   @Test
-  void addClickHouse() throws InterruptedException {
+  void addClickHouseAndEditValidated() throws InterruptedException {
     go("/");
     click(tid("add-new-data-source-button"));
     fill(tid("url"), "jdbc:ch://127.0.0.1:8123/backdoor_test");
@@ -59,6 +71,14 @@ public class AddDataSourceTest extends Base {
       List.of("project_setting"),
       elems(tid("menu-items", "adhoc-test", null, "menu-item-table")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()
     );
+
+    click(tid("more-option-data-source-button"));
+    click(tid("edit-data-source-button"));
+    fill(tid("url"), "jdbc:ch://127.0.0.1:8123/backdoor_test2");
+    click(tid("submit-button"));
+    waitUntil(() -> {
+      assertContains(elem(tid("error-panel")).getText(), "backdoor_test2 does not exist");
+    });
   }
 
   @Test
@@ -97,7 +117,7 @@ public class AddDataSourceTest extends Base {
     fill(tid("password"), "");
     click(tid("submit-button"));
 
-    checkErrorPanel("The server is reachable but either the username or password is invalid.");
+    checkErrorPanel("The server is reachable but either the database name, username, or password is invalid.");
   }
 
   @Test
@@ -123,7 +143,7 @@ public class AddDataSourceTest extends Base {
     fill(tid("password"), "");
     click(tid("submit-button"));
 
-    checkErrorPanel("The server is reachable but it's likely that the database name is invalid, but it could be wrong username or password too.");
+    checkErrorPanel("The server is reachable but either the database name, username, or password is invalid.");
   }
 
   @Test
@@ -136,7 +156,7 @@ public class AddDataSourceTest extends Base {
     fill(tid("password"), "random");
     click(tid("submit-button"));
 
-    checkErrorPanel("The server is reachable but either the username or password is invalid.");
+    checkErrorPanel("The server is reachable but either the database name, username, or password is invalid.");
   }
 
 // Timeout doesn't work for ClickHouse

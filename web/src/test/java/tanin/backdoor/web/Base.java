@@ -10,7 +10,6 @@ import org.openqa.selenium.logging.LoggingPreferences;
 import org.openqa.selenium.support.ui.Select;
 import tanin.backdoor.core.DatabaseConfig;
 import tanin.backdoor.core.User;
-import tanin.backdoor.core.engine.Engine;
 import tanin.ejwf.MinumBuilder;
 
 import java.net.URISyntaxException;

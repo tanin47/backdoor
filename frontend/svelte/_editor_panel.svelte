@@ -29,7 +29,7 @@ $: {
 }
 
 $: if (validDatabases.length > 0 && !selectedDatabaseName) {
-  selectedDatabaseName = validDatabases[0].name
+  selectedDatabaseName = validDatabases[0].nickname
 }
 
 let isLoading: boolean = false
@@ -152,8 +152,8 @@ async function submit(): Promise<void> {
         <select class="select-sm outline-0 hover:bg-base-200 rounded py-1 cursor-pointer"
                 bind:value={selectedDatabaseName}
                 data-test-id="run-sql-database-select">
-          {#each validDatabases as database (database.name)}
-            <option value={database.name}>{database.name}</option>
+          {#each validDatabases as database (database.nickname)}
+            <option value={database.nickname}>{database.nickname}</option>
           {/each}
         </select>
       {/if}

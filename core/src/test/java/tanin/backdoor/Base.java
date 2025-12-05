@@ -17,7 +17,6 @@ import org.openqa.selenium.support.ui.Select;
 import tanin.backdoor.core.BackdoorCoreServer;
 import tanin.backdoor.core.DatabaseConfig;
 import tanin.backdoor.core.User;
-import tanin.backdoor.core.engine.Engine;
 import tanin.ejwf.MinumBuilder;
 
 import java.io.File;
@@ -204,12 +203,7 @@ public class Base {
       }
 
       @Override
-      protected IResponse handleAddingValidDataSource(IRequest req, DatabaseConfig adHocDatabaseConfig) throws Exception {
-        return null;
-      }
-
-      @Override
-      protected IResponse handleRemovingValidDataSource(IRequest req, DatabaseConfig removedDatabaseConfig) throws Exception {
+      protected IResponse handleUpdatingAdHocDataSourceConfigs(IRequest req, DatabaseConfig[] allAdHocDatabaseConfigs) throws Exception {
         return null;
       }
     };

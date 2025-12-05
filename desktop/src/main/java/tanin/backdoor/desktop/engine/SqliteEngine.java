@@ -2,22 +2,17 @@ package tanin.backdoor.desktop.engine;
 
 import com.eclipsesource.json.Json;
 import com.eclipsesource.json.JsonValue;
-import org.postgresql.util.PSQLException;
 import org.sqlite.SQLiteException;
 import tanin.backdoor.core.*;
 import tanin.backdoor.core.engine.Engine;
 import tanin.backdoor.desktop.nativeinterface.Base;
 import tanin.backdoor.desktop.nativeinterface.MacOsApi;
 
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Properties;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static org.sqlite.SQLiteErrorCode.SQLITE_NOTADB;

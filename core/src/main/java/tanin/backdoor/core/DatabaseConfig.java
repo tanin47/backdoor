@@ -1,5 +1,8 @@
 package tanin.backdoor.core;
 
+import com.eclipsesource.json.Json;
+import com.eclipsesource.json.JsonValue;
+
 public class DatabaseConfig {
   public String nickname;
   public String jdbcUrl;
@@ -23,5 +26,30 @@ public class DatabaseConfig {
     this.username = username;
     this.password = password;
     this.isAdHoc = isAdHoc;
+  }
+
+  public static DatabaseConfig parse(JsonValue json) {
+    if (json == null || json.isNull()) {
+      return null;
+    }
+
+    var obj = json.asObject();
+
+    return new DatabaseConfig(
+      Helpers.getString(obj, "nickname"),
+      Helpers.getString(obj, "jdbcUrl"),
+      Helpers.getString(obj, "username"),
+      Helpers.getString(obj, "password"),
+      Helpers.getBoolean(obj, "isAdHoc", false)
+    );
+  }
+
+  public JsonValue toJson() {
+    return Json.object()
+      .add("nickname", nickname)
+      .add("jdbcUrl", jdbcUrl)
+      .add("username", username)
+      .add("password", password)
+      .add("isAdHoc", isAdHoc);
   }
 }

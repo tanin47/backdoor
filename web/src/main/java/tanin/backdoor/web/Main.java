@@ -5,7 +5,6 @@ import tanin.backdoor.core.EncryptionHelper;
 import tanin.backdoor.core.User;
 import tanin.ejwf.MinumBuilder;
 
-import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
