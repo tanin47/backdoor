@@ -81,7 +81,7 @@ async function submit() {
   isLoading = true
 
   try {
-    const json = await post('/api/edit-field', {
+    const json = await post('/api/update-field', {
       database: sheet.database,
       table: sheet.name,
       primaryKeys,

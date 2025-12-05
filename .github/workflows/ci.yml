@@ -49,7 +49,7 @@ jobs:
           node-version: '22'
       - uses: browser-actions/setup-chrome@v2
         with:
-          chrome-version: 'stable'
+          chrome-version: '142'
           install-chromedriver: true
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
@@ -136,7 +136,7 @@ jobs:
           node-version: '22'
       - uses: browser-actions/setup-chrome@v2
         with:
-          chrome-version: 'stable'
+          chrome-version: '142'
           install-chromedriver: true
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
@@ -182,7 +182,7 @@ jobs:
           node-version: '22'
       - uses: browser-actions/setup-chrome@v2
         with:
-          chrome-version: 'stable'
+          chrome-version: '142'
           install-chromedriver: true
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3

@@ -1,4 +1,3 @@
-import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.internal.extensions.stdlib.toDefaultLowerCase
 import java.nio.file.Files
@@ -331,13 +330,13 @@ private fun isValidLibFile(file: File): Boolean {
                 )
     } else if (currentOS == OS.WINDOWS) {
         return !(
-            file.absolutePath.endsWith("win32-aarch64\\jnidispatch.dll") ||
-            file.absolutePath.endsWith("win32-x86\\jnidispatch.dll") ||
-            file.absolutePath.endsWith("aarch64\\sqlitejdbc.dll") ||
-                    file.absolutePath.endsWith("aarch64\\sqlitejdbc.dll") ||
-                    file.absolutePath.endsWith("armv7\\sqlitejdbc.dll") ||
-                    file.absolutePath.endsWith("x86\\sqlitejdbc.dll")
-        )
+                file.absolutePath.endsWith("win32-aarch64\\jnidispatch.dll") ||
+                        file.absolutePath.endsWith("win32-x86\\jnidispatch.dll") ||
+                        file.absolutePath.endsWith("aarch64\\sqlitejdbc.dll") ||
+                        file.absolutePath.endsWith("aarch64\\sqlitejdbc.dll") ||
+                        file.absolutePath.endsWith("armv7\\sqlitejdbc.dll") ||
+                        file.absolutePath.endsWith("x86\\sqlitejdbc.dll")
+                )
     } else {
         throw Exception("Unsupported OS: $currentOS")
     }

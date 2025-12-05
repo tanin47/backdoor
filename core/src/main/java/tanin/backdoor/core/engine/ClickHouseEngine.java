@@ -48,10 +48,10 @@ public class ClickHouseEngine extends Engine {
       props.setProperty("user", overwritingUser.username());
       props.setProperty("password", overwritingUser.password());
     } else {
-      if (config.username != null) {
+      if (config.username != null && !config.username.isBlank()) {
         props.setProperty("user", config.username);
       }
-      if (config.password != null) {
+      if (config.password != null && !config.password.isBlank()) {
         props.setProperty("password", config.password);
       }
     }

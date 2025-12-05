@@ -8,6 +8,7 @@ import {type Database, type Query, Sheet} from "./common/models";
 import {generateName, MODE, PARADIGM} from "./common/globals";
 import ErrorModal from "./common/_error_modal.svelte"
 import NewDataSourceModal from "./_new_data_source_modal.svelte"
+import EditDataSourceModal from "./_edit_data_source_modal.svelte"
 import DeleteDataSourceModal from "./_delete_data_source_modal.svelte"
 import AdditionalLoginModal from "./_additional_login_modal.svelte";
 import {trackEvent} from "./common/tracker";
@@ -20,6 +21,7 @@ let selectedDatabase: Database | null = null
 
 let errorModal: ErrorModal;
 let newDataSourceModal: NewDataSourceModal;
+let editDataSourceModal: EditDataSourceModal;
 let deleteDataSourceModal: DeleteDataSourceModal;
 let additionalLoginModal: AdditionalLoginModal;
 
@@ -126,6 +128,7 @@ export async function runSql(database: string, sql: string): Promise<void> {
 
 <ErrorModal bind:this={errorModal} />
 <NewDataSourceModal bind:this={newDataSourceModal} onAdded={async () => {await load()}} />
+<EditDataSourceModal bind:this={editDataSourceModal} onEdited={async () => {await load()}} />
 <DeleteDataSourceModal bind:this={deleteDataSourceModal} onDeleted={async () => {await load()}} />
 <AdditionalLoginModal bind:this={additionalLoginModal} onLoggedIn={async () => {await load()}} />
 
@@ -170,7 +173,8 @@ export async function runSql(database: string, sql: string): Promise<void> {
           <span class="overflow-hidden text-ellipsis font-mono text-xs whitespace-nowrap">Add Data Source</span>
         </div>
       </div>
-      <div class="grow-1 overflow-y-auto">
+<!--      <div class="grow-1 overflow-y-auto">-->
+      <div class="grow-1">
         {#each databases as database, index (index)}
           <TableMenuList
             {database}
@@ -190,7 +194,12 @@ export async function runSql(database: string, sql: string): Promise<void> {
               await sheetPanel.openQuery(query)
             }}
             onLoggingIn={() => { additionalLoginModal.open(database) }}
-            onDeleting={() => {deleteDataSourceModal.open(database)}}
+            onEditing={() => {
+              editDataSourceModal.open(database)
+            }}
+            onDeleting={() => {
+              deleteDataSourceModal.open(database)
+            }}
           />
         {/each}
       </div>
@@ -209,11 +218,11 @@ export async function runSql(database: string, sql: string): Promise<void> {
       <SheetPanel
         bind:this={sheetPanel}
         onSheetSelected={(sheet) => {
-          selectedDatabase = databases.find(s => s.name === sheet.database) ?? null
+          selectedDatabase = databases.find(s => s.nickname === sheet.database) ?? null
         }}
         onTableDropped={(databaseName, droppedTable) => {
           for (const database of databases) {
-            if (database.name === databaseName) {
+            if (database.nickname === databaseName) {
               database.tables = database.tables.filter(v => v !== droppedTable)
             }
           }
@@ -221,7 +230,7 @@ export async function runSql(database: string, sql: string): Promise<void> {
         }}
         onTableRenamed={(databaseName, previousName, newName) => {
            for (const database of databases) {
-            if (database.name === databaseName) {
+            if (database.nickname === databaseName) {
               const foundIndex = database.tables.findIndex((t) => t === previousName)
 
               if (foundIndex > -1) {
@@ -257,7 +266,7 @@ export async function runSql(database: string, sql: string): Promise<void> {
           &nbsp;
         </span>
         <EditorPanel
-          selectedDatabaseName={selectedDatabase?.name ?? null}
+          selectedDatabaseName={selectedDatabase?.nickname ?? null}
           {selectedQuery}
           {databases}
           onRunSql={async (database, sql) => { await runSql(database, sql) }}

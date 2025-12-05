@@ -41,10 +41,10 @@ public class PostgresEngine extends Engine {
     var url = config.jdbcUrl;
     var props = new Properties();
 
-    if (config.username != null) {
+    if (config.username != null && !config.username.isBlank()) {
       props.setProperty("user", config.username);
     }
-    if (config.password != null) {
+    if (config.password != null && !config.password.isBlank()) {
       props.setProperty("password", config.password);
     }
 

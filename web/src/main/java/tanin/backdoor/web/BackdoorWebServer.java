@@ -448,29 +448,8 @@ public class BackdoorWebServer extends BackdoorCoreServer {
   }
 
   @Override
-  protected IResponse handleAddingValidDataSource(IRequest req, DatabaseConfig adHocDatabaseConfig) throws Exception {
+  protected IResponse handleUpdatingAdHocDataSourceConfigs(IRequest req, DatabaseConfig[] adHocDatabaseConfigs) throws Exception {
     var isLocalHost = req.getHeaders().valueByKey("Host").stream().findFirst().orElse("").startsWith("localhost");
-
-    var adHocDatabaseConfigs = new ArrayList<DatabaseConfig>(List.of(this.auth.get().adHocDatabaseConfigs()));
-    adHocDatabaseConfigs.add(adHocDatabaseConfig);
-
-    return Response.buildResponse(
-      StatusLine.StatusCode.CODE_200_OK,
-      Map.of(
-        "Content-Type", "application/json",
-        "Set-Cookie", makeAuthSetCookieLine(this.auth.get().users(), adHocDatabaseConfigs.toArray(new DatabaseConfig[0]), this.secretKey, Instant.now().plus(1, ChronoUnit.DAYS), !isLocalHost)
-      ),
-      Json.object().toString()
-    );
-  }
-
-  @Override
-  protected IResponse handleRemovingValidDataSource(IRequest req, DatabaseConfig removedDatabaseConfig) throws Exception {
-    var isLocalHost = req.getHeaders().valueByKey("Host").stream().findFirst().orElse("").startsWith("localhost");
-
-    var adHocDatabaseConfigs = Arrays.stream(this.auth.get().adHocDatabaseConfigs())
-      .filter(c -> !c.nickname.equals(removedDatabaseConfig.nickname))
-      .toArray(DatabaseConfig[]::new);
 
     return Response.buildResponse(
       StatusLine.StatusCode.CODE_200_OK,

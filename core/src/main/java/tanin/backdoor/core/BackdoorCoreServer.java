@@ -22,6 +22,7 @@ import java.util.*;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
 import java.util.prefs.BackingStoreException;
+import java.util.stream.Collectors;
 
 import static com.renomad.minum.web.RequestLine.Method.GET;
 import static com.renomad.minum.web.RequestLine.Method.POST;
@@ -164,8 +165,18 @@ public abstract class BackdoorCoreServer {
 
         for (var databaseConfig : getAllDatabaseConfigs()) {
           var databaseJson = Json.object()
-            .add("name", databaseConfig.nickname)
+            .add("nickname", databaseConfig.nickname)
             .add("isAdHoc", databaseConfig.isAdHoc);
+
+          if (databaseConfig.isAdHoc) {
+            databaseJson.add(
+              "adHocInfo",
+              Json.object()
+                .add("url", databaseConfig.jdbcUrl)
+                .add("username", databaseConfig.username)
+                .add("password", databaseConfig.password)
+            );
+          }
 
           try (var engine = makeEngine(databaseConfig)) {
             var tablesJson = Json.array();
@@ -220,7 +231,7 @@ public abstract class BackdoorCoreServer {
 
     wf.registerPath(
       POST,
-      "api/edit-field",
+      "api/update-field",
       req -> {
         var json = Json.parse(req.getBody().asString());
         var database = json.asObject().get("database").asString();
@@ -521,7 +532,8 @@ public abstract class BackdoorCoreServer {
           );
         }
 
-        if (Arrays.stream(getAllDatabaseConfigs()).anyMatch(d -> d.nickname.equals(nickname))) {
+        var allDatabaseConfigs = getAllDatabaseConfigs();
+        if (Arrays.stream(allDatabaseConfigs).anyMatch(d -> d.nickname.equals(nickname))) {
           return Response.buildResponse(
             StatusLine.StatusCode.CODE_400_BAD_REQUEST,
             Map.of("Content-Type", "application/json"),
@@ -541,13 +553,18 @@ public abstract class BackdoorCoreServer {
         );
 
         try (var _engine = this.engineProvider.createEngine(adHocDatabaseConfig, null)) {
-          return handleAddingValidDataSource(req, adHocDatabaseConfig);
+          var allAdHocDatabaseConfigs = Arrays.stream(allDatabaseConfigs)
+            .filter(d -> d.isAdHoc)
+            .collect(Collectors.toCollection(ArrayList::new));
+          allAdHocDatabaseConfigs.add(adHocDatabaseConfig);
+
+          return handleUpdatingAdHocDataSourceConfigs(req, allAdHocDatabaseConfigs.toArray(new DatabaseConfig[0]));
         } catch (Engine.InvalidCredentialsException | Engine.UnreachableServerException |
                  Engine.InvalidDatabaseNameProbablyException | Engine.GenericConnectionException e) {
           var message = "Unknown error. Please contact your administrator.";
 
           if (e instanceof Engine.InvalidCredentialsException) {
-            message = "The server is reachable but either the username or password is invalid.";
+            message = "The server is reachable but either the database name, username, or password is invalid.";
           } else if (e instanceof Engine.UnreachableServerException) {
             message = "The server is unreachable.";
           } else if (e instanceof Engine.InvalidDatabaseNameProbablyException) {
@@ -588,14 +605,98 @@ public abstract class BackdoorCoreServer {
 
     wf.registerPath(
       POST,
+      "api/update-data-source",
+      req -> {
+        var json = Json.parse(req.getBody().asString()).asObject();
+        var originalNickname = json.get("originalNickname").asString().trim();
+        var nickname = json.get("nickname").asString().trim();
+        var url = json.get("url").asString().trim();
+        var username = Helpers.getString(json, "username", "").trim();
+        var password = Helpers.getString(json, "password", "").trim();
+
+        if (nickname.isBlank()) {
+          return Response.buildResponse(
+            StatusLine.StatusCode.CODE_400_BAD_REQUEST,
+            Map.of("Content-Type", "application/json"),
+            Json
+              .object()
+              .add("errors", Json.array().add("The nickname cannot be blank."))
+              .toString()
+          );
+        }
+
+        var allAdHocDataSourceConfigs = Arrays.stream(getAllDatabaseConfigs()).filter(d -> d.isAdHoc).toArray(DatabaseConfig[]::new);
+        var found = Arrays.stream(allAdHocDataSourceConfigs)
+          .filter(d -> d.nickname.equals(originalNickname))
+          .findFirst()
+          .orElse(null);
+
+        if (found == null) {
+          return Response.buildResponse(
+            StatusLine.StatusCode.CODE_400_BAD_REQUEST,
+            Map.of("Content-Type", "application/json"),
+            Json
+              .object()
+              .add("errors", Json.array().add("The database '" + nickname + "' doesn't exist. Please reload to see the new list of the database."))
+              .toString()
+          );
+        }
+
+        found.nickname = nickname;
+        found.jdbcUrl = url;
+        found.username = username;
+        found.password = password;
+
+        try (var _engine = this.engineProvider.createEngine(found, null)) {
+          logger.info("The updated data source is valid.");
+          return handleUpdatingAdHocDataSourceConfigs(req, allAdHocDataSourceConfigs);
+        } catch (Engine.InvalidCredentialsException | Engine.UnreachableServerException |
+                 Engine.InvalidDatabaseNameProbablyException | Engine.GenericConnectionException e) {
+          var message = "Unknown error. Please contact your administrator.";
+
+          if (e instanceof Engine.InvalidCredentialsException) {
+            message = "The server is reachable but either the username or password is invalid.";
+          } else if (e instanceof Engine.UnreachableServerException) {
+            message = "The server is unreachable.";
+          } else if (e instanceof Engine.InvalidDatabaseNameProbablyException) {
+            message = "The server is reachable but it's likely that the database name is invalid, but it could be wrong username or password too.";
+          } else if (e instanceof Engine.GenericConnectionException) {
+            message = e.getMessage();
+          }
+
+          return Response.buildResponse(
+            StatusLine.StatusCode.CODE_400_BAD_REQUEST,
+            Map.of("Content-Type", "application/json"),
+            Json
+              .object()
+              .add("errors", Json.array().add(message))
+              .toString()
+          );
+        } catch (UnsupportedOperationException e) {
+          return Response.buildResponse(
+            StatusLine.StatusCode.CODE_400_BAD_REQUEST,
+            Map.of("Content-Type", "application/json"),
+            Json
+              .object()
+              .add("errors", Json.array().add(e.getMessage()))
+              .toString()
+          );
+        }
+      }
+    );
+
+    wf.registerPath(
+      POST,
       "api/delete-data-source",
       req -> {
         var json = Json.parse(req.getBody().asString());
         var database = json.asObject().get("database").asString().trim();
 
-        var removedDatabaseConfig = Arrays.stream(getAdHocDatabaseConfigs()).filter(d -> d.nickname.equals(database)).findFirst().orElse(null);
+        var filtered = Arrays.stream(getAdHocDatabaseConfigs())
+          .filter(d -> !d.nickname.equals(database))
+          .toArray(DatabaseConfig[]::new);
 
-        return handleRemovingValidDataSource(req, removedDatabaseConfig);
+        return handleUpdatingAdHocDataSourceConfigs(req, filtered);
       }
     );
 
@@ -612,9 +713,7 @@ public abstract class BackdoorCoreServer {
 
   protected abstract DatabaseConfig[] getAdHocDatabaseConfigs() throws BackingStoreException;
 
-  protected abstract IResponse handleAddingValidDataSource(IRequest req, DatabaseConfig adHocDatabaseConfig) throws Exception;
-
-  protected abstract IResponse handleRemovingValidDataSource(IRequest req, DatabaseConfig removedDatabaseConfig) throws Exception;
+  protected abstract IResponse handleUpdatingAdHocDataSourceConfigs(IRequest req, DatabaseConfig[] allAdHocDatabaseConfigs) throws Exception;
 
   protected IResponse processIndexPage(IRequest req) throws Exception {
     return Response.htmlOk(

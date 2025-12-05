@@ -4,7 +4,6 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.JavascriptExecutor;
 import tanin.backdoor.Base;
-import tanin.backdoor.core.engine.Engine;
 
 import static org.junit.jupiter.api.Assertions.*;
 

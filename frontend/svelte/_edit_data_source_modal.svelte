@@ -5,34 +5,51 @@ import Button from './common/_button.svelte'
 import ErrorPanel from "./common/form/_error_panel.svelte"
 import 'altcha'
 import {trackEvent} from "./common/tracker";
-import {openFileDialog, PARADIGM} from "./common/globals";
-import type {DatabaseType} from "./common/models";
+import {openFileDialog} from "./common/globals";
+import type {Database, DatabaseType} from "./common/models";
 
-export let onAdded: () => Promise<void>
+export let onEdited: () => Promise<void>
 
 let modal: HTMLDialogElement;
 let mainInput: HTMLInputElement;
+let databaseType: DatabaseType;
 
 let isLoading = false
 let errors: string[] = []
-let databaseType: DatabaseType;
 
 let form = {
   url: '',
+  originalNickname: '',
   nickname: '',
   username: '',
   password: '',
 }
 
-export function open(): void {
+function determineDatabaseType(url: string): DatabaseType {
+  if (url.startsWith('jdbc:sqlite')) {
+    return 'sqlite'
+  } else if (url.startsWith('jdbc:ch')) {
+    return 'clickhouse'
+  } else {
+    return 'postgres'
+  }
+}
+
+export function open(database: Database): void {
+  if (!database.isAdHoc) {
+    return;
+  }
+
   isLoading = false
   errors = []
 
+  databaseType = determineDatabaseType(database.adHocInfo!.url)
   form = {
-    url: '',
-    nickname: '',
-    username: '',
-    password: '',
+    url: database.adHocInfo!.url,
+    originalNickname: database.nickname,
+    nickname: database.nickname,
+    username: database.adHocInfo!.username,
+    password: database.adHocInfo!.password,
   }
 
   modal.showModal()
@@ -59,11 +76,11 @@ async function submit() {
   isLoading = true
 
   try {
-    const json = await post('/api/add-data-source', form)
+    const json = await post('/api/update-data-source', form)
 
-    await onAdded()
+    trackEvent('data-source-updated')
+    await onEdited()
     modal.close()
-    trackEvent('new-data-source-added')
   } catch (e) {
     isLoading = false
     errors = (e as FetchError).messages
@@ -87,13 +104,6 @@ async function submit() {
       bind:this={mainInput}
       autocorrect="off"
     />
-    <select class="select select-sm w-full" bind:value={databaseType}>
-      <option value="postgres">Postgres</option>
-      <option value="clickhouse">ClickHouse</option>
-      {#if PARADIGM === 'DESKTOP'}
-        <option value="sqlite">SQLite</option>
-      {/if}
-    </select>
     {#if databaseType === 'sqlite'}
       <div class="flex flex-col gap-2 items-center w-full">
         <div class="flex flex-row gap-2 items-center w-full">
@@ -165,11 +175,9 @@ async function submit() {
       </div>
     {/if}
     <ErrorPanel {errors}/>
-    <Button class="btn btn-neutral btn-sm" {isLoading} onClick={submit} dataTestId="submit-button">Connect Data Source
+    <Button class="btn btn-neutral btn-sm grow" {isLoading} onClick={submit} dataTestId="submit-button">
+      Update Data Source
     </Button>
-    <div class="text-warning text-xs">
-      The data source added here will be for you only. The credentials will be stored on your machine.
-    </div>
   </div>
   <div class="modal-backdrop" onclick={close}>
   </div>
