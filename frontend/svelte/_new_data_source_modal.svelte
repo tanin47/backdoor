@@ -8,7 +8,7 @@ import {trackEvent} from "./common/tracker";
 import {openFileDialog, PARADIGM} from "./common/globals";
 import type {DatabaseType} from "./common/models";
 
-export let onAdded: () => Promise<void>
+export let onAdded: (nickname: string) => Promise<void>
 
 let modal: HTMLDialogElement;
 let mainInput: HTMLInputElement;
@@ -61,7 +61,7 @@ async function submit() {
   try {
     const json = await post('/api/add-data-source', form)
 
-    await onAdded()
+    await onAdded(form.nickname)
     modal.close()
     trackEvent('new-data-source-added')
   } catch (e) {

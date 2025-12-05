@@ -44,6 +44,8 @@ public class LoginTest extends Base {
     click(tid("submit-button"));
 
     waitUntil(() -> assertEquals("/", getCurrentPath()));
+    click(tid("database-item"));
+    waitUntil(() -> assertEquals("loaded", elem(tid("database-item")).getDomAttribute("data-database-status")));
 
     fillCodeMirror("select current_user");
     click(tid("run-sql-button"));
@@ -95,12 +97,16 @@ public class LoginTest extends Base {
 
     waitUntil(() -> assertEquals("/", getCurrentPath()));
 
+    click(tid("database-item", "postgres"));
+    waitUntil(() -> assertEquals("loaded", elem(tid("database-item", "postgres")).getDomAttribute("data-database-status")));
     assertEquals(
       List.of("user"),
       elems(tid("menu-items", "postgres", null, "menu-item-table")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()
     );
 
-    assertTrue(hasElem(tid("database-lock-item", "clickhouse")));
+    assertEquals("unloaded", elem(tid("database-item", "clickhouse")).getDomAttribute("data-database-status"));
+    click(tid("database-item", "clickhouse"));
+    waitUntil(() -> assertTrue(hasElem(tid("additional-login-modal"))));
   }
 
   @Test
@@ -135,10 +141,14 @@ public class LoginTest extends Base {
 
     waitUntil(() -> assertEquals("/", getCurrentPath()));
 
+    click(tid("database-item", "postgres"));
+    waitUntil(() -> assertEquals("loaded", elem(tid("database-item", "postgres")).getDomAttribute("data-database-status")));
     assertEquals(
       List.of("user"),
       elems(tid("menu-items", "postgres", null, "menu-item-table")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()
     );
+    click(tid("database-item", "clickhouse"));
+    waitUntil(() -> assertEquals("loaded", elem(tid("database-item", "clickhouse")).getDomAttribute("data-database-status")));
     assertEquals(
       List.of("project_setting"),
       elems(tid("menu-items", "clickhouse", null, "menu-item-table")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()
@@ -177,10 +187,14 @@ public class LoginTest extends Base {
 
     waitUntil(() -> assertEquals("/", getCurrentPath()));
 
+    click(tid("database-item", "postgres"));
+    waitUntil(() -> assertEquals("loaded", elem(tid("database-item", "postgres")).getDomAttribute("data-database-status")));
     assertEquals(
       List.of("user"),
       elems(tid("menu-items", "postgres", null, "menu-item-table")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()
     );
+    click(tid("database-item", "clickhouse"));
+    waitUntil(() -> assertEquals("loaded", elem(tid("database-item", "clickhouse")).getDomAttribute("data-database-status")));
     assertEquals(
       List.of("project_setting"),
       elems(tid("menu-items", "clickhouse", null, "menu-item-table")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()

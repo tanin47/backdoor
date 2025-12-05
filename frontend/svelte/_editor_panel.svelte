@@ -25,7 +25,7 @@ let historyModal: HistoryModal
 let validDatabases: Database[] = []
 
 $: {
-  validDatabases = databases.filter(d => !d.requireLogin)
+  validDatabases = databases.filter(d => d.status === 'loaded')
 }
 
 $: if (validDatabases.length > 0 && !selectedDatabaseName) {

@@ -9,7 +9,6 @@ export interface DatabaseAdHocInfo {
 export interface Database {
   nickname: string;
   isAdHoc: boolean;
-  requireLogin: boolean;
   tables: string[];
   adHocInfo: DatabaseAdHocInfo | null;
   status: 'loaded' | 'unloaded'

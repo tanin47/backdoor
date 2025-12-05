@@ -9,6 +9,9 @@ public class ExecuteTest extends Base {
   @Test
   void runExplain() throws InterruptedException {
     go("/");
+    click(tid("database-item"));
+    waitUntil(() -> assertEquals("loaded", elem(tid("database-item")).getDomAttribute("data-database-status")));
+
     fillCodeMirror("explain select 1");
     click(tid("run-sql-button"));
 
@@ -26,6 +29,9 @@ public class ExecuteTest extends Base {
   @Test
   void updateSql() throws InterruptedException {
     go("/");
+    click(tid("database-item"));
+    waitUntil(() -> assertEquals("loaded", elem(tid("database-item")).getDomAttribute("data-database-status")));
+
     fillCodeMirror("update \"user\" set username = 'test_user_3_updated' where username = 'test_user_3'");
     click(tid("run-sql-button"));
 
@@ -51,6 +57,9 @@ public class ExecuteTest extends Base {
   @Test
   void deleteSql() throws InterruptedException {
     go("/");
+    click(tid("database-item"));
+    waitUntil(() -> assertEquals("loaded", elem(tid("database-item")).getDomAttribute("data-database-status")));
+
     fillCodeMirror("delete from \"user\" where username = 'test_user_3'");
     click(tid("run-sql-button"));
 
@@ -75,6 +84,9 @@ public class ExecuteTest extends Base {
   @Test
   void makeViewAndThenExecute() throws InterruptedException {
     go("/");
+    click(tid("database-item"));
+    waitUntil(() -> assertEquals("loaded", elem(tid("database-item")).getDomAttribute("data-database-status")));
+
     fillCodeMirror("select 1");
     click(tid("run-sql-button"));
 

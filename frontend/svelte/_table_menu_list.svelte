@@ -10,9 +10,13 @@ export let selectedQuery: Query | null
 let moreButton: HTMLElement
 let tooltip: HTMLElement
 
+let isLoading: boolean = false;
+
+let loadings: Set<string> = new Set();
+
 export let onTableClicked: (table: Table) => Promise<void>
 export let onQueryClicked: (query: Query) => Promise<void>
-export let onLoggingIn: () => void
+export let onLoading: () => Promise<void>
 export let onEditing: () => void
 export let onDeleting: () => void
 
@@ -41,12 +45,19 @@ onMount(() => {
     <ul
       class="menu flex flex-col gap-0 border border-gray-500 rounded-lg bg-accent-content p-0"
     >
-      <!--    <li>-->
-      <!--      <div class="flex items-center gap-1 px-2 py-1 cursor-pointer">-->
-      <!--        <i class="ph ph-arrow-clockwise text-xs"></i>-->
-      <!--        <span class="text-xs">Refresh</span>-->
-      <!--      </div>-->
-      <!--    </li>-->
+      <li>
+        <div
+          class="flex items-center gap-1 px-2 py-1 cursor-pointer"
+          data-test-id="refresh-data-source-button"
+          onclick={() => {
+            moreOptionTooltip.hide()
+            onLoading()
+          }}
+        >
+          <i class="ph ph-arrow-clockwise text-xs"></i>
+          <span class="text-xs">Refresh</span>
+        </div>
+      </li>
       <li>
         <div
           class="flex items-center gap-1 px-2 py-1 cursor-pointer"
@@ -77,36 +88,49 @@ onMount(() => {
   </div>
 {/if}
 <div>
-  {#if database.requireLogin}
-    <div
-      class="flex items-center gap-2 p-2 cursor-pointer"
-      onclick={onLoggingIn}
-      data-test-id="database-lock-item"
-      data-test-value={database.nickname}
-    >
-      <i class="ph ph-lock text-sm"></i>
+  <div
+    class="flex items-center gap-2 justify-between {isLoading ? 'cursor-progress' : 'cursor-pointer'}"
+    class:opacity-50={isLoading}
+    data-test-id="database-item"
+    data-database-status={database.status}
+    data-test-value={database.nickname}
+    onclick={async () => {
+      if (isLoading) { return }
+
+      if (database.status === 'unloaded') {
+        isLoading = true;
+        try {
+          await onLoading()
+        } finally {
+          isLoading = false
+        }
+      } else {
+        expanded = !expanded
+      }
+    }}
+  >
+    <div class="flex items-center gap-2 ps-2 py-2 overflow-hidden">
+      {#if database.status === 'unloaded'}
+        <i class="ph ph-lock-simple text-sm"></i>
+      {:else}
+        <i class="ph {expanded ? 'ph-caret-down' : 'ph-caret-right' } text-sm"></i>
+      {/if}
       <span
         class="overflow-hidden text-ellipsis font-mono text-xs whitespace-nowrap underline">{database.nickname}</span>
     </div>
-  {:else}
-    <div class="flex items-center gap-2 justify-between cursor-pointer" onclick={() => {expanded = !expanded}}>
-      <div class="flex items-center gap-2 ps-2 py-2 overflow-hidden">
-        <i class="ph {expanded ? 'ph-caret-down' : 'ph-caret-right' } text-sm"></i>
-        <span
-          class="overflow-hidden text-ellipsis font-mono text-xs whitespace-nowrap underline">{database.nickname}</span>
-      </div>
-      {#if database.isAdHoc}
-        <i
-          bind:this={moreButton}
-          class="ph ph-dots-three-vertical text-sm z-10 px-1 py-2 cursor-pointer"
-          data-test-id="more-option-data-source-button"
-          onclick={(ev) => {
-            ev.stopPropagation()
-            moreOptionTooltip.show()
-          }}
-        ></i>
-      {/if}
-    </div>
+    {#if database.isAdHoc}
+      <i
+        bind:this={moreButton}
+        class="ph ph-dots-three-vertical text-sm z-10 px-1 py-2 cursor-pointer"
+        data-test-id="more-option-data-source-button"
+        onclick={(ev) => {
+          ev.stopPropagation()
+          moreOptionTooltip.show()
+        }}
+      ></i>
+    {/if}
+  </div>
+  {#if database.status === 'loaded'}
     <ul
       class="menu flex flex-col w-full text-xs p-0"
       data-test-id="menu-items"
@@ -115,15 +139,26 @@ onMount(() => {
     >
       {#each database.tables as table (table)}
         <li class="w-full">
-        <span
-          class="flex items-center gap-2 font-mono w-full"
-          onclick={() => {onTableClicked({database: database.nickname, name: table})}}
-          data-test-id="menu-item-table"
-          data-test-value={table}
-        >
-          <i class="ph ph-table"></i>
-          <span class="overflow-hidden text-ellipsis whitespace-nowrap">{table}</span>
-        </span>
+          <span
+            class="flex items-center gap-2 font-mono w-full"
+            class:opacity-50={loadings.has(table)}
+            class:!cursor-progress={loadings.has(table)}
+            onclick={async () => {
+              loadings.add(table);
+              loadings = loadings;
+              try {
+                await onTableClicked({database: database.nickname, name: table})
+              } finally {
+                loadings.delete(table);
+                loadings = loadings;
+              }
+            }}
+            data-test-id="menu-item-table"
+            data-test-value={table}
+          >
+            <i class="ph ph-table"></i>
+            <span class="overflow-hidden text-ellipsis whitespace-nowrap">{table}</span>
+          </span>
         </li>
       {/each}
       {#each queries.filter(q => q.database === database.nickname) as query (query.name)}

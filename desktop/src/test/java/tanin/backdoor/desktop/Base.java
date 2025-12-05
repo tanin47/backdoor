@@ -1,7 +1,12 @@
 package tanin.backdoor.desktop;
 
+import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.extension.AfterTestExecutionCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.openqa.selenium.*;
+import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.interactions.Actions;
@@ -15,10 +20,9 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static tanin.backdoor.core.BackdoorCoreServer.makeSqlName;
@@ -26,6 +30,7 @@ import static tanin.backdoor.core.BackdoorCoreServer.makeSqlName;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class Base {
 
+  static final Logger logger = Logger.getLogger(Base.class.getName());
   static File sqliteFile;
 
   static {
@@ -38,7 +43,7 @@ public class Base {
     }
   }
 
-  static String SQLITE_DATABASE_URL = "jdbc:sqlite:" + sqliteFile.getAbsolutePath();
+  static String SQLITE_DATABASE_URL = "jdbc:sqlite:" + sqliteFile.getAbsolutePath().replace("\\", "\\\\");
 
   public DatabaseConfig sqliteConfig = new DatabaseConfig("sqlite", SQLITE_DATABASE_URL, null, null);
   static int PORT = 9091;
@@ -47,6 +52,32 @@ public class Base {
 
   public WebDriver webDriver;
   public BackdoorDesktopServer server;
+
+  @RegisterExtension
+  AfterTestExecutionCallback afterTestExecutionCallback = new AfterTestExecutionCallback() {
+    @Override
+    public void afterTestExecution(ExtensionContext context) throws Exception {
+      Optional<Throwable> exception = context.getExecutionException();
+
+      if (exception.isPresent()) { // has exception
+        var testName = context.getRequiredTestClass().getCanonicalName() + "." + context.getRequiredTestMethod().getName();
+        var dir = new File("./build/failed-screenshots");
+        var _ignored = dir.mkdirs();
+
+        var scrFile = ((TakesScreenshot) webDriver).getScreenshotAs(OutputType.FILE);
+        var file = dir.toPath().resolve(testName + ".png").toFile();
+        FileUtils.copyFile(scrFile, file);
+
+        logger.info(testName + "failed. Captured the screenshot at: " + file.getAbsolutePath());
+
+        var logEntries = webDriver.manage().logs().get(org.openqa.selenium.logging.LogType.BROWSER);
+        logger.info("Browser logs:");
+        for (var entry : logEntries) {
+          logger.info(new Date(entry.getTimestamp()) + ": " + entry.getMessage());
+        }
+      }
+    }
+  };
 
   @BeforeAll
   void setUpAll() throws SQLException, URISyntaxException, InterruptedException {
@@ -80,16 +111,18 @@ public class Base {
     webDriver = new ChromeDriver(options);
   }
 
-  void clearPreferences() {
-    try {
-      java.util.prefs.Preferences.userNodeForPackage(MinumBuilder.Mode.Test.getClass()).removeNode();
-    } catch (Exception ignored) {
-    }
+  void resetAdHocDatabaseConfigs() throws Exception {
+    server.handleUpdatingAdHocDataSourceConfigs(
+      null,
+      new DatabaseConfig[]{
+        new DatabaseConfig(sqliteConfig.nickname, sqliteConfig.jdbcUrl, sqliteConfig.username, sqliteConfig.password, true),
+      }
+    );
   }
 
   void resetDatabase() throws Exception {
     SqlHistoryManager.resetForTesting();
-    clearPreferences();
+    resetAdHocDatabaseConfigs();
 
     try (var sqlite = server.engineProvider.createEngine(sqliteConfig, null)) {
       var conn = sqlite.connection;
@@ -140,9 +173,6 @@ public class Base {
     var keyStorePassword = SelfSignedCertificate.generateRandomString(64);
     var keyStoreFile = SelfSignedCertificate.generateKeyStoreFile(cert, keyStorePassword);
     server = new BackdoorDesktopServer(
-      new DatabaseConfig[]{
-        new DatabaseConfig(sqliteConfig.nickname, sqliteConfig.jdbcUrl, sqliteConfig.username, sqliteConfig.password),
-      },
       PORT,
       TEST_AUTH_KEY,
       new MinumBuilder.KeyStore(keyStoreFile, keyStorePassword)

@@ -33,7 +33,6 @@ public class Main {
 
     var authKey = SelfSignedCertificate.generateRandomString(32);
     var server = new BackdoorDesktopServer(
-      new DatabaseConfig[0],
       0,
       authKey,
       new MinumBuilder.KeyStore(keyStoreFile, keyStorePassword)

@@ -31,16 +31,44 @@ let queries: Query[] = []
 
 async function load(): Promise<void> {
   try {
-    const json = await post('/api/get-relations', {})
+    const json = await post('/api/get-databases', {})
 
-    databases = json.databases;
-    trackEvent('databases-loaded', {count: databases.length, totalTableCount: databases.reduce((sum, b) => (sum + (b.tables?.length ?? 0)), 0)})
+    const previousDatabaseByNickname = new Map<string, Database>()
+    for (const database of databases) {
+      previousDatabaseByNickname.set(database.nickname, database)
+    }
+
+    databases = json.databases
+    databases.forEach(database => {
+      const previous = previousDatabaseByNickname.get(database.nickname)
+
+      database.status = previous?.status ?? 'unloaded'
+      database.tables = previous?.tables ?? []
+    });
+    trackEvent('databases-loaded', {count: databases.length})
   } catch (e) {
     console.error(e)
     errorModal.open(
       (e as FetchError).messages,
       'We cannot access your database. Please confirm that the database URL is correct. You can use `psql URL` to verify that your database URL is correct.'
     );
+  } finally {
+    isLoading = false
+  }
+}
+
+async function loadDatabase(nickname: string): Promise<void> {
+  try {
+    const json = await post('/api/get-tables', {database: nickname})
+
+    const found = databases.find(entry => entry.nickname === nickname)
+
+    if (found) {
+      found.status = 'loaded';
+      found.tables = json.tables
+      databases = databases
+      trackEvent('tables-loaded', {count: found.tables.length})
+    }
   } finally {
     isLoading = false
   }
@@ -127,10 +155,22 @@ export async function runSql(database: string, sql: string): Promise<void> {
 <svelte:window on:mousemove={handleResize} on:mouseup={stopResize}/>
 
 <ErrorModal bind:this={errorModal} />
-<NewDataSourceModal bind:this={newDataSourceModal} onAdded={async () => {await load()}} />
-<EditDataSourceModal bind:this={editDataSourceModal} onEdited={async () => {await load()}} />
+<NewDataSourceModal
+  bind:this={newDataSourceModal}
+  onAdded={async (nickname) => {
+    await load()
+    await loadDatabase(nickname)
+  }}
+/>
+<EditDataSourceModal
+  bind:this={editDataSourceModal}
+  onEdited={async (nickname) => {
+    await load()
+    await loadDatabase(nickname)
+  }}
+/>
 <DeleteDataSourceModal bind:this={deleteDataSourceModal} onDeleted={async () => {await load()}} />
-<AdditionalLoginModal bind:this={additionalLoginModal} onLoggedIn={async () => {await load()}} />
+<AdditionalLoginModal bind:this={additionalLoginModal} onLoading={async (database) => {await loadDatabase(database.nickname)}} />
 
 <div class="relative h-full w-full flex flex-row items-stretch">
   {#if isLoading}
@@ -193,7 +233,19 @@ export async function runSql(database: string, sql: string): Promise<void> {
               }
               await sheetPanel.openQuery(query)
             }}
-            onLoggingIn={() => { additionalLoginModal.open(database) }}
+            onLoading={async () => {
+              try {
+                await loadDatabase(database.nickname)
+              } catch (e) {
+                if (database.isAdHoc) {
+                  // If an error occurs, we open the edit dialog with the error message.
+                  editDataSourceModal.open(database, true)
+                } else {
+                  // If an error occurs, we open the additional login dialog
+                  additionalLoginModal.open(database)
+                }
+              }
+            }}
             onEditing={() => {
               editDataSourceModal.open(database)
             }}

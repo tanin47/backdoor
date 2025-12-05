@@ -1,6 +1,10 @@
 package tanin.backdoor.web;
 
+import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.extension.AfterTestExecutionCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
@@ -12,18 +16,23 @@ import tanin.backdoor.core.DatabaseConfig;
 import tanin.backdoor.core.User;
 import tanin.ejwf.MinumBuilder;
 
+import java.io.File;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class Base {
+  static final Logger logger = Logger.getLogger(Base.class.getName());
   User loggedInUser = new User("backdoor", "test");
   static String POSTGRES_DATABASE_URL = "postgres://127.0.0.1:5432/backdoor_test";
   static String CLICKHOUSE_DATABASE_URL = "jdbc:ch://127.0.0.1:8123/backdoor_test";
@@ -36,6 +45,32 @@ public class Base {
   public WebDriver webDriver;
   BackdoorWebServer server;
   boolean shouldLoggedIn = true;
+
+  @RegisterExtension
+  AfterTestExecutionCallback afterTestExecutionCallback = new AfterTestExecutionCallback() {
+    @Override
+    public void afterTestExecution(ExtensionContext context) throws Exception {
+      Optional<Throwable> exception = context.getExecutionException();
+
+      if (exception.isPresent()) { // has exception
+        var testName = context.getRequiredTestClass().getCanonicalName() + "." + context.getRequiredTestMethod().getName();
+        var dir = new File("./build/failed-screenshots");
+        var _ignored = dir.mkdirs();
+
+        var scrFile = ((TakesScreenshot) webDriver).getScreenshotAs(OutputType.FILE);
+        var file = dir.toPath().resolve(testName + ".png").toFile();
+        FileUtils.copyFile(scrFile, file);
+
+        logger.info(testName + "failed. Captured the screenshot at: " + file.getAbsolutePath());
+
+        var logEntries = webDriver.manage().logs().get(org.openqa.selenium.logging.LogType.BROWSER);
+        logger.info("Browser logs:");
+        for (var entry : logEntries) {
+          logger.info(new Date(entry.getTimestamp()) + ": " + entry.getMessage());
+        }
+      }
+    }
+  };
 
   @BeforeAll
   void setUpAll() throws SQLException, URISyntaxException, InterruptedException {

@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class AdHocDataSourceTest extends Base {
   @Test
-  void addEditAndDeletePostgres() throws InterruptedException {
+  void addExpandEditAndDeletePostgres() throws InterruptedException {
     go("/");
     click(tid("add-new-data-source-button"));
     fill(tid("url"), "postgres://backdoor_test_user:test@127.0.0.1:5432/backdoor_test");
@@ -22,8 +22,9 @@ public class AdHocDataSourceTest extends Base {
 
     assertEquals(
       List.of("postgres", "clickhouse", "adhoc-test"),
-      elems(tid("menu-items")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()
+      elems(tid("database-item")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()
     );
+
     assertEquals(
       List.of("user"),
       elems(tid("menu-items", "adhoc-test", null, "menu-item-table")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()
@@ -37,8 +38,14 @@ public class AdHocDataSourceTest extends Base {
 
     assertEquals(
       List.of("postgres", "clickhouse", "adhoc-test-updated"),
-      elems(tid("menu-items")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()
+      elems(tid("database-item")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()
     );
+
+    assertEquals(
+      List.of("user"),
+      elems(tid("menu-items", "adhoc-test-updated", null, "menu-item-table")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()
+    );
+
 
     click(tid("more-option-data-source-button"));
     click(tid("delete-data-source-button"));
@@ -47,7 +54,7 @@ public class AdHocDataSourceTest extends Base {
 
     assertEquals(
       List.of("postgres", "clickhouse"),
-      elems(tid("menu-items")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()
+      elems(tid("database-item")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()
     );
   }
 
@@ -65,8 +72,9 @@ public class AdHocDataSourceTest extends Base {
 
     assertEquals(
       List.of("postgres", "clickhouse", "adhoc-test"),
-      elems(tid("menu-items")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()
+      elems(tid("database-item")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()
     );
+
     assertEquals(
       List.of("project_setting"),
       elems(tid("menu-items", "adhoc-test", null, "menu-item-table")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()

@@ -7,7 +7,7 @@ import ErrorPanel from "./common/form/_error_panel.svelte"
 import 'altcha'
 import {trackEvent} from "./common/tracker";
 
-export let onLoggedIn: () => Promise<void>
+export let onLoading: (database: Database) => Promise<void>
 
 let modal: HTMLDialogElement;
 let usernameInput: HTMLInputElement;
@@ -63,9 +63,9 @@ async function submit() {
       ...form
     })
 
-    await onLoggedIn()
-    modal.close()
     trackEvent('data-source-logged-in')
+    await onLoading(database_!)
+    modal.close()
   } catch (e) {
     isLoading = false
     errors = (e as FetchError).messages
@@ -78,7 +78,7 @@ async function submit() {
 <dialog
   bind:this={modal}
   class="modal2"
-  data-test-id="edit-modal"
+  data-test-id="additional-login-modal"
 >
   <div class="modal-box !max-w-[480px] !w-auto flex flex-col gap-4" onkeydown={invokeOnEnter(submit)}>
     <div class="text-neutral-content text-sm">
