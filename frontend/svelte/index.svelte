@@ -13,6 +13,7 @@ import DeleteDataSourceModal from "./_delete_data_source_modal.svelte"
 import AdditionalLoginModal from "./_additional_login_modal.svelte";
 import {trackEvent} from "./common/tracker";
 import {saveNewSqlHistoryEntry} from "./history";
+import HelpModal from "./_help_modal.svelte";
 
 let sheetPanel: SheetPanel;
 
@@ -24,6 +25,7 @@ let newDataSourceModal: NewDataSourceModal;
 let editDataSourceModal: EditDataSourceModal;
 let deleteDataSourceModal: DeleteDataSourceModal;
 let additionalLoginModal: AdditionalLoginModal;
+let helpModal: HelpModal;
 
 let isLoading = false
 let databases: Database[] = []
@@ -74,6 +76,9 @@ onMount(() => {
   trackEvent('landing-index')
   isLoading = true
   void load()
+  if (MODE !== 'Test') {
+    helpModal.open()
+  }
 })
 
 
@@ -167,6 +172,7 @@ export async function runSql(database: string, sql: string): Promise<void> {
 />
 <DeleteDataSourceModal bind:this={deleteDataSourceModal} onDeleted={async () => {await load()}} />
 <AdditionalLoginModal bind:this={additionalLoginModal} onLoading={async (database) => {await loadDatabase(database.nickname)}} />
+<HelpModal bind:this={helpModal} />
 
 <div class="relative h-full w-full flex flex-row items-stretch">
   {#if isLoading}
@@ -188,18 +194,24 @@ export async function runSql(database: string, sql: string): Promise<void> {
         &nbsp;
       </span>
       <div class="flex flex-col">
-        <a
-          href="https://github.com/tanin47/backdoor"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="flex flex-row items-center p-2 gap-1 bg-black  text-gray-400 text-sm"
-        >
-          {#if MODE === 'Dev'}
-            <div class="text-accent">[dev]</div>
-          {/if}
-          <i class="ph ph-door-open"></i>
-          <div class="whitespace-nowrap overflow-hidden text-ellipsis">Backdoor</div>
-        </a>
+        <div class="flex items-center justify-between gap-2">
+          <a
+            href="https://github.com/tanin47/backdoor"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="flex flex-row items-center p-2 gap-1 bg-black  text-gray-400 text-sm"
+          >
+            {#if MODE === 'Dev'}
+              <div class="text-accent">[dev]</div>
+            {/if}
+            <i class="ph ph-door-open"></i>
+            <div class="whitespace-nowrap overflow-hidden text-ellipsis">Backdoor</div>
+          </a>
+          <i
+            class="ph ph-question cursor-pointer text-gray-400 me-1"
+            onclick={() => {helpModal.open()}}
+          ></i>
+        </div>
         <div
           class="flex flex-row items-center p-2 gap-2 bg-base-300  text-gray-400 text-sm cursor-pointer"
           data-test-id="add-new-data-source-button"
