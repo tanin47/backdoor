@@ -101,6 +101,8 @@ jobs:
           APTABASE_ID: ${{ secrets.APTABASE_ID }}
           APPLE_EMAIL: ${{ secrets.APPLE_EMAIL }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SENTRY_WEBVIEW_DSN: ${{ secrets.SENTRY_WEBVIEW_DSN }}
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v2
         with:

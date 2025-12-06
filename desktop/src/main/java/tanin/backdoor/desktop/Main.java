@@ -1,6 +1,6 @@
 package tanin.backdoor.desktop;
 
-import tanin.backdoor.core.DatabaseConfig;
+import tanin.backdoor.core.BackdoorCoreServer;
 import tanin.backdoor.desktop.nativeinterface.Base;
 import tanin.ejwf.MinumBuilder;
 
@@ -24,6 +24,8 @@ public class Main {
   }
 
   public static void main(String[] args) throws Exception {
+    BackdoorCoreServer.initSentry(BackdoorDesktopServer.SENTRY_PROPERTIES != null);
+
     var cert = SelfSignedCertificate.generate("localhost");
     logger.info("The SSL cert is randomly generated on each run:");
     logger.info("  Certificate SHA-256 Fingerprint: " + SelfSignedCertificate.getSHA256Fingerprint(cert.cert().getEncoded()));
@@ -48,8 +50,7 @@ public class Main {
 
     var browser = new Browser(
       url,
-      true
-//      MinumBuilder.IS_LOCAL_DEV
+      MinumBuilder.MODE != MinumBuilder.Mode.Prod
     );
     server.browser = browser;
     browser.run();

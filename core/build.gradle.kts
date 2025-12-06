@@ -56,6 +56,7 @@ dependencies {
     api("org.xerial:sqlite-jdbc:3.51.0.0")
     api("com.eclipsesource.minimal-json:minimal-json:0.9.5")
     api("org.altcha:altcha:1.2.0")
+    api("io.sentry:sentry-jul:8.28.0")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.7.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")

@@ -58,19 +58,15 @@ async function load(): Promise<void> {
 }
 
 async function loadDatabase(nickname: string): Promise<void> {
-  try {
-    const json = await post('/api/get-tables', {database: nickname})
+  const json = await post('/api/get-tables', {database: nickname})
 
-    const found = databases.find(entry => entry.nickname === nickname)
+  const found = databases.find(entry => entry.nickname === nickname)
 
-    if (found) {
-      found.status = 'loaded';
-      found.tables = json.tables
-      databases = databases
-      trackEvent('tables-loaded', {count: found.tables.length})
-    }
-  } finally {
-    isLoading = false
+  if (found) {
+    found.status = 'loaded';
+    found.tables = json.tables
+    databases = databases
+    trackEvent('tables-loaded', {count: found.tables.length})
   }
 }
 
@@ -213,8 +209,7 @@ export async function runSql(database: string, sql: string): Promise<void> {
           <span class="overflow-hidden text-ellipsis font-mono text-xs whitespace-nowrap">Add Data Source</span>
         </div>
       </div>
-<!--      <div class="grow-1 overflow-y-auto">-->
-      <div class="grow-1">
+      <div class="grow-1 overflow-y-auto">
         {#each databases as database, index (index)}
           <TableMenuList
             {database}

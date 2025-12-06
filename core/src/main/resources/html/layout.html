@@ -13,6 +13,8 @@
     window.MODE = {{MODE}};
     window.APP_VERSION = {{APP_VERSION}};
     window.PARADIGM = {{PARADIGM}};
+    window.SENTRY_DSN = {{SENTRY_DSN}};
+    window.SENTRY_RELEASE = {{SENTRY_RELEASE}};
 
     var oldFetch = window.fetch;
     window.fetch = function () {
@@ -37,6 +39,7 @@
       return oldFetch.apply(window, args);
     };
   </script>
+  <script src="/assets/svelte/sentry.js"></script>
 </head>
 <body>
   {{content}}

@@ -6,6 +6,7 @@ import com.eclipsesource.json.JsonObject;
 import com.eclipsesource.json.JsonValue;
 import com.renomad.minum.templating.TemplateProcessor;
 import com.renomad.minum.web.*;
+import io.sentry.Sentry;
 import tanin.backdoor.core.engine.Engine;
 import tanin.backdoor.core.engine.EngineProvider;
 import tanin.ejwf.MinumBuilder;
@@ -19,7 +20,6 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.*;
-import java.util.logging.LogManager;
 import java.util.logging.Logger;
 import java.util.prefs.BackingStoreException;
 import java.util.stream.Collectors;
@@ -46,13 +46,29 @@ public abstract class BackdoorCoreServer {
 
   private static final Logger logger = Logger.getLogger(BackdoorCoreServer.class.getName());
 
-  static {
-    try (var configFile = BackdoorCoreServer.class.getResourceAsStream("/logging.properties")) {
-      LogManager.getLogManager().readConfiguration(configFile);
-      logger.info("The log config (logging.properties) has been loaded.");
-    } catch (IOException e) {
-      logger.warning("Could not load the log config file (logging.properties): " + e.getMessage());
+  private static boolean isSentryInited = false;
+
+  public static void initSentry(boolean isEnabled) {
+    if (isSentryInited) {
+      return;
     }
+
+    if (isEnabled) {
+      Sentry.init(options -> {
+        options.setEnableExternalConfiguration(true);
+        options.setBeforeSend((event, hint) -> {
+          var user = event.getUser();
+          if (user != null) {
+            user.setIpAddress(null); // Don't log user's IP address.
+          }
+          event.setTag("os_name", System.getProperty("os.name"));
+          event.setTag("os_version", System.getProperty("os.version"));
+          return event;
+        });
+      });
+    }
+
+    isSentryInited = true;
   }
 
   public static String stripeSurroundingDoubleQuotes(String arg) {
@@ -75,12 +91,16 @@ public abstract class BackdoorCoreServer {
   private FullSystem minum;
 
   public EngineProvider engineProvider;
+  public String sentryWebviewDsn;
+  public String sentryRelease;
 
   public BackdoorCoreServer(
     DatabaseConfig[] databaseConfigs,
     int port,
     int sslPort,
-    MinumBuilder.KeyStore keyStore
+    MinumBuilder.KeyStore keyStore,
+    String sentryWebviewDsn,
+    String sentryRelease
   ) {
     this.databaseConfigs = databaseConfigs;
     this.port = port;
@@ -88,6 +108,8 @@ public abstract class BackdoorCoreServer {
     this.keyStore = keyStore;
     this.engineProvider = new EngineProvider() {
     };
+    this.sentryWebviewDsn = sentryWebviewDsn;
+    this.sentryRelease = sentryRelease;
   }
 
   protected abstract User getUserByDatabaseConfig(DatabaseConfig databaseConfig);
@@ -100,11 +122,17 @@ public abstract class BackdoorCoreServer {
     return '"' + sql.replace("\"", "").replace(";", "") + '"';
   }
 
-  public static String makeHtml(String path, String csrfToken, Paradigm paradigm, String appVersion) throws IOException {
+  public String makeHtml(String path, String csrfToken, Paradigm paradigm, String appVersion) throws IOException {
     return makeHtml(path, csrfToken, paradigm, appVersion, null);
   }
 
-  public static String makeHtml(String path, String csrfToken, Paradigm paradigm, String appVersion, JsonObject props) throws IOException {
+  public String makeHtml(
+    String path,
+    String csrfToken,
+    Paradigm paradigm,
+    String appVersion,
+    JsonObject props
+  ) throws IOException {
     var layout = TemplateProcessor.buildProcessor(new String(BackdoorCoreServer.class.getResourceAsStream("/html/layout.html").readAllBytes()));
     var targetHtml = TemplateProcessor.buildProcessor(new String(BackdoorCoreServer.class.getResourceAsStream("/html/" + path).readAllBytes()));
 
@@ -120,7 +148,9 @@ public abstract class BackdoorCoreServer {
         "MODE", Json.value(MinumBuilder.MODE.toString()).toString(),
         "CSRF_TOKEN", Json.value(csrfToken).toString(),
         "APP_VERSION", Json.value(appVersion).toString(),
-        "PARADIGM", Json.value(paradigm.toString()).toString()
+        "PARADIGM", Json.value(paradigm.toString()).toString(),
+        "SENTRY_DSN", Json.value(sentryWebviewDsn).toString(),
+        "SENTRY_RELEASE", Json.value(sentryRelease).toString()
       )
     );
   }
@@ -160,7 +190,8 @@ public abstract class BackdoorCoreServer {
     wf.registerPath(
       POST,
       "api/get-databases",
-      r -> {
+      req -> {
+        var _ignored = req.getBody(); // Need to consume the request body per https://github.com/byronka/minum/issues/26
         var databases = Json.array();
 
         for (var databaseConfig : getAllDatabaseConfigs()) {
@@ -523,7 +554,10 @@ public abstract class BackdoorCoreServer {
     wf.registerPath(
       GET,
       "",
-      this::processIndexPage
+      req -> {
+        var _ignored = req.getBody(); // Need to consume the request body per https://github.com/byronka/minum/issues/26
+        return processIndexPage(req);
+      }
     );
 
     wf.registerPath(

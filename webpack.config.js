@@ -7,12 +7,17 @@ const pathModule = require("path");
 const glob = require('glob');
 const fs = require('fs');
 
-const aptabaseIdPath = './secret/APTABASE_ID';
-let aptabaseId = process.env.APTABASE_ID;
-if (fs.existsSync(aptabaseIdPath)) {
-  aptabaseId = fs.readFileSync(aptabaseIdPath, 'utf8').trim();
+function getProp(envValue, filePath) {
+  if (envValue) {
+    return envValue;
+  } else if (fs.existsSync(filePath)) {
+    return fs.readFileSync(filePath, 'utf8').trim();
+  } else {
+    return null;
+  }
 }
 
+const aptabaseId = getProp(process.env.APTABASE_ID, './secret/APTABASE_ID');
 
 function buildEntry(mode) {
   let entry = {}
@@ -38,6 +43,12 @@ function buildEntry(mode) {
       `webpack-hot-middleware/client?path=/__webpack_hmr&timeout=5000&reload=true`,
       './frontend/stylesheets/tailwindbase.css',
     ]
+    entry[pathModule.join('svelte', 'sentry')] = [
+      `webpack-hot-middleware/client?path=/__webpack_hmr&timeout=5000&reload=true`,
+      './frontend/svelte/sentry.ts',
+    ]
+  } else {
+    entry[pathModule.join('svelte', 'sentry')] = './frontend/svelte/sentry.ts'
   }
 
   return entry
@@ -133,7 +144,7 @@ const config = {
     new MiniCssExtractPlugin(),
     new CamelCaseNamePlugin(),
     new webpack.DefinePlugin({
-      'APTABASE_ID_WEBPACK_REPLACEMENT': JSON.stringify(aptabaseId),
+      'APTABASE_ID_WEBPACK_REPLACEMENT': JSON.stringify(aptabaseId)
     }),
   ],
   output: {

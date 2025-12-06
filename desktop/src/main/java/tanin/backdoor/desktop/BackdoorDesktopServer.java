@@ -27,6 +27,7 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
 
   private static final Logger logger = Logger.getLogger(BackdoorDesktopServer.class.getName());
   private static final String VERSION;
+  public static Properties SENTRY_PROPERTIES = null;
 
   static {
     var properties = new Properties();
@@ -36,6 +37,16 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
     } catch (Exception e) {
       logger.warning("Failed to load version.properties: " + e.getMessage());
       throw new RuntimeException("Failed to load version.properties", e);
+    }
+
+    try (var stream = BackdoorDesktopServer.class.getResourceAsStream("/sentry.properties")) {
+      SENTRY_PROPERTIES = new Properties();
+      SENTRY_PROPERTIES.load(stream);
+    } catch (Exception e) {
+      logger.warning("Failed to load sentry.properties: " + e.getMessage());
+      if (MinumBuilder.MODE == MinumBuilder.Mode.Prod) {
+        throw new RuntimeException("Failed to load sentry.properties", e);
+      }
     }
   }
 
@@ -48,7 +59,14 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
     String authKey,
     MinumBuilder.KeyStore keyStore
   ) {
-    super(new DatabaseConfig[0], -1, sslPort, keyStore);
+    super(
+      new DatabaseConfig[0],
+      -1,
+      sslPort,
+      keyStore,
+      SENTRY_PROPERTIES.getProperty("webviewDsn"),
+      SENTRY_PROPERTIES.getProperty("release")
+    );
     this.authKey = authKey;
     this.engineProvider = new EngineProvider();
   }
@@ -79,7 +97,7 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
       ) {
         // ok
       } else {
-        logger.info("The auth key is invalid. Got: " + authKeyFromQueryString + " and " + authKeyFromCookie);
+        logger.warning("The auth key is invalid.");
         return Response.buildResponse(
           StatusLine.StatusCode.CODE_401_UNAUTHORIZED,
           Map.of("Content-Type", "text/plain"),
@@ -93,6 +111,7 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
         logger.info(request.getRequestLine().getMethod() + " " + request.getRequestLine().getPathDetails().getIsolatedPath() + " " + response.getStatusCode());
         return response;
       } catch (SQLException e) {
+        logger.log(Level.WARNING, request.getRequestLine().getMethod() + " " + request.getRequestLine().getPathDetails().getIsolatedPath() + " raised an error.", e);
         return Response.buildResponse(
           StatusLine.StatusCode.CODE_400_BAD_REQUEST,
           Map.of("Content-Type", "application/json"),
@@ -214,7 +233,7 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
     return Response.buildResponse(
       StatusLine.StatusCode.CODE_200_OK,
       Map.of("Content-Type", "application/json"),
-      Json.object().toString()
+      Json.object().add("ransomstuff", "hello").toString()
     );
   }
 
