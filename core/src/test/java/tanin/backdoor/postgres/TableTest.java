@@ -45,6 +45,9 @@ public class TableTest extends Base {
       );
     }
     go("/");
+    click(tid("database-item"));
+    waitUntil(() -> assertEquals("loaded", elem(tid("database-item")).getDomAttribute("data-database-status")));
+
 
     click(tid("menu-items", "postgres", null, "menu-item-table", "date_time"));
 
@@ -114,6 +117,9 @@ public class TableTest extends Base {
     }
 
     go("/");
+    click(tid("database-item"));
+    waitUntil(() -> assertEquals("loaded", elem(tid("database-item")).getDomAttribute("data-database-status")));
+
 
     click(tid("menu-items", "postgres", null, "menu-item-table", "json_pgvector"));
 
@@ -141,6 +147,9 @@ public class TableTest extends Base {
   @Test
   void createUpdateDropTable() throws InterruptedException {
     go("/");
+    click(tid("database-item"));
+    waitUntil(() -> assertEquals("loaded", elem(tid("database-item")).getDomAttribute("data-database-status")));
+
 
     click(tid("menu-items", "postgres", null, "menu-item-table", "user"));
 
@@ -166,6 +175,8 @@ public class TableTest extends Base {
   @Test
   void editField() throws InterruptedException {
     go("/");
+    click(tid("database-item"));
+    waitUntil(() -> assertEquals("loaded", elem(tid("database-item")).getDomAttribute("data-database-status")));
 
     click(tid("menu-items", "postgres", null, "menu-item-table", "user"));
 
@@ -182,6 +193,9 @@ public class TableTest extends Base {
   @Test
   void deleteRow() throws InterruptedException {
     go("/");
+    click(tid("database-item"));
+    waitUntil(() -> assertEquals("loaded", elem(tid("database-item")).getDomAttribute("data-database-status")));
+
 
     click(tid("menu-items", "postgres", null, "menu-item-table", "user"));
 
@@ -197,6 +211,9 @@ public class TableTest extends Base {
   @Test
   void filterRow() throws InterruptedException {
     go("/");
+    click(tid("database-item"));
+    waitUntil(() -> assertEquals("loaded", elem(tid("database-item")).getDomAttribute("data-database-status")));
+
 
     click(tid("menu-items", "postgres", null, "menu-item-table", "user"));
 
@@ -213,6 +230,9 @@ public class TableTest extends Base {
   @Test
   void sortRow() throws InterruptedException {
     go("/");
+    click(tid("database-item"));
+    waitUntil(() -> assertEquals("loaded", elem(tid("database-item")).getDomAttribute("data-database-status")));
+
 
     click(tid("menu-items", "postgres", null, "menu-item-table", "user"));
 
@@ -272,6 +292,9 @@ public class TableTest extends Base {
     }
 
     go("/");
+    click(tid("database-item"));
+    waitUntil(() -> assertEquals("loaded", elem(tid("database-item")).getDomAttribute("data-database-status")));
+
 
     click(tid("menu-items", "postgres", null, "menu-item-table", "user"));
 

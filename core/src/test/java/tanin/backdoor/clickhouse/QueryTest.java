@@ -9,6 +9,9 @@ public class QueryTest extends Base {
   @Test
   void createRenameUpdateDeleteView() throws InterruptedException {
     go("/");
+    click(tid("database-item", "clickhouse"));
+    waitUntil(() -> assertEquals("loaded", elem(tid("database-item", "clickhouse")).getDomAttribute("data-database-status")));
+
     fillCodeMirror("select * from \"project_setting\" order by user_id asc limit 1");
     select(tid("run-sql-database-select"), "clickhouse");
     click(tid("run-sql-button"));
@@ -62,6 +65,9 @@ public class QueryTest extends Base {
   @Test
   void makeNewSql() throws InterruptedException {
     go("/");
+    click(tid("database-item", "clickhouse"));
+    waitUntil(() -> assertEquals("loaded", elem(tid("database-item", "clickhouse")).getDomAttribute("data-database-status")));
+
     fillCodeMirror("select 1");
     select(tid("run-sql-database-select"), "clickhouse");
     click(tid("run-sql-button"));

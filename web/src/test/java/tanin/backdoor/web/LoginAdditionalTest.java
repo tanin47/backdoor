@@ -39,7 +39,7 @@ public class LoginAdditionalTest extends Base {
     ));
     go("/");
 
-    click(tid("database-lock-item", "clickhouse"));
+    click(tid("database-item", "clickhouse"));
   }
 
   @Test

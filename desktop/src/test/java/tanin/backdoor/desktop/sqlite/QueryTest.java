@@ -9,6 +9,9 @@ public class QueryTest extends Base {
   @Test
   void createRenameUpdateDeleteView() throws InterruptedException {
     go("/");
+    click(tid("database-item"));
+    waitUntil(() -> assertEquals("loaded", elem(tid("database-item")).getDomAttribute("data-database-status")));
+
     fillCodeMirror("select * from \"user\" order by id asc limit 1");
     click(tid("run-sql-button"));
 
@@ -59,6 +62,9 @@ public class QueryTest extends Base {
   @Test
   void makeNewSql() throws InterruptedException {
     go("/");
+    click(tid("database-item"));
+    waitUntil(() -> assertEquals("loaded", elem(tid("database-item")).getDomAttribute("data-database-status")));
+
     fillCodeMirror("select 1");
     click(tid("run-sql-button"));
 

@@ -8,12 +8,13 @@ import {trackEvent} from "./common/tracker";
 import {openFileDialog} from "./common/globals";
 import type {Database, DatabaseType} from "./common/models";
 
-export let onEdited: () => Promise<void>
+export let onEdited: (nickname: string) => Promise<void>
 
 let modal: HTMLDialogElement;
 let mainInput: HTMLInputElement;
 let databaseType: DatabaseType;
 
+let comeFromError_: boolean;
 let isLoading = false
 let errors: string[] = []
 
@@ -35,11 +36,12 @@ function determineDatabaseType(url: string): DatabaseType {
   }
 }
 
-export function open(database: Database): void {
+export function open(database: Database, comeFromError: boolean = false): void {
   if (!database.isAdHoc) {
     return;
   }
 
+  comeFromError_ = comeFromError
   isLoading = false
   errors = []
 
@@ -79,7 +81,7 @@ async function submit() {
     const json = await post('/api/update-data-source', form)
 
     trackEvent('data-source-updated')
-    await onEdited()
+    await onEdited(form.nickname)
     modal.close()
   } catch (e) {
     isLoading = false
@@ -87,14 +89,23 @@ async function submit() {
   }
 }
 
+(window as any).SET_URL_FOR_TESTING = (url: string) => {
+  form.url = url;
+}
+
 </script>
 
 <dialog
   bind:this={modal}
   class="modal2"
-  data-test-id="edit-modal"
+  data-test-id="edit-data-source-modal"
 >
   <div class="modal-box !min-w-[480px] !w-auto flex flex-col gap-4" onkeydown={invokeOnEnter(submit)}>
+    {#if comeFromError_}
+      <div class="text-warning text-sm">
+        Unable to connect to the data source. Please update the data source's information and try again.
+      </div>
+    {/if}
     <input
       type="text"
       class="input input-sm w-full"

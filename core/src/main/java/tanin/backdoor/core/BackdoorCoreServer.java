@@ -159,7 +159,7 @@ public abstract class BackdoorCoreServer {
 
     wf.registerPath(
       POST,
-      "api/get-relations",
+      "api/get-databases",
       r -> {
         var databases = Json.array();
 
@@ -178,20 +178,6 @@ public abstract class BackdoorCoreServer {
             );
           }
 
-          try (var engine = makeEngine(databaseConfig)) {
-            var tablesJson = Json.array();
-
-            var tables = engine.getTables();
-            for (var table : tables) {
-              tablesJson.add(table);
-            }
-
-            databaseJson.add("tables", tablesJson);
-            databaseJson.add("requireLogin", false);
-          } catch (Engine.InvalidCredentialsException e) {
-            databaseJson.add("requireLogin", true);
-          }
-
           databases.add(databaseJson);
         }
 
@@ -199,6 +185,35 @@ public abstract class BackdoorCoreServer {
           StatusLine.StatusCode.CODE_200_OK,
           Map.of("Content-Type", "application/json"),
           Json.object().add("databases", databases).toString()
+        );
+      }
+    );
+
+    wf.registerPath(
+      POST,
+      "api/get-tables",
+      req -> {
+        var json = Json.parse(req.getBody().asString());
+        var database = json.asObject().get("database").asString();
+
+        var tablesJson = Json.array();
+        try (var engine = makeEngine(database)) {
+          var tables = engine.getTables();
+          for (var table : tables) {
+            tablesJson.add(table);
+          }
+        } catch (Exception e) {
+          return Response.buildResponse(
+            StatusLine.StatusCode.CODE_400_BAD_REQUEST,
+            Map.of("Content-Type", "application/json"),
+            Json.object().add("errors", Json.array("Unable to load the database. May require username and password.")).toString()
+          );
+        }
+
+        return Response.buildResponse(
+          StatusLine.StatusCode.CODE_200_OK,
+          Map.of("Content-Type", "application/json"),
+          Json.object().add("tables", tablesJson).toString()
         );
       }
     );
@@ -625,7 +640,7 @@ public abstract class BackdoorCoreServer {
           );
         }
 
-        var allAdHocDataSourceConfigs = Arrays.stream(getAllDatabaseConfigs()).filter(d -> d.isAdHoc).toArray(DatabaseConfig[]::new);
+        var allAdHocDataSourceConfigs = getAdHocDatabaseConfigs();
         var found = Arrays.stream(allAdHocDataSourceConfigs)
           .filter(d -> d.nickname.equals(originalNickname))
           .findFirst()
