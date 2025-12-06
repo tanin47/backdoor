@@ -1,3 +1,4 @@
 version.properties
+sentry.properties
 libMacOsApi.dylib
 WindowsApi.dll

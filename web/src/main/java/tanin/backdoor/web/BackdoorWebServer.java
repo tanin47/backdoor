@@ -16,6 +16,7 @@ import java.sql.SQLException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static com.renomad.minum.web.RequestLine.Method.*;
@@ -27,6 +28,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
   private static final String AUTH_COOKIE_KEY = "backdoor";
   private static final Set<RequestLine.Method> CSRF_READ_METHODS = new HashSet<>(List.of(GET, HEAD, OPTIONS));
   private static final String VERSION;
+  public static Properties SENTRY_PROPERTIES = null;
 
   static {
     var properties = new Properties();
@@ -36,6 +38,14 @@ public class BackdoorWebServer extends BackdoorCoreServer {
     } catch (Exception e) {
       logger.warning("Failed to load version.properties: " + e.getMessage());
       throw new RuntimeException("Failed to load version.properties", e);
+    }
+
+    try (var stream = BackdoorWebServer.class.getResourceAsStream("/sentry.properties")) {
+      SENTRY_PROPERTIES = new Properties();
+      SENTRY_PROPERTIES.load(stream);
+    } catch (Exception e) {
+      logger.warning("Failed to load sentry.properties: " + e.getMessage());
+      throw new RuntimeException("Failed to load sentry.properties", e);
     }
   }
 
@@ -51,7 +61,14 @@ public class BackdoorWebServer extends BackdoorCoreServer {
     User[] users,
     String secretKey
   ) {
-    super(databaseConfigs, port, sslPort, null);
+    super(
+      databaseConfigs,
+      port,
+      sslPort,
+      null,
+      SENTRY_PROPERTIES.getProperty("dsn"),
+      SENTRY_PROPERTIES.getProperty("release")
+    );
     this.secretKey = secretKey;
 
     if (users != null) {
@@ -174,14 +191,6 @@ public class BackdoorWebServer extends BackdoorCoreServer {
     "{}"
   );
 
-  IResponse decideAuthError(IRequest req) {
-    if (req.getRequestLine().getMethod() == RequestLine.Method.GET) {
-      return REDIRECT_AUTH_RESP;
-    } else {
-      return POST_AUTH_RESP;
-    }
-  }
-
   void checkAuth(IRequest req) throws Exception {
     var path = req.getRequestLine().getPathDetails().getIsolatedPath();
 
@@ -254,7 +263,11 @@ public class BackdoorWebServer extends BackdoorCoreServer {
       try {
         checkAuth(request);
       } catch (AuthFailureException e) {
-        return decideAuthError(request);
+        if (request.getRequestLine().getMethod() == RequestLine.Method.GET) {
+          return REDIRECT_AUTH_RESP;
+        } else {
+          return POST_AUTH_RESP;
+        }
       }
 
       var method = request.getRequestLine().getMethod();
@@ -273,6 +286,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
         try {
           response = inputs.endpoint().apply(inputs.clientRequest());
         } catch (SQLException e) {
+          logger.log(Level.WARNING, request.getRequestLine().getMethod() + " " + request.getRequestLine().getPathDetails().getIsolatedPath() + " raised an error.", e);
           return Response.buildResponse(
             StatusLine.StatusCode.CODE_400_BAD_REQUEST,
             Map.of("Content-Type", "application/json"),
@@ -281,6 +295,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
               .toString()
           );
         } catch (EarlyExitException e) {
+          logger.log(Level.SEVERE, request.getRequestLine().getMethod() + " " + request.getRequestLine().getPathDetails().getIsolatedPath() + " raised an error.", e);
           return e.response;
         }
       } else {

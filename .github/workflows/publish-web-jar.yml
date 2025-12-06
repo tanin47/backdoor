@@ -54,6 +54,8 @@ jobs:
         run: ./gradlew clean :web:publish
         env:
           APTABASE_ID: ${{ secrets.APTABASE_ID }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SENTRY_WEBVIEW_DSN: ${{ secrets.SENTRY_WEBVIEW_DSN }}
       - name: Publish to Sonatype
         run: ./gradlew :web:jreleaserDeploy
         env:

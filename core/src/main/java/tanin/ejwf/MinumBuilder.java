@@ -61,7 +61,7 @@ public class MinumBuilder {
       !isPackaged && (
         Files.exists(Path.of("./local_dev_marker.ejwf")) ||
           Files.exists(Path.of("../local_dev_marker.ejwf"))
-        )
+      )
     ) {
       return Mode.Dev;
     } else {

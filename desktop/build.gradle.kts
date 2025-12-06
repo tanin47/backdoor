@@ -42,24 +42,27 @@ val macDeveloperApplicationCertName = if (isNotarizing) {
 } else {
     "3rd Party Mac Developer Application: Tanin Na Nakorn (S6482XAL5E)"
 }
-val appleEmail = if (System.getenv("APPLE_EMAIL") != null) {
-    System.getenv("APPLE_EMAIL")
-} else {
+
+fun getSecret(envKey: String, filePath: String, required: Boolean): String {
+    if (System.getenv(envKey) != null) {
+        return System.getenv(envKey)
+    }
+
     try {
-        project.file("../secret/APPLE_EMAIL").readText().trim()
+        return project.file(filePath).readText().trim()
     } catch (e: Exception) {
-        "The-apple-email-is-not-specified"
+        if (required) {
+            throw Exception("Unable to read the secret from the env `$envKey` or from the file `$filePath`")
+        } else {
+            return "not-specified"
+        }
     }
 }
-val appleAppSpecificPassword = if (System.getenv("APPLE_APP_SPECIFIC_PASSWORD") != null) {
-    System.getenv("APPLE_APP_SPECIFIC_PASSWORD")
-} else {
-    try {
-        project.file("../secret/APPLE_APP_SPECIFIC_PASSWORD").readText().trim()
-    } catch (e: Exception) {
-        "The-apple-app-specific-password-is-not-specified"
-    }
-}
+
+val appleEmail = getSecret("APPLE_EMAIL", "../secret/APPLE_EMAIL", false)
+val appleAppSpecificPassword = getSecret("APPLE_APP_SPECIFIC_PASSWORD", "../secret/APPLE_APP_SPECIFIC_PASSWORD", false)
+val sentryDsn = getSecret("SENTRY_DSN", "../secret/SENTRY_DSN", true)
+val sentryWebviewDsn = getSecret("SENTRY_WEBVIEW_DSN", "../secret/SENTRY_WEBVIEW_DSN", true)
 
 val teamId = "S6482XAL5E"
 val appName = "Backdoor"
@@ -134,9 +137,23 @@ tasks.register("compileSwift") {
     }
 }
 
-tasks.register("writeVersion") {
+tasks.register("writeVersionAndSentryProperties") {
     doLast {
         file("src/main/resources/version.properties").writeText("version=${project.version}")
+
+        val isDev = gradle.startParameter.taskNames.find { s ->
+            s.lowercase().contains("run") || s.lowercase().contains("test")
+        } != null
+
+        file("src/main/resources/sentry.properties").writeText(
+            listOf(
+                "dsn=${sentryDsn}",
+                "webviewDsn=${sentryWebviewDsn}",
+                "environment=${if (isDev) "Dev" else "Prod"}",
+                "send-default-pii=true",
+                "release=backdoor-desktop@${internalVersion}"
+            ).joinToString("\n")
+        )
     }
 }
 
@@ -146,7 +163,7 @@ tasks.named<JavaCompile>("compileJava") {
     } else if (currentOS == OS.WINDOWS) {
         dependsOn("compileWindowsApi")
     }
-    dependsOn("writeVersion")
+    dependsOn("writeVersionAndSentryProperties")
     options.compilerArgs.addAll(
         listOf(
             "--add-exports",

@@ -92,6 +92,8 @@ jobs:
           SSL_COM_USERNAME: ${{ secrets.SSL_COM_USERNAME }}
           SSL_COM_PASSWORD: ${{ secrets.SSL_COM_PASSWORD }}
           SSL_COM_TOTP_SECRET: ${{ secrets.SSL_COM_TOTP_SECRET }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SENTRY_WEBVIEW_DSN: ${{ secrets.SENTRY_WEBVIEW_DSN }}
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v2
         with:

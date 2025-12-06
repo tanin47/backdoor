@@ -62,6 +62,8 @@ jobs:
           ./gradlew --no-daemon :web:jacocoTestReport :core:jacocoTestReport
         env:
           HEADLESS: true
+          SENTRY_DSN: 'dummy'
+          SENTRY_WEBVIEW_DSN: 'dummy'
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         env:
@@ -149,6 +151,8 @@ jobs:
           ./gradlew --no-daemon :desktop:jacocoTestReport
         env:
           HEADLESS: true
+          SENTRY_DSN: 'dummy'
+          SENTRY_WEBVIEW_DSN: 'dummy'
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         env:
@@ -195,6 +199,8 @@ jobs:
           ./gradlew --no-daemon :desktop:jacocoTestReport
         env:
           HEADLESS: true
+          SENTRY_DSN: 'dummy'
+          SENTRY_WEBVIEW_DSN: 'dummy'
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         env:

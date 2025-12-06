@@ -11,6 +11,25 @@ plugins {
     id("com.gradleup.shadow") version "9.2.2"
 }
 
+fun getSecret(envKey: String, filePath: String, required: Boolean): String {
+    if (System.getenv(envKey) != null) {
+        return System.getenv(envKey)
+    }
+
+    try {
+        return project.file(filePath).readText().trim()
+    } catch (e: Exception) {
+        if (required) {
+            throw Exception("Unable to read the secret from the env `$envKey` or from the file `$filePath`")
+        } else {
+            return "not-specified"
+        }
+    }
+}
+
+val sentryDsn = getSecret("SENTRY_DSN", "../secret/SENTRY_DSN", true)
+val sentryWebviewDsn = getSecret("SENTRY_WEBVIEW_DSN", "../secret/SENTRY_WEBVIEW_DSN", true)
+
 group = "tanin.backdoor"
 version = "2.4.0-rc1"
 
@@ -64,9 +83,23 @@ dependencies {
     testImplementation("org.seleniumhq.selenium:selenium-java:4.36.0")
 }
 
-tasks.register("writeVersion") {
+tasks.register("writeVersionAndSentryProperties") {
     doLast {
         file("src/main/resources/version.properties").writeText("version=${project.version}")
+
+        val isDev = gradle.startParameter.taskNames.find { s ->
+            s.lowercase().contains("run") || s.lowercase().contains("test")
+        } != null
+
+        file("src/main/resources/sentry.properties").writeText(
+            listOf(
+                "dsn=${sentryDsn}",
+                "webviewDsn=${sentryWebviewDsn}",
+                "environment=${if (isDev) "Dev" else "Prod"}",
+                "send-default-pii=true",
+                "release=backdoor-web@${project.version}"
+            ).joinToString("\n")
+        )
     }
 }
 
@@ -86,7 +119,7 @@ tasks.named<Test>("test") {
 }
 
 tasks.compileJava {
-    dependsOn("writeVersion")
+    dependsOn("writeVersionAndSentryProperties")
 }
 
 application {

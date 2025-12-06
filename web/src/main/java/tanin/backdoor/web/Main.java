@@ -1,5 +1,6 @@
 package tanin.backdoor.web;
 
+import tanin.backdoor.core.BackdoorCoreServer;
 import tanin.backdoor.core.DatabaseConfig;
 import tanin.backdoor.core.EncryptionHelper;
 import tanin.backdoor.core.User;
@@ -15,6 +16,8 @@ import static tanin.backdoor.core.BackdoorCoreServer.stripeSurroundingDoubleQuot
 public class Main {
 
   public static void main(String[] args) throws SQLException, NoSuchAlgorithmException, KeyManagementException {
+    BackdoorCoreServer.initSentry(BackdoorWebServer.SENTRY_PROPERTIES != null);
+
     var databaseConfigs = new ArrayList<DatabaseConfig>();
     int port = 0;
     int sslPort = 0;

@@ -8,7 +8,6 @@ export type Paradigm = 'CORE' | 'WEB' | 'DESKTOP';
 // @ts-expect-error defined globally
 export const PARADIGM: string = window.PARADIGM;
 
-
 const NAMES = [
   "acacia",
   "alder",
