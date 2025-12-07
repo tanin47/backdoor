@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   build-core-web:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     services:
       postgres:
         image: pgvector/pgvector:pg16
@@ -82,7 +82,7 @@ jobs:
           path: '**/build/failed-screenshots/'
 
   build-desktop-mac:
-    runs-on: macos-latest
+    runs-on: macos-14
 
     steps:
       - name: Checkout
@@ -171,7 +171,7 @@ jobs:
           path: '**/build/failed-screenshots/'
 
   build-desktop-win:
-    runs-on: windows-latest
+    runs-on: windows-2022
 
     steps:
       - name: Checkout

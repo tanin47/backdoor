@@ -99,6 +99,7 @@ tasks.register<Exec>("compileWindowsApi") {
 
     commandLine(
         "gcc",
+        "-g",
         "-shared",
         "-o",
         "./src/main/resources/native/WindowsApi.dll",
