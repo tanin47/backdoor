@@ -5,9 +5,16 @@ import java.util.logging.Logger;
 
 public class SqlHistoryManager {
   private static final Logger logger = Logger.getLogger(SqlHistoryManager.class.getName());
-  private static final String DB_URL = "jdbc:sqlite:sql_history.db";
+  private static final String DB_URL;
 
   static {
+    try {
+      DB_URL = "jdbc:sqlite:" + AppDataFolder.getAppDataFolder().toPath().resolve("sql_history.db").toFile().getAbsolutePath();
+      logger.info("SqlHistoryManager data is stored at: " + DB_URL);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+
     try {
       DriverManager.registerDriver(new org.sqlite.JDBC());
       logger.info("Registered the SQLite driver");

@@ -65,7 +65,7 @@ val appName = "Backdoor"
 val packageIdentifier = "tanin.backdoor.desktop.macos"
 group = "tanin.backdoor.desktop"
 version = "1.1"
-val internalVersion = "1.1.1"
+val internalVersion = "1.1.2"
 
 java {
     toolchain {
@@ -536,6 +536,7 @@ tasks.register("bareJpackage") {
             )
         } else if (currentOS == OS.WINDOWS) {
             listOf(
+                "--icon", layout.projectDirectory.dir("win-resources").file("Backdoor.ico").asFile.absolutePath,
                 "--type", "msi",
                 "--win-menu",
                 "--win-shortcut"
@@ -699,28 +700,33 @@ tasks.register<Exec>("convertToPkg") {
 tasks.register<Exec>("validatePkg") {
     dependsOn("convertToPkg")
     inputs.file(tasks.named("convertToPkg").get().outputs.files.singleFile)
-    commandLine(
-        "/usr/bin/xcrun",
-        "altool",
-        "--validate-app",
-        "-f", inputs.files.singleFile.absolutePath,
-        "-t", "osx",
-        "-u", appleEmail!!,
-        "-p", appleAppSpecificPassword!!
-    )
+
+    doLast {
+        runCmd(
+            "/usr/bin/xcrun",
+            "altool",
+            "--validate-app",
+            "-f", inputs.files.singleFile.absolutePath,
+            "-t", "osx",
+            "-u", appleEmail!!,
+            "-p", appleAppSpecificPassword!!
+        )
+    }
 }
 
 
 tasks.register<Exec>("uploadPkgToAppStore") {
     dependsOn("validatePkg")
     inputs.file(tasks.named("convertToPkg").get().outputs.files.singleFile)
-    commandLine(
-        "/usr/bin/xcrun",
-        "altool",
-        "--upload-app",
-        "-f", inputs.files.singleFile.absolutePath,
-        "-t", "osx",
-        "-u", appleEmail!!,
-        "-p", appleAppSpecificPassword!!
-    )
+    doLast {
+        runCmd(
+            "/usr/bin/xcrun",
+            "altool",
+            "--upload-app",
+            "-f", inputs.files.singleFile.absolutePath,
+            "-t", "osx",
+            "-u", appleEmail!!,
+            "-p", appleAppSpecificPassword!!
+        )
+    }
 }
