@@ -705,8 +705,8 @@ tasks.register<Exec>("validatePkg") {
         "--validate-app",
         "-f", inputs.files.singleFile.absolutePath,
         "-t", "osx",
-        "-u", appleEmail,
-        "-p", appleAppSpecificPassword
+        "-u", appleEmail!!,
+        "-p", appleAppSpecificPassword!!
     )
 }
 
@@ -720,7 +720,7 @@ tasks.register<Exec>("uploadPkgToAppStore") {
         "--upload-app",
         "-f", inputs.files.singleFile.absolutePath,
         "-t", "osx",
-        "-u", appleEmail,
-        "-p", appleAppSpecificPassword
+        "-u", appleEmail!!,
+        "-p", appleAppSpecificPassword!!
     )
 }
