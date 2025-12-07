@@ -43,7 +43,7 @@ val macDeveloperApplicationCertName = if (isNotarizing) {
     "3rd Party Mac Developer Application: Tanin Na Nakorn (S6482XAL5E)"
 }
 
-fun getSecret(envKey: String, filePath: String, required: Boolean): String {
+fun getSecret(envKey: String, filePath: String): String? {
     if (System.getenv(envKey) != null) {
         return System.getenv(envKey)
     }
@@ -51,18 +51,14 @@ fun getSecret(envKey: String, filePath: String, required: Boolean): String {
     try {
         return project.file(filePath).readText().trim()
     } catch (e: Exception) {
-        if (required) {
-            throw Exception("Unable to read the secret from the env `$envKey` or from the file `$filePath`")
-        } else {
-            return "not-specified"
-        }
+        return null
     }
 }
 
-val appleEmail = getSecret("APPLE_EMAIL", "../secret/APPLE_EMAIL", false)
-val appleAppSpecificPassword = getSecret("APPLE_APP_SPECIFIC_PASSWORD", "../secret/APPLE_APP_SPECIFIC_PASSWORD", false)
-val sentryDsn = getSecret("SENTRY_DSN", "../secret/SENTRY_DSN", true)
-val sentryWebviewDsn = getSecret("SENTRY_WEBVIEW_DSN", "../secret/SENTRY_WEBVIEW_DSN", true)
+val appleEmail = getSecret("APPLE_EMAIL", "../secret/APPLE_EMAIL")
+val appleAppSpecificPassword = getSecret("APPLE_APP_SPECIFIC_PASSWORD", "../secret/APPLE_APP_SPECIFIC_PASSWORD")
+val sentryDsn = getSecret("SENTRY_DSN", "../secret/SENTRY_DSN")
+val sentryWebviewDsn = getSecret("SENTRY_WEBVIEW_DSN", "../secret/SENTRY_WEBVIEW_DSN")
 
 val teamId = "S6482XAL5E"
 val appName = "Backdoor"
@@ -147,8 +143,8 @@ tasks.register("writeVersionAndSentryProperties") {
 
         file("src/main/resources/sentry.properties").writeText(
             listOf(
-                "dsn=${sentryDsn}",
-                "webviewDsn=${sentryWebviewDsn}",
+                "dsn=${sentryDsn!!}",
+                "webviewDsn=${sentryWebviewDsn!!}",
                 "environment=${if (isDev) "Dev" else "Prod"}",
                 "send-default-pii=true",
                 "release=backdoor-desktop@${internalVersion}"
@@ -661,8 +657,8 @@ tasks.register<Exec>("notarize") {
         "notarytool",
         "submit",
         "--wait",
-        "--apple-id", appleEmail,
-        "--password", appleAppSpecificPassword,
+        "--apple-id", appleEmail!!,
+        "--password", appleAppSpecificPassword!!,
         "--team-id", teamId,
         inputs.files.singleFile.absolutePath,
     )

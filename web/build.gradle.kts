@@ -11,7 +11,7 @@ plugins {
     id("com.gradleup.shadow") version "9.2.2"
 }
 
-fun getSecret(envKey: String, filePath: String, required: Boolean): String {
+fun getSecret(envKey: String, filePath: String): String? {
     if (System.getenv(envKey) != null) {
         return System.getenv(envKey)
     }
@@ -19,16 +19,12 @@ fun getSecret(envKey: String, filePath: String, required: Boolean): String {
     try {
         return project.file(filePath).readText().trim()
     } catch (e: Exception) {
-        if (required) {
-            throw Exception("Unable to read the secret from the env `$envKey` or from the file `$filePath`")
-        } else {
-            return "not-specified"
-        }
+        return null
     }
 }
 
-val sentryDsn = getSecret("SENTRY_DSN", "../secret/SENTRY_DSN", true)
-val sentryWebviewDsn = getSecret("SENTRY_WEBVIEW_DSN", "../secret/SENTRY_WEBVIEW_DSN", true)
+val sentryDsn = getSecret("SENTRY_DSN", "../secret/SENTRY_DSN")
+val sentryWebviewDsn = getSecret("SENTRY_WEBVIEW_DSN", "../secret/SENTRY_WEBVIEW_DSN")
 
 group = "tanin.backdoor"
 version = "2.4.0-rc2"
@@ -93,8 +89,8 @@ tasks.register("writeVersionAndSentryProperties") {
 
         file("src/main/resources/sentry.properties").writeText(
             listOf(
-                "dsn=${sentryDsn}",
-                "webviewDsn=${sentryWebviewDsn}",
+                "dsn=${sentryDsn!!}",
+                "webviewDsn=${sentryWebviewDsn!!}",
                 "environment=${if (isDev) "Dev" else "Prod"}",
                 "send-default-pii=true",
                 "release=backdoor-web@${project.version}"
