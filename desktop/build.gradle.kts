@@ -362,9 +362,9 @@ private fun codesignInJar(jarFile: File, nativeLibPath: File) {
     tmpDir.walk()
         .filter { it.isFile && isCodesignable(it) }
         .forEach { libFile ->
+            codesign(libFile)
+
             if (isValidLibFile(libFile)) {
-                println("")
-                codesign(libFile)
                 runCmd("cp", libFile.absolutePath, nativeLibPath.absolutePath)
             }
 
