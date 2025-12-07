@@ -63,8 +63,8 @@ jobs:
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v2
         with:
-          draft: true
-          prerelease: true
+          draft: false
+          prerelease: false
           files: ./web/build/staging-deploy/io/github/tanin47/backdoor/**/*
           overwrite_files: true
           fail_on_unmatched_files: true

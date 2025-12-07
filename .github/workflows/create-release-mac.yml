@@ -106,8 +106,8 @@ jobs:
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v2
         with:
-          draft: true
-          prerelease: true
+          draft: false
+          prerelease: false
           files: ./desktop/build/dmg/*.dmg
           overwrite_files: true
           append_body: false
