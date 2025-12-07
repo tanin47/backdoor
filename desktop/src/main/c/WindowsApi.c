@@ -25,6 +25,8 @@ __declspec(dllexport) char* openFileDialog(long hwnd, bool isSaved) {
   ofn.lpstrTitle = isSaved ? "Select a file to save" : "Select a file to open";
   ofn.Flags = isSaved ? OFN_OVERWRITEPROMPT : (OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST);
 
+  printf("Opening the file dialog...\n");
+  fflush(stdout);
   bool result = isSaved ? GetSaveFileName(&ofn) : GetOpenFileName(&ofn);
 
   // Display the Open dialog box
