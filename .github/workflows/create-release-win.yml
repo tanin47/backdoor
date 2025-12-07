@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: windows-2022
     defaults:
       run:
         shell: msys2 {0}
@@ -25,11 +25,12 @@ jobs:
     steps:
       - uses: msys2/setup-msys2@v2
         with:
+          msystem: UCRT64
           update: true
           install: >-
             curl
             git 
-            gcc
+            mingw-w64-ucrt-x86_64-gcc
             unzip
       - name: Checkout
         uses: actions/checkout@v4
