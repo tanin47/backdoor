@@ -44,8 +44,8 @@ Desktop app version (great for personal use)
 
 | Platform              | Direct Download                                                                                 | App Store                                                                                                                               |
 |-----------------------|-------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|
-| MacOS (Apple Silicon) | 🟢 [Link](https://github.com/tanin47/backdoor/releases/download/desktop-1.1.2/Backdoor-1.1.dmg) | [![Download from Mac App Store](./readme/download-button.svg)](https://apps.apple.com/us/app/backdoor-database-tool/id6755612631?mt=12) |
-| Windows               | 🟢 [Link](https://github.com/tanin47/backdoor/releases/download/desktop-1.1.2/Backdoor-1.1.msi) | 🟡 In Progress                                                                                                                          |
+| MacOS (Apple Silicon) | 🟢 [Link](https://github.com/tanin47/backdoor/releases/download/desktop-1.1.3/Backdoor-1.1.dmg) | [![Download from Mac App Store](./readme/download-button.svg)](https://apps.apple.com/us/app/backdoor-database-tool/id6755612631?mt=12) |
+| Windows               | 🟢 [Link](https://github.com/tanin47/backdoor/releases/download/desktop-1.1.3/Backdoor-1.1.msi) | 🟡 In Progress                                                                                                                          |
 | Linux                 | 🟡 In Progress                                                                                  | N/A                                                                                                                                     |
 | MacOS (Intel)         | 🔜 Coming Soon                                                                                  | 🔜 Coming Soon                                                                                                                          |
 
