@@ -65,7 +65,7 @@ val appName = "Backdoor"
 val packageIdentifier = "tanin.backdoor.desktop.macos"
 group = "tanin.backdoor.desktop"
 version = "1.1"
-val internalVersion = "1.1.2"
+val internalVersion = "1.1.3"
 
 java {
     toolchain {
@@ -300,24 +300,34 @@ private fun runCmd(vararg args: String): String {
     return runCmd(layout.projectDirectory.asFile, *args)
 }
 
-private fun codesign(file: File, useRuntimeEntitlement: Boolean = false) {
+
+enum class EntitlementType {
+    NoEntitlement,
+    MainEntitlement,
+    RuntimeEntitlement
+}
+
+private fun codesign(file: File, entitlementType: EntitlementType = EntitlementType.NoEntitlement) {
     if (currentOS == OS.MAC) {
+        val entitlementArgs = when (entitlementType) {
+            EntitlementType.NoEntitlement -> emptyList()
+            EntitlementType.MainEntitlement -> listOf("--entitlements", "entitlements.plist")
+            EntitlementType.RuntimeEntitlement -> listOf("--entitlements", "runtime-entitlements.plist")
+        }
+
         runCmd(
-            "codesign",
-            "-vvvv",
-            "--options",
-            "runtime",
-            "--entitlements",
-            if (useRuntimeEntitlement) {
-                "runtime-entitlements.plist"
-            } else {
-                "entitlements.plist"
-            },
-            "--timestamp",
-            "--force",
-            "--sign",
-            macDeveloperApplicationCertName,
-            file.absolutePath,
+            *(listOf(
+                "codesign",
+                "-vvvv",
+                "--options",
+                "runtime",
+            ) + entitlementArgs + listOf(
+                "--timestamp",
+                "--force",
+                "--sign",
+                macDeveloperApplicationCertName,
+                file.absolutePath,
+            )).toTypedArray()
         )
     }
 }
@@ -406,11 +416,11 @@ tasks.register("codesignLibsInJars") {
 }
 
 
-private fun codesignDir(dir: File, useRuntimeEntitlement: Boolean = false) {
+private fun codesignDir(dir: File) {
     dir.walk()
         .filter { it.isFile && isCodesignable(it) }
         .forEach { libFile ->
-            codesign(libFile, useRuntimeEntitlement)
+            codesign(libFile, EntitlementType.NoEntitlement)
         }
 }
 
@@ -429,7 +439,7 @@ tasks.register("macosCodesignProvisionprofile") {
         codesign(provisionprofileDir.file("embedded.provisionprofile").asFile)
 
         removeQuarantine(provisionprofileDir.file("runtime.provisionprofile").asFile)
-        codesign(provisionprofileDir.file("runtime.provisionprofile").asFile, useRuntimeEntitlement = true)
+        codesign(provisionprofileDir.file("runtime.provisionprofile").asFile)
     }
 }
 
@@ -589,10 +599,14 @@ tasks.register("jpackageForMac") {
             outputAppFile.resolve("Contents/runtime/Contents/embedded.provisionprofile").toPath()
         )
 
-        codesignDir(outputAppFile.resolve("Contents/runtime"), useRuntimeEntitlement = true)
+        codesignDir(outputAppFile.resolve("Contents/runtime"))
 
-        codesign(outputAppFile.resolve("Contents/runtime"), useRuntimeEntitlement = true)
-        codesign(outputAppFile)
+        codesign(
+            outputAppFile.resolve("Contents/runtime/Contents/Home/lib/jspawnhelper"),
+            EntitlementType.RuntimeEntitlement
+        )
+        codesign(outputAppFile.resolve("Contents/runtime"))
+        codesign(outputAppFile, EntitlementType.MainEntitlement)
 
         outputDmgDir.deleteRecursively()
         outputDmgDir.mkdirs()
@@ -698,12 +712,13 @@ tasks.register<Exec>("convertToPkg") {
 }
 
 
-tasks.register<Exec>("validatePkg") {
+tasks.register("validatePkg") {
     dependsOn("convertToPkg")
     inputs.file(tasks.named("convertToPkg").get().outputs.files.singleFile)
 
     doLast {
         runCmd(
+            layout.projectDirectory.asFile,
             "/usr/bin/xcrun",
             "altool",
             "--validate-app",
@@ -716,11 +731,12 @@ tasks.register<Exec>("validatePkg") {
 }
 
 
-tasks.register<Exec>("uploadPkgToAppStore") {
+tasks.register("uploadPkgToAppStore") {
     dependsOn("validatePkg")
     inputs.file(tasks.named("convertToPkg").get().outputs.files.singleFile)
     doLast {
         runCmd(
+            layout.projectDirectory.asFile,
             "/usr/bin/xcrun",
             "altool",
             "--upload-app",
