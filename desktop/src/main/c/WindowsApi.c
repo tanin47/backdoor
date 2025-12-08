@@ -1,5 +1,6 @@
 #include <windows.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
 
 char* getStringFromC(char *input) {
