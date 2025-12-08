@@ -8,8 +8,7 @@ import tanin.backdoor.desktop.nativeinterface.WindowsApi;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static tanin.backdoor.desktop.nativeinterface.WebviewNative.N;
-import static tanin.backdoor.desktop.nativeinterface.WebviewNative.WV_HINT_FIXED;
+import static tanin.backdoor.desktop.nativeinterface.WebviewNative.*;
 
 public class Browser {
   private static final Logger logger = Logger.getLogger(Browser.class.getName());
@@ -30,7 +29,8 @@ public class Browser {
     }
 
     this.pointer = N.webview_create(this.isDebug, null);
-    N.webview_set_size(this.pointer, 1000, 600, WV_HINT_FIXED);
+    N.webview_set_size(this.pointer, 1000, 600, WV_HINT_NONE);
+    N.webview_set_title(this.pointer, "Backdoor");
     N.webview_navigate(this.pointer, this.url);
 
     Signal.handle(new Signal("INT"), sig -> terminate());
