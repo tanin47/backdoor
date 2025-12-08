@@ -25,8 +25,10 @@ jobs:
     steps:
       - uses: msys2/setup-msys2@v2
         with:
+          # ucrt64 is for modern windows.
           msystem: UCRT64
           update: true
+          # gcc is not the same as mingw-w64-ucrt-x86_64-gcc and is not for building a linked dll.
           install: >-
             curl
             git 
