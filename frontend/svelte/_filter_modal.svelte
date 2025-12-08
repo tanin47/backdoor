@@ -72,7 +72,7 @@ async function submit() {
 
   isLoading = true
 
-  const newFilters = sheet.filters;
+  const newFilters = [...sheet.filters];
   const foundIndex = newFilters.findIndex(f => f.name === currentColumn!.name)
 
   if (foundIndex >= 0) {
@@ -98,6 +98,7 @@ async function submit() {
     })
 
     modal.close()
+    json.sheet.filters = newFilters
     onSheetUpdated(json.sheet)
     trackEvent('column-filtered')
   } catch (e) {

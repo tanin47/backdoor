@@ -121,9 +121,10 @@ async function submit(): Promise<void> {
   <div class="flex gap-2 items-center text-xs p-1">
     <Button
       {isLoading}
-      class="btn btn-xs btn-ghost flex items-center gap-2 px-2"
+      class="btn btn-xs btn-ghost flex items-center gap-2 px-2 group"
       onClick={async () => { await submit() }}
       dataTestId="run-sql-button"
+      disabled={validDatabases.length === 0}
     >
       <i class="ph ph-play"></i>
       <span>
@@ -132,9 +133,24 @@ async function submit(): Promise<void> {
         {:else}
           Run SQL
         {/if}
-        <span class="text-xs text-gray-400 tracking-[1px] ps-1">⌘⏎</span>
+        <span class="text-xs text-gray-400 group-disabled:opacity-20 tracking-[1px] ps-1">⌘⏎</span>
       </span>
     </Button>
+    {#if validDatabases.length > 0}
+      <div class="pb-[1px] flex items-center gap-0">
+        {#if selectedQuery}
+          <span class="text-xs">[{selectedQuery.database}]</span>
+        {:else}
+          <select class="select-sm outline-0 hover:bg-base-200 rounded py-1 cursor-pointer"
+                  bind:value={selectedDatabaseName}
+                  data-test-id="run-sql-database-select">
+            {#each validDatabases as database (database.nickname)}
+              <option value={database.nickname}>{database.nickname}</option>
+            {/each}
+          </select>
+        {/if}
+      </div>
+    {/if}
   </div>
   <div class="flex items-center gap-1">
     <Button
@@ -145,25 +161,19 @@ async function submit(): Promise<void> {
       <i class="ph ph-clock-counter-clockwise"></i>
       <span>History</span>
     </Button>
-    <div class="pe-2 pb-[2px] flex items-center gap-0">
-      {#if selectedQuery}
-        <span class="text-xs">[{selectedQuery.database}]</span>
-      {:else}
-        <select class="select-sm outline-0 hover:bg-base-200 rounded py-1 cursor-pointer"
-                bind:value={selectedDatabaseName}
-                data-test-id="run-sql-database-select">
-          {#each validDatabases as database (database.nickname)}
-            <option value={database.nickname}>{database.nickname}</option>
-          {/each}
-        </select>
-      {/if}
-    </div>
   </div>
 </div>
 <div class="grow border-t border-neutral relative">
-  <div class="absolute top-0 left-0 right-0 bottom-0">
+  <div class="absolute top-0 left-0 right-0 bottom-0" class:invisible={validDatabases.length === 0}>
     <textarea bind:this={editorTextarea} placeholder="Compose a beautiful SQL..."></textarea>
   </div>
+  {#if validDatabases.length === 0}
+    <div class="absolute top-0 left-0 right-0 bottom-0 p-2 flex items-center justify-center">
+      <div class="italic text-neutral">
+        Connect at least one data source on the left panel to start writing a SQL.
+      </div>
+    </div>
+  {/if}
 </div>
 
 <style>

@@ -78,7 +78,6 @@ export class Sheet implements BaseSheet {
   columns: Column[] = [];
   stats: Stats = {numberOfRows: 0};
   rows: any[][] = [];
-  isLoading: boolean = false;
   sorts: Sort[] = [];
   filters: Filter[] = [];
   errors: string[] = [];

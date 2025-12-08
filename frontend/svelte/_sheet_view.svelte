@@ -144,7 +144,6 @@ let dropTableModal: DropTableModal
 let filterModal: FilterModal
 let virtualListUpdate: number = 0
 
-
 let isLoading = false
 
 async function loadMore(): Promise<void> {
@@ -290,16 +289,23 @@ function handleResize(event: MouseEvent) {
     </div>
   {/if}
 {/if}
-<div class="flex flex-col grow w-full items-stretch overflow-hidden relative" data-test-id="sheet-view-content">
+<div
+  class="flex flex-col grow w-full items-stretch overflow-hidden relative"
+  data-test-id="sheet-view-content"
+>
   {#if sheet === null}
-    <div class="text-lg p-6 text-neutral italic h-full w-full flex justify-center items-center">
+    <div class="p-6 text-neutral italic h-full w-full flex justify-center items-center">
       Select a table on the left panel or write your first SQL in the bottom panel.
     </div>
-  {:else if sheet.isLoading}
-    <progress class="progress w-full opacity-50"></progress>
   {:else if sheet.errors.length > 0}
     <ErrorPanel errors={sheet.errors} />
   {:else}
+    {#if isLoading}
+      <div class="absolute top-0 left-0 right-0 bottom-0 p-2 flex items-center justify-center z-50">
+        <div class="absolute top-0 left-0 right-0 bottom-0 bg-black opacity-70"></div>
+        <progress class="progress w-1/2 z-50"></progress>
+      </div>
+    {/if}
     {@const primaryKeyColumnIndex = sheet.getPrimaryKeyColumnIndex()}
     {@const totalWidth = columnWidths.reduce((sum, width) => sum + width, numberColumnWidth)}
     {#key virtualListUpdate}
