@@ -17,7 +17,8 @@ permissions:
 
 jobs:
   build:
-    runs-on: macos-14
+    # A dylib code-signed on macos-14 doesn't work on macos-15. It could be that macos-15 had a stricter requirement.
+    runs-on: macos-15
 
     steps:
       - name: Checkout
