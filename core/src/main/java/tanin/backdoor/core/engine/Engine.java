@@ -52,6 +52,23 @@ public abstract class Engine implements AutoCloseable {
   public DatabaseConfig databaseConfig;
   public Connection connection;
 
+  public abstract static class Value {
+  }
+
+  public static class UseDefaultValue extends Value {
+  }
+
+  public static class UseNull extends Value {
+  }
+
+  public static class UseSpecifiedValue extends Value {
+    public final String value;
+
+    public UseSpecifiedValue(String value) {
+      this.value = value;
+    }
+  }
+
   protected Engine(DatabaseConfig config, User overwritingUser) throws SQLException, URISyntaxException, InvalidCredentialsException, OverwritingUserAndCredentialedJdbcConflictedException, UnreachableServerException, InvalidDatabaseNameProbablyException, GenericConnectionException {
     this.databaseConfig = config;
 
@@ -77,7 +94,7 @@ public abstract class Engine implements AutoCloseable {
 
   public abstract String[] getTables() throws SQLException;
 
-  public abstract void insert(String table, Column[] columns, String[] values) throws Exception;
+  public abstract void insert(String table, Column[] columns, Engine.Value[] values) throws Exception;
 
   public abstract void update(String table, Column column, String newValue, Filter[] filters) throws Exception;
 

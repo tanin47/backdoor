@@ -110,32 +110,89 @@ public class TableTest extends Base {
     waitUntil(() -> assertFalse(hasElem(tid("menu-items", "sqlite", null, "menu-item-table", "user_new_name"))));
   }
 
-
   @Test
-  void insertRow() throws Exception {
+  void insertRowDefault() throws Exception {
+    try (var engine = server.engineProvider.createEngine(sqliteConfig, null)) {
+      engine.connection.createStatement().execute(
+        """
+          CREATE TABLE "test_table" (
+            id INT PRIMARY KEY,
+            with_default_value TEXT NOT NULL DEFAULT 'some_default',
+            nullable_field TEXT,
+            required_field TEXT NOT NULL
+          )
+          """
+      );
+    }
+
     go("/");
     click(tid("database-item"));
     waitUntil(() -> assertEquals("loaded", elem(tid("database-item")).getDomAttribute("data-database-status")));
 
-    click(tid("menu-items", "sqlite", null, "menu-item-table", "user"));
+    click(tid("menu-items", "sqlite", null, "menu-item-table", "test_table"));
 
-    waitUntil(() -> assertTrue(hasElem(tid("sheet-tab", "user"))));
+    waitUntil(() -> assertTrue(hasElem(tid("sheet-tab", "test_table"))));
     click(tid("insert-row-button"));
 
-    fill(tid("insert-field", "id"), "1234");
-    fill(tid("insert-field", "username"), "inserted-username");
-    fill(tid("insert-field", "password"), "inserted-password");
+    fill(tid("insert-field", "required_field"), "some_required");
     click(tid("submit-button"));
     waitUntil(() -> assertFalse(hasElem(tid("submit-button"))));
 
     click(tid("close-button"));
     try (var engine = server.engineProvider.createEngine(sqliteConfig, null)) {
       var conn = engine.connection;
-      var rs = conn.createStatement().executeQuery("SELECT id, username, password FROM \"user\" WHERE id = '1234'");
+      var rs = conn.createStatement().executeQuery("SELECT id, with_default_value, nullable_field, required_field FROM \"test_table\"");
       rs.next();
-      assertEquals(1234, rs.getInt(1));
-      assertEquals("inserted-username", rs.getString(2));
-      assertEquals("inserted-password", rs.getString(3));
+      assertEquals(0, rs.getInt(1));
+      assertEquals("some_default", rs.getString(2));
+      assertNull(rs.getString(3));
+      assertEquals("some_required", rs.getString(4));
+    }
+  }
+
+  @Test
+  void insertRowNonDefault() throws Exception {
+    try (var pg = server.engineProvider.createEngine(sqliteConfig, null)) {
+      pg.connection.createStatement().execute(
+        """
+          CREATE TABLE "test_table" (
+            id INT PRIMARY KEY,
+            with_default_value TEXT NOT NULL DEFAULT 'some_default',
+            nullable_field TEXT,
+            required_field TEXT NOT NULL
+          )
+          """
+      );
+    }
+
+    go("/");
+    click(tid("database-item"));
+    waitUntil(() -> assertEquals("loaded", elem(tid("database-item")).getDomAttribute("data-database-status")));
+
+    click(tid("menu-items", "sqlite", null, "menu-item-table", "test_table"));
+
+    waitUntil(() -> assertTrue(hasElem(tid("sheet-tab", "test_table"))));
+    click(tid("insert-row-button"));
+
+    click(tid("default-toggle-button", "id"));
+    fill(tid("insert-field", "id"), "12");
+    click(tid("default-toggle-button", "with_default_value"));
+    fill(tid("insert-field", "with_default_value"), "non-default");
+    click(tid("null-toggle-button", "nullable_field"));
+    fill(tid("insert-field", "nullable_field"), "non-null");
+    fill(tid("insert-field", "required_field"), "some_required");
+    click(tid("submit-button"));
+    waitUntil(() -> assertFalse(hasElem(tid("submit-button"))));
+
+    click(tid("close-button"));
+    try (var pg = server.engineProvider.createEngine(sqliteConfig, null)) {
+      var conn = pg.connection;
+      var rs = conn.createStatement().executeQuery("SELECT id, with_default_value, nullable_field, required_field FROM \"test_table\"");
+      rs.next();
+      assertEquals(12, rs.getInt(1));
+      assertEquals("non-default", rs.getString(2));
+      assertEquals("non-null", rs.getString(3));
+      assertEquals("some_required", rs.getString(4));
     }
   }
 
