@@ -77,6 +77,8 @@ public abstract class Engine implements AutoCloseable {
 
   public abstract String[] getTables() throws SQLException;
 
+  public abstract void insert(String table, Column[] columns, String[] values) throws Exception;
+
   public abstract void update(String table, Column column, String newValue, Filter[] filters) throws Exception;
 
   public abstract void delete(String table, Filter[] filters) throws Exception;

@@ -4,6 +4,10 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.JavascriptExecutor;
 import tanin.backdoor.Base;
+import tanin.backdoor.core.engine.Engine;
+
+import java.net.URISyntaxException;
+import java.sql.SQLException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -170,6 +174,34 @@ public class TableTest extends Base {
 
     waitUntil(() -> assertFalse(hasElem(tid("sheet-tab", "user_new_name"))));
     waitUntil(() -> assertFalse(hasElem(tid("menu-items", "postgres", null, "menu-item-table", "user_new_name"))));
+  }
+
+  @Test
+  void insertRow() throws Exception {
+    go("/");
+    click(tid("database-item"));
+    waitUntil(() -> assertEquals("loaded", elem(tid("database-item")).getDomAttribute("data-database-status")));
+
+    click(tid("menu-items", "postgres", null, "menu-item-table", "user"));
+
+    waitUntil(() -> assertTrue(hasElem(tid("sheet-tab", "user"))));
+    click(tid("insert-row-button"));
+
+    fill(tid("insert-field", "id"), "1234");
+    fill(tid("insert-field", "username"), "inserted-username");
+    fill(tid("insert-field", "password"), "inserted-password");
+    click(tid("submit-button"));
+    waitUntil(() -> assertFalse(hasElem(tid("submit-button"))));
+
+    click(tid("close-button"));
+    try (var pg = server.engineProvider.createEngine(postgresConfig, null)) {
+      var conn = pg.connection;
+      var rs = conn.createStatement().executeQuery("SELECT id, username, password FROM \"user\" WHERE id = '1234'");
+      rs.next();
+      assertEquals(1234, rs.getInt(1));
+      assertEquals("inserted-username", rs.getString(2));
+      assertEquals("inserted-password", rs.getString(3));
+    }
   }
 
   @Test

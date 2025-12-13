@@ -3,6 +3,7 @@ import ErrorPanel from "./common/form/_error_panel.svelte";
 import type {Sheet, Sort, SortDirection} from "./common/models";
 import VirtualTable, {type Item} from 'svelte-virtual-table-by-tanin';
 import EditModal from './_edit_modal.svelte';
+import InsertModal from './_insert_modal.svelte';
 import DeleteModal from './_delete_modal.svelte';
 import DropTableModal from './_drop_table_modal.svelte';
 import RenameTableModal from './_rename_table_modal.svelte';
@@ -135,6 +136,7 @@ function getRowHeight(values: any[]) {
   return height;
 }
 
+let insertModal: InsertModal
 let editModal: EditModal
 let deleteModal: DeleteModal
 let renameQueryModal: RenameQueryModal
@@ -266,7 +268,7 @@ function handleResize(event: MouseEvent) {
     </div>
   {:else}
     <div class="flex flex-row gap-4 items-center justify-between text-xs px-2 py-1 bg-base-300 border-b border-neutral whitespace-nowrap">
-      <div class="flex gap-2 items-center">
+      <div class="flex gap-2 items-baseline">
         <div data-test-id="sheet-stats">
           Count: {sheet.stats.numberOfRows}
           {#if sheet.rows.length === sheet.stats.numberOfRows}
@@ -275,8 +277,11 @@ function handleResize(event: MouseEvent) {
             (Show {sheet.rows.length} rows)
           {/if}
         </div>
+        {#if sheet.type === 'table'}
+          <Button class="btn btn-xs btn-ghost text-success p-0" onClick={async () => {insertModal.open()}} dataTestId="insert-row-button">Insert Row</Button>
+        {/if}
       </div>
-      <div class="flex gap-4 items-center">
+      <div class="flex gap-4 items-baseline">
         <div>[{sheet.database}]</div>
         {#if sheet.type === 'table'}
           <Button class="btn btn-xs btn-ghost text-warning p-0" onClick={async () => {renameTableModal.open()}} dataTestId="rename-table-button">Rename Table</Button>
@@ -439,6 +444,10 @@ function handleResize(event: MouseEvent) {
 </div>
 
 {#if sheet}
+  <InsertModal
+    bind:this={insertModal}
+    {sheet}
+  ></InsertModal>
   <EditModal
     bind:this={editModal}
     {sheet}
