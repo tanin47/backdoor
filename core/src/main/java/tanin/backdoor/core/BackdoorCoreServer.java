@@ -277,6 +277,38 @@ public abstract class BackdoorCoreServer {
 
     wf.registerPath(
       POST,
+      "api/insert-row",
+      req -> {
+        var json = Json.parse(req.getBody().asString());
+        var database = json.asObject().get("database").asString();
+        var tableName = json.asObject().get("table").asString();
+        var row = json.asObject().get("row").asObject();
+
+        try (var engine = makeEngine(database)) {
+          var columns = engine.getColumns(tableName);
+          var values = Arrays.stream(columns).map(c -> {
+            var v = row.get(c.name);
+            if (v == null || v.isNull()) {
+              return null;
+            } else {
+              return v.asString();
+            }
+          }).toArray(String[]::new);
+          engine.insert(tableName, columns, values);
+
+          return Response.buildResponse(
+            StatusLine.StatusCode.CODE_200_OK,
+            Map.of("Content-Type", "application/json"),
+            Json
+              .object()
+              .toString()
+          );
+        }
+      }
+    );
+
+    wf.registerPath(
+      POST,
       "api/update-field",
       req -> {
         var json = Json.parse(req.getBody().asString());

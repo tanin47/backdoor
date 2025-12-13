@@ -156,6 +156,37 @@ public class TableTest extends Base {
   }
 
   @Test
+  void insertRow() throws Exception {
+    go("/");
+    click(tid("database-item", "clickhouse"));
+    waitUntil(() -> assertEquals("loaded", elem(tid("database-item", "clickhouse")).getDomAttribute("data-database-status")));
+
+    click(tid("menu-items", "clickhouse", null, "menu-item-table", "project_setting"));
+
+    waitUntil(() -> assertTrue(hasElem(tid("sheet-tab", "project_setting"))));
+    click(tid("insert-row-button"));
+
+    fill(tid("insert-field", "user_id"), "u1");
+    fill(tid("insert-field", "project_id"), "p1");
+    fill(tid("insert-field", "some_value"), "99");
+    click(tid("submit-button"));
+    waitUntil(() -> assertFalse(hasElem(tid("submit-button"))));
+
+    click(tid("close-button"));
+    try (var engine = server.engineProvider.createEngine(clickHouseConfig, null)) {
+      var conn = engine.connection;
+      var rs = conn.createStatement().executeQuery(
+        "SELECT user_id, project_id, item_id, some_value FROM project_setting WHERE user_id = 'u1'"
+      );
+      rs.next();
+      assertEquals("u1", rs.getString(1));
+      assertEquals("p1", rs.getString(2));
+      assertNull(rs.getString(3));
+      assertEquals(99, rs.getInt(4));
+    }
+  }
+
+  @Test
   void editField() throws InterruptedException {
     go("/");
     click(tid("database-item", "clickhouse"));

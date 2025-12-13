@@ -13,6 +13,7 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.logging.Logger;
 
 import static org.sqlite.SQLiteErrorCode.SQLITE_NOTADB;
@@ -92,6 +93,28 @@ public class SqliteEngine extends Engine {
       }
     }
     return tables.toArray(new String[0]);
+  }
+
+  @Override
+  public void insert(String table, Column[] columns, String[] values) throws Exception {
+    execute(
+      "INSERT INTO " + makeSqlName(table) + "(" +
+        String.join(",", Arrays.stream(columns).map(c -> makeSqlName(c.name)).toArray(String[]::new)) +
+        ") VALUES (" +
+        String.join(
+          ",",
+          Arrays.stream(values)
+            .map(v -> {
+              if (v == null) {
+                return "NULL";
+              } else {
+                return makeSqlLiteral(v);
+              }
+            })
+            .toArray(String[]::new)
+        ) +
+        ")"
+    );
   }
 
   @Override

@@ -138,7 +138,7 @@ public class Base {
       conn.createStatement().execute(
         """
           CREATE TABLE "user" (
-            id INT PRIMARY KEY,
+            id INT PRIMARY KEY NOT NULL,
             username VARCHAR(255) NOT NULL UNIQUE,
             password VARCHAR(255) NOT NULL
           )
