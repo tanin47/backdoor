@@ -22,7 +22,9 @@ async function submit(): Promise<void> {
     const _json = await post('/login', form)
 
     window.location.href = '/'
+    trackEvent('login-succeeded')
   } catch (e) {
+    trackEvent('login-failed')
     isLoading = false
     errors = (e as FetchError).messages
     altcha.reset()

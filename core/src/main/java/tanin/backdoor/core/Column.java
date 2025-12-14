@@ -21,14 +21,24 @@ public class Column {
   int maxCharacterLength;
   boolean isPrimaryKey;
   boolean isNullable;
+  boolean hasDefaultValue;
 
-  public Column(String name, ColumnType type, String rawType, int maxCharacterLength, boolean isPrimaryKey, boolean isNullable) {
+  public Column(
+    String name,
+    ColumnType type,
+    String rawType,
+    int maxCharacterLength,
+    boolean isPrimaryKey,
+    boolean isNullable,
+    boolean hasDefaultValue
+  ) {
     this.name = name;
     this.type = type;
     this.rawType = rawType;
     this.maxCharacterLength = maxCharacterLength;
     this.isPrimaryKey = isPrimaryKey;
     this.isNullable = isNullable;
+    this.hasDefaultValue = hasDefaultValue;
   }
 
   JsonObject toJson() {
@@ -38,6 +48,7 @@ public class Column {
       .add("rawType", rawType)
       .add("maxCharacterLength", maxCharacterLength)
       .add("isPrimaryKey", isPrimaryKey)
-      .add("isNullable", isNullable);
+      .add("isNullable", isNullable)
+      .add("hasDefaultValue", hasDefaultValue);
   }
 }

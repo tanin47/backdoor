@@ -26,6 +26,7 @@ export interface Column {
   maxCharacterLength: number;
   isPrimaryKey: boolean;
   isNullable: boolean;
+  hasDefaultValue: boolean
 }
 
 export interface Stats {

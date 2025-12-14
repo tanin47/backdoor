@@ -287,13 +287,17 @@ public abstract class BackdoorCoreServer {
         try (var engine = makeEngine(database)) {
           var columns = engine.getColumns(tableName);
           var values = Arrays.stream(columns).map(c -> {
-            var v = row.get(c.name);
-            if (v == null || v.isNull()) {
-              return null;
+            var v = row.get(c.name).asObject();
+            var useDefaultValue = v.get("useDefaultValue").asBoolean();
+            var isNull = v.get("isNull").asBoolean();
+            if (useDefaultValue) {
+              return new Engine.UseDefaultValue();
+            } else if (isNull) {
+              return new Engine.UseNull();
             } else {
-              return v.asString();
+              return new Engine.UseSpecifiedValue(v.get("value").asString());
             }
-          }).toArray(String[]::new);
+          }).toArray(Engine.Value[]::new);
           engine.insert(tableName, columns, values);
 
           return Response.buildResponse(
@@ -461,7 +465,8 @@ public abstract class BackdoorCoreServer {
                 rawType,
                 colName.length(),
                 false,
-                metaData.isNullable(i) == ResultSetMetaData.columnNullable
+                metaData.isNullable(i) == ResultSetMetaData.columnNullable,
+                false
               ));
             }
 
@@ -479,6 +484,7 @@ public abstract class BackdoorCoreServer {
               Column.ColumnType.INTEGER,
               "int",
               colName.length(),
+              false,
               false,
               false
             );

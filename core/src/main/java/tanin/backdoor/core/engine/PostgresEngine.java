@@ -99,7 +99,8 @@ public class PostgresEngine extends Engine {
   public Column[] getColumns(String table) throws SQLException {
     var rs = executeQuery(
       "SELECT c.column_name, c.data_type, c.is_nullable, " +
-        "CASE WHEN tc.constraint_type = 'PRIMARY KEY' THEN true ELSE false END as is_primary_key " +
+        "CASE WHEN tc.constraint_type = 'PRIMARY KEY' THEN true ELSE false END as is_primary_key, " +
+        "CASE WHEN c.column_default IS NOT NULL OR c.identity_generation IS NOT NULL OR c.generation_expression IS NOT NULL THEN true ELSE false END as has_default_value " +
         "FROM information_schema.columns c " +
         "LEFT JOIN information_schema.key_column_usage kcu " +
         "ON c.table_schema = kcu.table_schema " +
@@ -115,13 +116,15 @@ public class PostgresEngine extends Engine {
     while (rs.next()) {
       var name = rs.getString("column_name");
       var rawType = rs.getString("data_type");
+      var hasDefaultValue = rs.getBoolean("has_default_value");
       columns.add(new Column(
         name,
         convertRawType(rawType),
         rawType,
         name.length(),
         rs.getBoolean("is_primary_key"),
-        rs.getString("is_nullable").equals("YES")
+        rs.getString("is_nullable").equals("YES") && !hasDefaultValue,
+        hasDefaultValue
       ));
     }
     return columns.toArray(new Column[0]);
@@ -140,19 +143,34 @@ public class PostgresEngine extends Engine {
   }
 
   @Override
-  public void insert(String table, Column[] columns, String[] values) throws Exception {
+  public void insert(String table, Column[] columns, Engine.Value[] values) throws Exception {
+    var insertedColumns = new ArrayList<Column>();
+    var insertedValues = new ArrayList<Value>();
+
+    for (var i = 0; i < columns.length; i++) {
+      if (values[i] instanceof Engine.UseDefaultValue) {
+        // do nothing
+      } else {
+        insertedColumns.add(columns[i]);
+        insertedValues.add(values[i]);
+      }
+    }
+
     execute(
       "INSERT INTO " + makeSqlName(table) + "(" +
-        String.join(",", Arrays.stream(columns).map(c -> makeSqlName(c.name)).toArray(String[]::new)) +
+        String.join(",", insertedColumns.stream().map(c -> makeSqlName(c.name)).toArray(String[]::new)) +
         ") VALUES (" +
         String.join(
           ",",
-          Arrays.stream(values)
+          insertedValues
+            .stream()
             .map(v -> {
-              if (v == null) {
+              if (v instanceof Engine.UseNull) {
                 return "NULL";
+              } else if (v instanceof Engine.UseSpecifiedValue) {
+                return makeSqlLiteral(((UseSpecifiedValue) v).value);
               } else {
-                return makeSqlLiteral(v);
+                throw new RuntimeException();
               }
             })
             .toArray(String[]::new)

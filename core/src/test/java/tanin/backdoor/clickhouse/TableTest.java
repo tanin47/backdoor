@@ -156,33 +156,90 @@ public class TableTest extends Base {
   }
 
   @Test
-  void insertRow() throws Exception {
+  void insertRowDefault() throws Exception {
+    try (var engine = server.engineProvider.createEngine(clickHouseConfig, null)) {
+      engine.connection.createStatement().execute(
+        """
+          CREATE TABLE "test_table" (
+            id UUID DEFAULT generateUUIDv4(),
+            with_default_value String DEFAULT 'some_default',
+            nullable_field Nullable(String),
+            required_field String
+          )
+          ENGINE = ReplacingMergeTree()
+          ORDER BY (id)
+          PRIMARY KEY (id);
+          """
+      );
+    }
     go("/");
     click(tid("database-item", "clickhouse"));
     waitUntil(() -> assertEquals("loaded", elem(tid("database-item", "clickhouse")).getDomAttribute("data-database-status")));
 
-    click(tid("menu-items", "clickhouse", null, "menu-item-table", "project_setting"));
+    click(tid("menu-items", "clickhouse", null, "menu-item-table", "test_table"));
 
-    waitUntil(() -> assertTrue(hasElem(tid("sheet-tab", "project_setting"))));
+    waitUntil(() -> assertTrue(hasElem(tid("sheet-tab", "test_table"))));
     click(tid("insert-row-button"));
 
-    fill(tid("insert-field", "user_id"), "u1");
-    fill(tid("insert-field", "project_id"), "p1");
-    fill(tid("insert-field", "some_value"), "99");
+    fill(tid("insert-field", "required_field"), "some_required");
     click(tid("submit-button"));
     waitUntil(() -> assertFalse(hasElem(tid("submit-button"))));
 
     click(tid("close-button"));
     try (var engine = server.engineProvider.createEngine(clickHouseConfig, null)) {
-      var conn = engine.connection;
-      var rs = conn.createStatement().executeQuery(
-        "SELECT user_id, project_id, item_id, some_value FROM project_setting WHERE user_id = 'u1'"
+      var rs = engine.connection.createStatement().executeQuery(
+        "SELECT with_default_value, nullable_field, required_field FROM test_table"
       );
       rs.next();
-      assertEquals("u1", rs.getString(1));
-      assertEquals("p1", rs.getString(2));
-      assertNull(rs.getString(3));
-      assertEquals(99, rs.getInt(4));
+      assertEquals("some_default", rs.getString(1));
+      assertNull(rs.getString(2));
+      assertEquals("some_required", rs.getString(3));
+    }
+  }
+
+  @Test
+  void insertRowNonDefault() throws Exception {
+    try (var engine = server.engineProvider.createEngine(clickHouseConfig, null)) {
+      engine.connection.createStatement().execute(
+        """
+          CREATE TABLE "test_table" (
+            id UUID DEFAULT generateUUIDv4(),
+            with_default_value String DEFAULT 'some_default',
+            nullable_field Nullable(String),
+            required_field String
+          )
+          ENGINE = ReplacingMergeTree()
+          ORDER BY (id)
+          PRIMARY KEY (id);
+          """
+      );
+    }
+    go("/");
+    click(tid("database-item", "clickhouse"));
+    waitUntil(() -> assertEquals("loaded", elem(tid("database-item", "clickhouse")).getDomAttribute("data-database-status")));
+
+    click(tid("menu-items", "clickhouse", null, "menu-item-table", "test_table"));
+
+    waitUntil(() -> assertTrue(hasElem(tid("sheet-tab", "test_table"))));
+    click(tid("insert-row-button"));
+
+    click(tid("default-toggle-button", "with_default_value"));
+    fill(tid("insert-field", "with_default_value"), "non-default");
+    click(tid("null-toggle-button", "nullable_field"));
+    fill(tid("insert-field", "nullable_field"), "non-null");
+    fill(tid("insert-field", "required_field"), "some_required");
+    click(tid("submit-button"));
+    waitUntil(() -> assertFalse(hasElem(tid("submit-button"))));
+
+    click(tid("close-button"));
+    try (var engine = server.engineProvider.createEngine(clickHouseConfig, null)) {
+      var rs = engine.connection.createStatement().executeQuery(
+        "SELECT with_default_value, nullable_field, required_field FROM test_table"
+      );
+      rs.next();
+      assertEquals("non-default", rs.getString(1));
+      assertEquals("non-null", rs.getString(2));
+      assertEquals("some_required", rs.getString(3));
     }
   }
 

@@ -76,20 +76,22 @@ public class ClickHouseEngine extends Engine {
 
     var columns = new ArrayList<Column>();
     rs = executeQuery(
-      "select name, type, is_in_primary_key FROM system.columns WHERE database = " +
+      "select name, type, is_in_primary_key, default_kind FROM system.columns WHERE database = " +
         makeSqlLiteral(databaseName) + " AND `table` = " + makeSqlLiteral(table) +
         " ORDER BY position ASC;"
     );
     while (rs.next()) {
       var name = rs.getString("name");
       var rawType = rs.getString("type");
+      var hasDefaultValue = !rs.getString("default_kind").isEmpty();
       columns.add(new Column(
         name,
         convertRawType(rawType),
         rawType,
         name.length(),
         rs.getInt("is_in_primary_key") == 1,
-        rawType.startsWith("Nullable(")
+        rawType.startsWith("Nullable(") && !hasDefaultValue,
+        hasDefaultValue
       ));
     }
 
@@ -110,19 +112,33 @@ public class ClickHouseEngine extends Engine {
   }
 
   @Override
-  public void insert(String table, Column[] columns, String[] values) throws Exception {
+  public void insert(String table, Column[] columns, Engine.Value[] values) throws Exception {
+    var insertedColumns = new ArrayList<Column>();
+    var insertedValues = new ArrayList<Value>();
+
+    for (var i = 0; i < columns.length; i++) {
+      if (values[i] instanceof Engine.UseDefaultValue) {
+        // do nothing
+      } else {
+        insertedColumns.add(columns[i]);
+        insertedValues.add(values[i]);
+      }
+    }
     execute(
       "INSERT INTO " + makeSqlName(table) + "(" +
-        String.join(",", Arrays.stream(columns).map(c -> makeSqlName(c.name)).toArray(String[]::new)) +
+        String.join(",", insertedColumns.stream().map(c -> makeSqlName(c.name)).toArray(String[]::new)) +
         ") VALUES (" +
         String.join(
           ",",
-          Arrays.stream(values)
+          insertedValues
+            .stream()
             .map(v -> {
-              if (v == null) {
+              if (v instanceof Engine.UseNull) {
                 return "NULL";
+              } else if (v instanceof Engine.UseSpecifiedValue) {
+                return makeSqlLiteral(((UseSpecifiedValue) v).value);
               } else {
-                return makeSqlLiteral(v);
+                throw new RuntimeException();
               }
             })
             .toArray(String[]::new)
