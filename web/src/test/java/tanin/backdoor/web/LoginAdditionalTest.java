@@ -4,7 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.Cookie;
 import tanin.backdoor.core.DatabaseConfig;
-import tanin.backdoor.core.User;
+import tanin.backdoor.core.DatabaseUser;
 
 import java.sql.SQLException;
 import java.time.Instant;
@@ -31,7 +31,9 @@ public class LoginAdditionalTest extends Base {
     webDriver.manage().addCookie(new Cookie(
       "backdoor",
       BackdoorWebServer.makeAuthCookieValueForUser(
-        new User[]{new User("backdoor_test_user", "test", "postgres")},
+        null,
+        null,
+        new DatabaseUser[]{new DatabaseUser("backdoor_test_user", "test", "postgres")},
         new DatabaseConfig[0],
         server.secretKey,
         Instant.now().plus(1, ChronoUnit.DAYS)

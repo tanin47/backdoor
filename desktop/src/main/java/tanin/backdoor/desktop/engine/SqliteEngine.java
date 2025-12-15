@@ -33,14 +33,14 @@ public class SqliteEngine extends Engine {
     }
   }
 
-  SqliteEngine(DatabaseConfig config, User overwritingUser) throws SQLException, URISyntaxException, InvalidCredentialsException, OverwritingUserAndCredentialedJdbcConflictedException, UnreachableServerException, InvalidDatabaseNameProbablyException, GenericConnectionException {
+  SqliteEngine(DatabaseConfig config, DatabaseUser overwritingUser) throws SQLException, URISyntaxException, InvalidCredentialsException, OverwritingUserAndCredentialedJdbcConflictedException, UnreachableServerException, InvalidDatabaseNameProbablyException, GenericConnectionException {
     super(config, overwritingUser);
   }
 
   String filePath;
 
   @Override
-  protected void connect(DatabaseConfig config, User overwritingUser) throws SQLException, GenericConnectionException {
+  protected void connect(DatabaseConfig config, DatabaseUser overwritingUser) throws SQLException, GenericConnectionException {
     filePath = config.jdbcUrl.substring("jdbc:sqlite:".length());
     try {
       if (Base.CURRENT_OS == Base.OperatingSystem.MAC) {

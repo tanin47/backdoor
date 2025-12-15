@@ -149,3 +149,9 @@ export class Sheet implements BaseSheet {
     this.deletedRowIndices.clear();
   }
 }
+
+export interface DbUser {
+  id: string;
+  username: string;
+  passwordExpiredAt: number | null;
+}

@@ -13,8 +13,9 @@ import org.openqa.selenium.logging.LogType;
 import org.openqa.selenium.logging.LoggingPreferences;
 import org.openqa.selenium.support.ui.Select;
 import tanin.backdoor.core.DatabaseConfig;
-import tanin.backdoor.core.User;
+import tanin.backdoor.core.DatabaseUser;
 import tanin.ejwf.MinumBuilder;
+import tanin.migratedb.MigrateDb;
 
 import java.io.File;
 import java.net.URISyntaxException;
@@ -33,7 +34,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class Base {
   static final Logger logger = Logger.getLogger(Base.class.getName());
-  User loggedInUser = new User("backdoor", "test");
+  CommandLineUser loggedInUser = new CommandLineUser("backdoor", "test");
+  static String BACKDOOR_POSTGRES_DATABASE_URL = "postgres://backdoor_test_user:test@127.0.0.1:5432/backdoor_test";
   static String POSTGRES_DATABASE_URL = "postgres://127.0.0.1:5432/backdoor_test";
   static String CLICKHOUSE_DATABASE_URL = "jdbc:ch://127.0.0.1:8123/backdoor_test";
 
@@ -44,6 +46,7 @@ public class Base {
 
   public WebDriver webDriver;
   BackdoorWebServer server;
+  BackdoorUserService backdoorUserService = new BackdoorUserService(BACKDOOR_POSTGRES_DATABASE_URL);
   boolean shouldLoggedIn = true;
 
   @RegisterExtension
@@ -179,6 +182,10 @@ public class Base {
         }
       }
     }
+
+    try (var migrateDb = new MigrateDb(BACKDOOR_POSTGRES_DATABASE_URL, new MigrateDb.MigrateScriptDir(BackdoorWebServer.class, "/sql"))) {
+      migrateDb.migrate();
+    }
   }
 
   @BeforeEach
@@ -188,6 +195,7 @@ public class Base {
       .addDatabaseConfig(clickHouseConfig.nickname, clickHouseConfig.jdbcUrl, clickHouseConfig.username, clickHouseConfig.password)
       .withPort(PORT)
       .addUser(loggedInUser.username(), loggedInUser.password())
+      .withBackdoorDatabaseJdbcUrl(BACKDOOR_POSTGRES_DATABASE_URL)
       .withSecretKey("fakesecretkey")
       .build();
     resetDatabase();
@@ -199,7 +207,9 @@ public class Base {
       webDriver.manage().addCookie(new Cookie(
         "backdoor",
         BackdoorWebServer.makeAuthCookieValueForUser(
-          new User[]{loggedInUser},
+          null,
+          loggedInUser,
+          null,
           new DatabaseConfig[0],
           server.secretKey,
           Instant.now().plus(1, ChronoUnit.DAYS)

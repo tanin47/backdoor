@@ -12,7 +12,7 @@ services:
         value: 9999
       - key: DATABASE_URL
         fromDatabase:
-          name: backdoor-postgres-for-testing
+          name: backdoor-postgres-for-testing-2
           property: connectionString
       # IMPORTANT: Delete this environment variable and set it on Render dashboard instead for security
       - key: SECRET_KEY

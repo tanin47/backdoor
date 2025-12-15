@@ -69,7 +69,7 @@ public abstract class Engine implements AutoCloseable {
     }
   }
 
-  protected Engine(DatabaseConfig config, User overwritingUser) throws SQLException, URISyntaxException, InvalidCredentialsException, OverwritingUserAndCredentialedJdbcConflictedException, UnreachableServerException, InvalidDatabaseNameProbablyException, GenericConnectionException {
+  protected Engine(DatabaseConfig config, DatabaseUser overwritingUser) throws SQLException, URISyntaxException, InvalidCredentialsException, OverwritingUserAndCredentialedJdbcConflictedException, UnreachableServerException, InvalidDatabaseNameProbablyException, GenericConnectionException {
     this.databaseConfig = config;
 
     try {
@@ -88,7 +88,7 @@ public abstract class Engine implements AutoCloseable {
     }
   }
 
-  protected abstract void connect(DatabaseConfig config, User overwritingUser) throws SQLException, InvalidCredentialsException, URISyntaxException, UnreachableServerException, InvalidDatabaseNameProbablyException, GenericConnectionException;
+  protected abstract void connect(DatabaseConfig config, DatabaseUser overwritingUser) throws SQLException, InvalidCredentialsException, URISyntaxException, UnreachableServerException, InvalidDatabaseNameProbablyException, GenericConnectionException;
 
   public abstract Column[] getColumns(String table) throws SQLException;
 

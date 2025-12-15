@@ -3,35 +3,34 @@ package tanin.backdoor.web;
 import tanin.backdoor.core.BackdoorCoreServer;
 import tanin.backdoor.core.DatabaseConfig;
 import tanin.backdoor.core.EncryptionHelper;
-import tanin.backdoor.core.User;
+import tanin.backdoor.core.DatabaseUser;
 import tanin.ejwf.MinumBuilder;
 
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
-import java.sql.SQLException;
 import java.util.ArrayList;
 
 import static tanin.backdoor.core.BackdoorCoreServer.stripeSurroundingDoubleQuotes;
 
 public class Main {
 
-  public static void main(String[] args) throws SQLException, NoSuchAlgorithmException, KeyManagementException {
+  public static void main(String[] args) throws Exception {
     BackdoorCoreServer.initSentry(BackdoorWebServer.SENTRY_PROPERTIES != null);
 
     var databaseConfigs = new ArrayList<DatabaseConfig>();
     int port = 0;
     int sslPort = 0;
-    var users = new ArrayList<User>();
+    var users = new ArrayList<CommandLineUser>();
     var secretKey = EncryptionHelper.generateRandomString(32);
+    String backdoorDatabaseJdbcUrl = null;
 
     if (MinumBuilder.MODE == MinumBuilder.Mode.Dev) {
       databaseConfigs.add(new DatabaseConfig("postgres", "postgres://127.0.0.1:5432/backdoor_test", "backdoor_test_user", "test"));
 //      databaseConfigs.add(new DatabaseConfig("clickhouse", "jdbc:ch://localhost:8123", "abacus_dev_user", "dev"));
 //      databaseConfigs.add(new DatabaseConfig("postgres", "postgres://127.0.0.1:5432/backdoor_test", null, null));
       databaseConfigs.add(new DatabaseConfig("clickhouse", "jdbc:ch://localhost:8123?user=backdoor&password=test_ch", null, null));
-      users.add(new User("masked_test", "1234"));
+      users.add(new CommandLineUser("masked_test", "1234"));
       secretKey = "testkey";
       port = 9090;
+      backdoorDatabaseJdbcUrl = "postgres://backdoor_test_user:test@127.0.0.1:5432/backdoor_test";
     }
 
 
@@ -49,6 +48,9 @@ public class Main {
         case "-port":
           if (i + 1 < args.length) port = Integer.parseInt(args[++i]);
           break;
+        case "-backdoor-jdbc-url":
+          if (i + 1 < args.length) backdoorDatabaseJdbcUrl = args[++i];
+          break;
         case "-ssl-port":
           if (i + 1 < args.length) sslPort = Integer.parseInt(args[++i]);
           break;
@@ -64,7 +66,7 @@ public class Main {
               if (userAndPass.length != 2) {
                 throw new IllegalArgumentException("Invalid user argument. The format should follow: `user:pass,user2:pass2`");
               }
-              users.add(new User(userAndPass[0], userAndPass[1]));
+              users.add(new CommandLineUser(userAndPass[0], userAndPass[1]));
             }
           }
           break;
@@ -79,8 +81,9 @@ public class Main {
       databaseConfigs.toArray(new DatabaseConfig[0]),
       port,
       sslPort,
-      users.toArray(new User[0]),
-      secretKey
+      users.toArray(new CommandLineUser[0]),
+      secretKey,
+      backdoorDatabaseJdbcUrl
     );
     var minum = main.start();
     minum.block();
