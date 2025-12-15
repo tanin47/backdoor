@@ -16,6 +16,7 @@ import java.sql.SQLException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -159,10 +160,19 @@ public class BackdoorWebServer extends BackdoorCoreServer {
     if (found == null) {
       for (var databaseConfig : databaseConfigs) {
         var potentialDatabaseUser = new User(username, password, databaseConfig.nickname);
+        AtomicBoolean isValid = new AtomicBoolean(false);
         try (var engine = engineProvider.createEngine(databaseConfig, potentialDatabaseUser)) {
-          var rs = engine.executeQuery("SELECT 123");
-          rs.next();
-          if (rs.getInt(1) == 123) {
+          engine.executeQuery(
+            "SELECT 123",
+            rs -> {
+              rs.next();
+              if (rs.getInt(1) == 123) {
+                isValid.set(true);
+              }
+            }
+          );
+
+          if (isValid.get()) {
             return potentialDatabaseUser;
           }
         } catch (Engine.InvalidCredentialsException |

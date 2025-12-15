@@ -20,6 +20,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 import java.util.prefs.BackingStoreException;
 import java.util.stream.Collectors;
@@ -334,7 +335,8 @@ public abstract class BackdoorCoreServer {
           var newSantiziedValue = setToNull ? null : newValue;
           engine.update(tableName, column, newSantiziedValue, primaryKeyFilters);
           assert column != null;
-          var rs = engine.select(
+          AtomicReference<JsonValue> newFetchedValue = new AtomicReference<>(Json.NULL);
+          engine.select(
             tableName,
             column,
             Arrays.stream(primaryKeyFilters)
@@ -343,21 +345,21 @@ public abstract class BackdoorCoreServer {
                   p.value = newSantiziedValue;
                 }
               })
-              .toArray(Filter[]::new)
+              .toArray(Filter[]::new),
+            rs -> {
+              while (rs.next()) {
+                newFetchedValue.set(engine.getJsonValue(rs, 1, column));
+              }
+            }
           );
-
-          JsonValue newFetchedValue = Json.NULL;
-          while (rs.next()) {
-            newFetchedValue = engine.getJsonValue(rs, 1, column);
-          }
 
           return Response.buildResponse(
             StatusLine.StatusCode.CODE_200_OK,
             Map.of("Content-Type", "application/json"),
             Json
               .object()
-              .add("newValue", newFetchedValue)
-              .add("newCharacterLength", getValueLength(newFetchedValue, column))
+              .add("newValue", newFetchedValue.get())
+              .add("newCharacterLength", getValueLength(newFetchedValue.get(), column))
               .toString()
           );
         }
@@ -435,25 +437,15 @@ public abstract class BackdoorCoreServer {
         }).toArray(Sort[]::new);
 
         try (var engine = makeEngine(database)) {
-          ResultSet rs = null;
           int modifyCount = 0;
+          AtomicReference<Stats> stats = new AtomicReference<>(new Stats(0));
+          AtomicReference<JsonValue[][]> rows = new AtomicReference<>();
+          var columns = new ArrayList<Column>();
           SqlType sqlType = engine.getSqlType(originalSql);
 
           var sql = originalSql.trim().replaceAll(";$", "");
 
-          if (sqlType == SqlType.SELECT) {
-            rs = engine.executeQueryWithParams(sql, filters, sorts, offset, 100);
-          } else if (sqlType == SqlType.EXPLAIN) {
-            rs = engine.executeQuery(sql);
-          } else if (sqlType == SqlType.MODIFY || sqlType == SqlType.ADMINISTRATIVE) {
-            rs = null;
-            modifyCount = engine.executeUpdate(sql);
-          }
-
-          Stats stats = new Stats(0);
-          var columns = new ArrayList<Column>();
-          JsonValue[][] rows;
-          if (rs != null) {
+          Engine.ProcessResultSet process = rs -> {
             var metaData = rs.getMetaData();
 
             for (int i = 1; i <= metaData.getColumnCount(); i++) {
@@ -470,14 +462,21 @@ public abstract class BackdoorCoreServer {
               ));
             }
 
-            rows = readRows(engine, columns.toArray(new Column[0]), rs);
+            rows.set(readRows(engine, columns.toArray(new Column[0]), rs));
 
             if (sqlType == SqlType.SELECT) {
-              stats = engine.getStats(sql, filters);
+              stats.set(engine.getStats(sql, filters));
             } else {
-              stats = new Stats(rows.length);
+              stats.set(new Stats(rows.get().length));
             }
-          } else {
+          };
+
+          if (sqlType == SqlType.SELECT) {
+            engine.executeQueryWithParams(sql, filters, sorts, offset, 100, process);
+          } else if (sqlType == SqlType.EXPLAIN) {
+            engine.executeQuery(sql, process);
+          } else if (sqlType == SqlType.MODIFY || sqlType == SqlType.ADMINISTRATIVE) {
+            modifyCount = engine.executeUpdate(sql);
             var colName = "modified_count";
             var column = new Column(
               colName,
@@ -489,8 +488,8 @@ public abstract class BackdoorCoreServer {
               false
             );
 
-            rows = new JsonValue[1][1];
-            rows[0][0] = Json.value(modifyCount);
+            rows.set(new JsonValue[1][1]);
+            rows.get()[0][0] = Json.value(modifyCount);
 
             column.maxCharacterLength = Math.max(("" + modifyCount).length(), column.maxCharacterLength);
             columns.add(column);
@@ -498,7 +497,7 @@ public abstract class BackdoorCoreServer {
 
           var rowsJson = Json.array();
 
-          for (var row : rows) {
+          for (var row : rows.get()) {
             var rowJson = Json.array();
             for (var value : row) {
               rowJson.add(value);
@@ -514,8 +513,8 @@ public abstract class BackdoorCoreServer {
             columns.toArray(new Column[0]),
             filters,
             sorts,
-            stats,
-            rows
+            stats.get(),
+            rows.get()
           );
 
           return Response.buildResponse(
@@ -554,11 +553,13 @@ public abstract class BackdoorCoreServer {
           var columns = engine.getColumns(name);
           var sql = engine.makeLoadTableSql(name, columns);
           var stats = engine.getStats(sql, filters);
-          var rs = engine.executeQueryWithParams(sql, filters, sorts, offset, 100);
-          var rows = readRows(engine, columns, rs);
+          AtomicReference<JsonValue[][]> rows = new AtomicReference<>();
+          engine.executeQueryWithParams(sql, filters, sorts, offset, 100, rs -> {
+            rows.set((readRows(engine, columns, rs)));
+          });
           var rowsJson = Json.array();
 
-          for (var row : rows) {
+          for (var row : rows.get()) {
             var rowJson = Json.array();
             for (var value : row) {
               rowJson.add(value);
@@ -575,7 +576,7 @@ public abstract class BackdoorCoreServer {
             filters,
             sorts,
             stats,
-            rows
+            rows.get()
           );
 
           return Response.buildResponse(

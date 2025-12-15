@@ -184,7 +184,7 @@ export async function runSql(database: string, sql: string): Promise<void> {
     </div>
   {:else}
     <div
-      class="flex flex-col justify-between bg-primary-content border-e-2 border-gray-600 relative"
+      class="flex flex-col justify-between bg-primary-content border-e-2 border-gray-600 relative overflow-hidden"
       style="width: {leftNavWidth}px; min-width: {leftNavWidth}px; max-width: {leftNavWidth}px;"
     >
       <span
@@ -193,19 +193,19 @@ export async function runSql(database: string, sql: string): Promise<void> {
       >
         &nbsp;
       </span>
-      <div class="flex flex-col">
-        <div class="flex items-center justify-between gap-2">
+      <div class="flex flex-col bg-black overflow-hidden">
+        <div class="flex items-center justify-between gap-2 overflow-hidden">
           <a
             href="https://github.com/tanin47/backdoor"
             target="_blank"
             rel="noopener noreferrer"
-            class="flex flex-row items-center p-2 gap-1 bg-black  text-gray-400 text-sm"
+            class="flex flex-row items-center p-2 gap-1  text-gray-400 text-sm whitespace-nowrap overflow-hidden"
           >
             {#if MODE === 'Dev'}
               <div class="text-accent">[dev]</div>
             {/if}
             <i class="ph ph-door-open"></i>
-            <div class="whitespace-nowrap overflow-hidden text-ellipsis">Backdoor</div>
+            <div class="overflow-hidden text-ellipsis">Backdoor</div>
           </a>
           <i
             class="ph ph-question cursor-pointer text-gray-400 me-1"

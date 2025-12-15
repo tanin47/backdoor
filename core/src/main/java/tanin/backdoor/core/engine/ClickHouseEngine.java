@@ -1,5 +1,6 @@
 package tanin.backdoor.core.engine;
 
+import com.clickhouse.jdbc.Driver;
 import com.eclipsesource.json.Json;
 import com.eclipsesource.json.JsonObject;
 import com.eclipsesource.json.JsonValue;
@@ -15,6 +16,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 
 import static tanin.backdoor.core.BackdoorCoreServer.makeSqlLiteral;
@@ -25,7 +27,7 @@ public class ClickHouseEngine extends Engine {
 
   static {
     try {
-      DriverManager.registerDriver(new com.clickhouse.jdbc.Driver());
+      DriverManager.registerDriver(new Driver());
       logger.info("Registered the ClickHouse driver");
     } catch (SQLException e) {
       logger.severe("Unable to register the ClickHouse driver: " + e);
@@ -70,30 +72,37 @@ public class ClickHouseEngine extends Engine {
 
   @Override
   public Column[] getColumns(String table) throws SQLException {
-    var rs = executeQuery("SELECT currentDatabase();");
-    rs.next();
-    var databaseName = rs.getString(1);
+    AtomicReference<String> databaseName = new AtomicReference<>();
+    executeQuery(
+      "SELECT currentDatabase();",
+      rs -> {
+        rs.next();
+        databaseName.set(rs.getString(1));
+      }
+    );
 
     var columns = new ArrayList<Column>();
-    rs = executeQuery(
+    executeQuery(
       "select name, type, is_in_primary_key, default_kind FROM system.columns WHERE database = " +
-        makeSqlLiteral(databaseName) + " AND `table` = " + makeSqlLiteral(table) +
-        " ORDER BY position ASC;"
+        makeSqlLiteral(databaseName.get()) + " AND `table` = " + makeSqlLiteral(table) +
+        " ORDER BY position ASC;",
+      rs -> {
+        while (rs.next()) {
+          var name = rs.getString("name");
+          var rawType = rs.getString("type");
+          var hasDefaultValue = !rs.getString("default_kind").isEmpty();
+          columns.add(new Column(
+            name,
+            convertRawType(rawType),
+            rawType,
+            name.length(),
+            rs.getInt("is_in_primary_key") == 1,
+            rawType.startsWith("Nullable(") && !hasDefaultValue,
+            hasDefaultValue
+          ));
+        }
+      }
     );
-    while (rs.next()) {
-      var name = rs.getString("name");
-      var rawType = rs.getString("type");
-      var hasDefaultValue = !rs.getString("default_kind").isEmpty();
-      columns.add(new Column(
-        name,
-        convertRawType(rawType),
-        rawType,
-        name.length(),
-        rs.getInt("is_in_primary_key") == 1,
-        rawType.startsWith("Nullable(") && !hasDefaultValue,
-        hasDefaultValue
-      ));
-    }
 
     return columns.toArray(new Column[0]);
   }
@@ -101,23 +110,25 @@ public class ClickHouseEngine extends Engine {
   @Override
   public String[] getTables() throws SQLException {
     var tables = new ArrayList<String>();
-    var rs = executeQuery(
-      "SHOW TABLES;"
+    executeQuery(
+      "SHOW TABLES;",
+      rs -> {
+        while (rs.next()) {
+          tables.add(rs.getString("name"));
+        }
+      }
     );
-    while (rs.next()) {
-      tables.add(rs.getString("name"));
-    }
 
     return tables.toArray(new String[0]);
   }
 
   @Override
-  public void insert(String table, Column[] columns, Engine.Value[] values) throws Exception {
+  public void insert(String table, Column[] columns, Value[] values) throws Exception {
     var insertedColumns = new ArrayList<Column>();
     var insertedValues = new ArrayList<Value>();
 
     for (var i = 0; i < columns.length; i++) {
-      if (values[i] instanceof Engine.UseDefaultValue) {
+      if (values[i] instanceof UseDefaultValue) {
         // do nothing
       } else {
         insertedColumns.add(columns[i]);
@@ -133,9 +144,9 @@ public class ClickHouseEngine extends Engine {
           insertedValues
             .stream()
             .map(v -> {
-              if (v instanceof Engine.UseNull) {
+              if (v instanceof UseNull) {
                 return "NULL";
-              } else if (v instanceof Engine.UseSpecifiedValue) {
+              } else if (v instanceof UseSpecifiedValue) {
                 return makeSqlLiteral(((UseSpecifiedValue) v).value);
               } else {
                 throw new RuntimeException();
@@ -251,7 +262,7 @@ public class ClickHouseEngine extends Engine {
       return Json.value(convertHashmapToJson((HashMap<Object, Object>) value).toString());
     }
 
-    if (column.type == Column.ColumnType.TIME) {
+    if (column.type == tanin.backdoor.core.Column.ColumnType.TIME) {
       if (rawType.startsWith("time64(")) {
         // the type would look like time64(NUMBER)
         int precision = Integer.parseInt(rawType.substring("time64(".length(), rawType.length() - 1));
@@ -271,7 +282,7 @@ public class ClickHouseEngine extends Engine {
       }
     }
 
-    if (column.type == Column.ColumnType.TIMESTAMP) {
+    if (column.type == tanin.backdoor.core.Column.ColumnType.TIMESTAMP) {
       var timestamp = rs.getTimestamp(columnIndex);
       if (rawType.startsWith("datetime64(")) {
         var formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSSSSS").withZone(ZoneOffset.UTC);
