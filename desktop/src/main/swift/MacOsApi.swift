@@ -126,6 +126,7 @@ public func startAccessingSecurityScopedResource(
 ) -> Bool {
     let path = String(cString: filePath)
     let url = URL(fileURLWithPath: path)
+    NSLog("startAccessingSecurityScopedResource: \(path)")
     return url.startAccessingSecurityScopedResource()
 }
 
@@ -135,5 +136,6 @@ public func stopAccessingSecurityScopedResource(
 ) -> Void {
     let path = String(cString: filePath)
     let url = URL(fileURLWithPath: path)
+    NSLog("stopAccessingSecurityScopedResource: \(path)")
     url.stopAccessingSecurityScopedResource()
 }

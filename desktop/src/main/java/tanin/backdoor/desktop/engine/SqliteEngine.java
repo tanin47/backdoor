@@ -13,7 +13,7 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 
 import static org.sqlite.SQLiteErrorCode.SQLITE_NOTADB;
@@ -40,7 +40,7 @@ public class SqliteEngine extends Engine {
   String filePath;
 
   @Override
-  protected void connect(DatabaseConfig config, User overwritingUser) throws SQLException, InvalidCredentialsException, URISyntaxException, UnreachableServerException, InvalidDatabaseNameProbablyException, GenericConnectionException {
+  protected void connect(DatabaseConfig config, User overwritingUser) throws SQLException, GenericConnectionException {
     filePath = config.jdbcUrl.substring("jdbc:sqlite:".length());
     try {
       if (Base.CURRENT_OS == Base.OperatingSystem.MAC) {
@@ -48,6 +48,7 @@ public class SqliteEngine extends Engine {
       }
       connection = DriverManager.getConnection(config.jdbcUrl);
       execute("SELECT 'backdoor_test_connection_for_sqlite'");
+      execute("PRAGMA journal_mode = MEMORY");
     } catch (SQLiteException e) {
       if (e.getResultCode() == SQLITE_NOTADB) {
         throw new GenericConnectionException("The selected file isn't a SQLite database");
@@ -60,40 +61,42 @@ public class SqliteEngine extends Engine {
   @Override
   public Column[] getColumns(String table) throws SQLException {
     var columns = new ArrayList<Column>();
-    try (var rs = executeQuery(
-      "SELECT name, type, \"notnull\", pk, dflt_value FROM pragma_table_info('" + table + "')"
-    )) {
-      while (rs.next()) {
-        var name = rs.getString("name");
-        var type = rs.getString("type");
-        var isPrimaryKey = rs.getInt("pk") > 0;
-        var hasDefaultValue = rs.getString("dflt_value") != null || isPrimaryKey;
-        var nullable = rs.getInt("notnull") == 0 && !hasDefaultValue;
+    executeQuery(
+      "SELECT name, type, \"notnull\", pk, dflt_value FROM pragma_table_info('" + table + "')",
+      rs -> {
+        while (rs.next()) {
+          var name = rs.getString("name");
+          var type = rs.getString("type");
+          var isPrimaryKey = rs.getInt("pk") > 0;
+          var hasDefaultValue = rs.getString("dflt_value") != null || isPrimaryKey;
+          var nullable = rs.getInt("notnull") == 0 && !hasDefaultValue;
 
-        columns.add(new Column(
-          name,
-          convertRawType(type),
-          type,
-          name.length(),
-          isPrimaryKey,
-          nullable,
-          hasDefaultValue
-        ));
+          columns.add(new Column(
+            name,
+            convertRawType(type),
+            type,
+            name.length(),
+            isPrimaryKey,
+            nullable,
+            hasDefaultValue
+          ));
+        }
       }
-    }
+    );
     return columns.toArray(new Column[0]);
   }
 
   @Override
   public String[] getTables() throws SQLException {
     var tables = new ArrayList<String>();
-    try (var rs = executeQuery(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
-    )) {
-      while (rs.next()) {
-        tables.add(rs.getString("name"));
+    executeQuery(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'",
+      rs -> {
+        while (rs.next()) {
+          tables.add(rs.getString("name"));
+        }
       }
-    }
+    );
     return tables.toArray(new String[0]);
   }
 
@@ -210,17 +213,20 @@ public class SqliteEngine extends Engine {
       return BackdoorCoreServer.SqlType.ADMINISTRATIVE;
     }
 
-    boolean isModifyingTable = false;
-    try (var rs = executeQuery("explain " + sql)) {
-      while (rs.next()) {
-        if (rs.getString("opcode").equals("OpenWrite")) {
-          isModifyingTable = true;
-          break;
+    AtomicBoolean isModifyingTable = new AtomicBoolean(false);
+    executeQuery(
+      "explain " + sql,
+      rs -> {
+        while (rs.next()) {
+          if (rs.getString("opcode").equals("OpenWrite")) {
+            isModifyingTable.set(true);
+            break;
+          }
         }
       }
-    }
+    );
 
-    return isModifyingTable ? BackdoorCoreServer.SqlType.MODIFY : BackdoorCoreServer.SqlType.SELECT;
+    return isModifyingTable.get() ? BackdoorCoreServer.SqlType.MODIFY : BackdoorCoreServer.SqlType.SELECT;
   }
 
   @Override

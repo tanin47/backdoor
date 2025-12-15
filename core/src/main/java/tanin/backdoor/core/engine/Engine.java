@@ -113,11 +113,15 @@ public abstract class Engine implements AutoCloseable {
     Filter[] filters
   ) throws SQLException {
     var whereClause = makeWhereClause(filters);
-    var rs = executeQuery("SELECT COUNT(*) AS numberOfRows FROM (" + sql + ") " + whereClause);
     var tableStats = new Stats(0);
-    while (rs.next()) {
-      tableStats.numberOfRows = rs.getInt("numberOfRows");
-    }
+    executeQuery(
+      "SELECT COUNT(*) AS numberOfRows FROM (" + sql + ") " + whereClause,
+      rs -> {
+        while (rs.next()) {
+          tableStats.numberOfRows = rs.getInt("numberOfRows");
+        }
+      }
+    );
     return tableStats;
   }
 
@@ -126,7 +130,7 @@ public abstract class Engine implements AutoCloseable {
       " FROM " + makeSqlName(table);
   }
 
-  public ResultSet executeQueryWithParams(String sql, Filter[] filters, Sort[] sorts, int offset, int limit) throws SQLException {
+  public void executeQueryWithParams(String sql, Filter[] filters, Sort[] sorts, int offset, int limit, ProcessResultSet processResultSet) throws SQLException {
     var whereClause = makeWhereClause(filters);
 
     var orderByClause = "";
@@ -134,12 +138,13 @@ public abstract class Engine implements AutoCloseable {
       orderByClause = " ORDER BY " + String.join(", ", Arrays.stream(sorts).map(s -> makeSqlName(s.name) + " " + s.direction).toArray(String[]::new));
     }
 
-    return executeQuery(
+    executeQuery(
       "SELECT * FROM (" + sql + ") " +
         whereClause +
         orderByClause +
         " LIMIT " + limit +
-        " OFFSET " + offset
+        " OFFSET " + offset,
+      processResultSet
     );
   }
 
@@ -160,10 +165,11 @@ public abstract class Engine implements AutoCloseable {
     return whereClause;
   }
 
-  public ResultSet select(String tableName, Column column, Filter[] filters) throws SQLException {
+  public void select(String tableName, Column column, Filter[] filters, ProcessResultSet processResultSet) throws SQLException {
     var whereClause = makeWhereClause(filters);
-    return executeQuery(
-      "SELECT " + makeSqlName(column.name) + " FROM " + makeSqlName(tableName) + whereClause
+    executeQuery(
+      "SELECT " + makeSqlName(column.name) + " FROM " + makeSqlName(tableName) + whereClause,
+      processResultSet
     );
   }
 
@@ -172,18 +178,33 @@ public abstract class Engine implements AutoCloseable {
     execute("DROP TABLE IF EXISTS " + makeSqlName(table) + maybeCascade);
   }
 
-  public ResultSet executeQuery(String sql) throws SQLException {
+  public interface ProcessResultSet {
+    void process(ResultSet rs) throws SQLException;
+  }
+
+  public void executeQuery(
+    String sql,
+    ProcessResultSet processResultSet
+  ) throws SQLException {
     logger.info("Executing query: " + sql);
-    return connection.createStatement().executeQuery(sql);
+    try (var stmt = connection.createStatement()) {
+      try (var rs = stmt.executeQuery(sql)) {
+        processResultSet.process(rs);
+      }
+    }
   }
 
   public boolean execute(String sql) throws SQLException {
     logger.info("Executing: " + sql);
-    return connection.createStatement().execute(sql);
+    try (var stmt = connection.createStatement()) {
+      return stmt.execute(sql);
+    }
   }
 
   public int executeUpdate(String sql) throws SQLException {
     logger.info("Executing update: " + sql);
-    return connection.createStatement().executeUpdate(sql);
+    try (var stmt = connection.createStatement()) {
+      return stmt.executeUpdate(sql);
+    }
   }
 }

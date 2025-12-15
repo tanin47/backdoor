@@ -2,6 +2,7 @@ package tanin.backdoor.core.engine;
 
 import com.eclipsesource.json.Json;
 import com.eclipsesource.json.JsonValue;
+import org.postgresql.Driver;
 import org.postgresql.util.PSQLException;
 import tanin.backdoor.core.*;
 
@@ -11,9 +12,9 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 
 import static tanin.backdoor.core.BackdoorCoreServer.makeSqlLiteral;
@@ -24,7 +25,7 @@ public class PostgresEngine extends Engine {
 
   static {
     try {
-      DriverManager.registerDriver(new org.postgresql.Driver());
+      DriverManager.registerDriver(new Driver());
       logger.info("Registered the Postgres driver");
     } catch (SQLException e) {
       logger.severe("Unable to register the Postgres driver: " + e);
@@ -97,7 +98,8 @@ public class PostgresEngine extends Engine {
 
   @Override
   public Column[] getColumns(String table) throws SQLException {
-    var rs = executeQuery(
+    var columns = new ArrayList<>(List.<Column>of());
+    executeQuery(
       "SELECT c.column_name, c.data_type, c.is_nullable, " +
         "CASE WHEN tc.constraint_type = 'PRIMARY KEY' THEN true ELSE false END as is_primary_key, " +
         "CASE WHEN c.column_default IS NOT NULL OR c.identity_generation IS NOT NULL OR c.generation_expression IS NOT NULL THEN true ELSE false END as has_default_value " +
@@ -110,45 +112,48 @@ public class PostgresEngine extends Engine {
         "ON kcu.constraint_name = tc.constraint_name " +
         "AND kcu.table_schema = tc.table_schema " +
         "AND kcu.table_name = tc.table_name " +
-        "WHERE c.table_schema = 'public' AND c.table_name = " + makeSqlLiteral(table) + ";"
+        "WHERE c.table_schema = 'public' AND c.table_name = " + makeSqlLiteral(table) + ";",
+      rs -> {
+        while (rs.next()) {
+          var name = rs.getString("column_name");
+          var rawType = rs.getString("data_type");
+          var hasDefaultValue = rs.getBoolean("has_default_value");
+          columns.add(new Column(
+            name,
+            convertRawType(rawType),
+            rawType,
+            name.length(),
+            rs.getBoolean("is_primary_key"),
+            rs.getString("is_nullable").equals("YES") && !hasDefaultValue,
+            hasDefaultValue
+          ));
+        }
+      }
     );
-    var columns = new ArrayList<>(List.<Column>of());
-    while (rs.next()) {
-      var name = rs.getString("column_name");
-      var rawType = rs.getString("data_type");
-      var hasDefaultValue = rs.getBoolean("has_default_value");
-      columns.add(new Column(
-        name,
-        convertRawType(rawType),
-        rawType,
-        name.length(),
-        rs.getBoolean("is_primary_key"),
-        rs.getString("is_nullable").equals("YES") && !hasDefaultValue,
-        hasDefaultValue
-      ));
-    }
     return columns.toArray(new Column[0]);
   }
 
   @Override
   public String[] getTables() throws SQLException {
     var tables = new ArrayList<String>();
-    var rs = executeQuery(
-      "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' ORDER BY table_name ASC;"
+    executeQuery(
+      "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' ORDER BY table_name ASC;",
+      rs -> {
+        while (rs.next()) {
+          tables.add(rs.getString("table_name"));
+        }
+      }
     );
-    while (rs.next()) {
-      tables.add(rs.getString("table_name"));
-    }
     return tables.toArray(new String[0]);
   }
 
   @Override
-  public void insert(String table, Column[] columns, Engine.Value[] values) throws Exception {
+  public void insert(String table, Column[] columns, Value[] values) throws Exception {
     var insertedColumns = new ArrayList<Column>();
     var insertedValues = new ArrayList<Value>();
 
     for (var i = 0; i < columns.length; i++) {
-      if (values[i] instanceof Engine.UseDefaultValue) {
+      if (values[i] instanceof UseDefaultValue) {
         // do nothing
       } else {
         insertedColumns.add(columns[i]);
@@ -165,9 +170,9 @@ public class PostgresEngine extends Engine {
           insertedValues
             .stream()
             .map(v -> {
-              if (v instanceof Engine.UseNull) {
+              if (v instanceof UseNull) {
                 return "NULL";
-              } else if (v instanceof Engine.UseSpecifiedValue) {
+              } else if (v instanceof UseSpecifiedValue) {
                 return makeSqlLiteral(((UseSpecifiedValue) v).value);
               } else {
                 throw new RuntimeException();
@@ -252,10 +257,15 @@ public class PostgresEngine extends Engine {
       return BackdoorCoreServer.SqlType.ADMINISTRATIVE;
     }
 
-    var rs = executeQuery("explain (format json) " + sql);
-    rs.next();
-    var result = Json.parse(rs.getString(1));
-    var isModifyingTable = result.asArray().get(0).asObject().get("Plan").asObject().get("Node Type").asString().equals("ModifyTable");
+    AtomicReference<JsonValue> result = new AtomicReference<>();
+    executeQuery(
+      "explain (format json) " + sql,
+      rs -> {
+        rs.next();
+        result.set(Json.parse(rs.getString(1)));
+      }
+    );
+    var isModifyingTable = result.get().asArray().get(0).asObject().get("Plan").asObject().get("Node Type").asString().equals("ModifyTable");
 
     return isModifyingTable ? BackdoorCoreServer.SqlType.MODIFY : BackdoorCoreServer.SqlType.SELECT;
   }
