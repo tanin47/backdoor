@@ -3,7 +3,6 @@ package tanin.backdoor.web;
 import tanin.backdoor.core.BackdoorCoreServer;
 import tanin.backdoor.core.DatabaseConfig;
 import tanin.backdoor.core.EncryptionHelper;
-import tanin.backdoor.core.DatabaseUser;
 import tanin.ejwf.MinumBuilder;
 
 import java.util.ArrayList;
@@ -18,7 +17,7 @@ public class Main {
     var databaseConfigs = new ArrayList<DatabaseConfig>();
     int port = 0;
     int sslPort = 0;
-    var users = new ArrayList<CommandLineUser>();
+    var users = new ArrayList<SourceCodeUser>();
     var secretKey = EncryptionHelper.generateRandomString(32);
     String backdoorDatabaseJdbcUrl = null;
 
@@ -27,7 +26,7 @@ public class Main {
 //      databaseConfigs.add(new DatabaseConfig("clickhouse", "jdbc:ch://localhost:8123", "abacus_dev_user", "dev"));
 //      databaseConfigs.add(new DatabaseConfig("postgres", "postgres://127.0.0.1:5432/backdoor_test", null, null));
       databaseConfigs.add(new DatabaseConfig("clickhouse", "jdbc:ch://localhost:8123?user=backdoor&password=test_ch", null, null));
-      users.add(new CommandLineUser("masked_test", "1234"));
+      users.add(new SourceCodeUser("masked_test", "1234"));
       secretKey = "testkey";
       port = 9090;
       backdoorDatabaseJdbcUrl = "postgres://backdoor_test_user:test@127.0.0.1:5432/backdoor_test";
@@ -66,7 +65,7 @@ public class Main {
               if (userAndPass.length != 2) {
                 throw new IllegalArgumentException("Invalid user argument. The format should follow: `user:pass,user2:pass2`");
               }
-              users.add(new CommandLineUser(userAndPass[0], userAndPass[1]));
+              users.add(new SourceCodeUser(userAndPass[0], userAndPass[1]));
             }
           }
           break;
@@ -81,7 +80,7 @@ public class Main {
       databaseConfigs.toArray(new DatabaseConfig[0]),
       port,
       sslPort,
-      users.toArray(new CommandLineUser[0]),
+      users.toArray(new SourceCodeUser[0]),
       secretKey,
       backdoorDatabaseJdbcUrl
     );

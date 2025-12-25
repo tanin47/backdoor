@@ -13,7 +13,6 @@ import org.openqa.selenium.logging.LogType;
 import org.openqa.selenium.logging.LoggingPreferences;
 import org.openqa.selenium.support.ui.Select;
 import tanin.backdoor.core.DatabaseConfig;
-import tanin.backdoor.core.DatabaseUser;
 import tanin.ejwf.MinumBuilder;
 import tanin.migratedb.MigrateDb;
 
@@ -34,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class Base {
   static final Logger logger = Logger.getLogger(Base.class.getName());
-  CommandLineUser loggedInUser = new CommandLineUser("backdoor", "test");
+  SourceCodeUser loggedInUser = new SourceCodeUser("backdoor", "test");
   static String BACKDOOR_POSTGRES_DATABASE_URL = "postgres://backdoor_test_user:test@127.0.0.1:5432/backdoor_test";
   static String POSTGRES_DATABASE_URL = "postgres://127.0.0.1:5432/backdoor_test";
   static String CLICKHOUSE_DATABASE_URL = "jdbc:ch://127.0.0.1:8123/backdoor_test";
@@ -46,7 +45,7 @@ public class Base {
 
   public WebDriver webDriver;
   BackdoorWebServer server;
-  BackdoorUserService backdoorUserService = new BackdoorUserService(BACKDOOR_POSTGRES_DATABASE_URL);
+  DynamicUserService dynamicUserService = new DynamicUserService(BACKDOOR_POSTGRES_DATABASE_URL);
   boolean shouldLoggedIn = true;
 
   @RegisterExtension

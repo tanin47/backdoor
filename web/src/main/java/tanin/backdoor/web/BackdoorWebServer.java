@@ -65,17 +65,17 @@ public class BackdoorWebServer extends BackdoorCoreServer {
   }
 
 
-  public CommandLineUser[] commandLineUsers;
+  public SourceCodeUser[] sourceCodeUsers;
   public String secretKey;
   public String backdoorDatabaseJdbcUrl;
-  private BackdoorUserService backdoorUserService;
+  private DynamicUserService dynamicUserService;
   ThreadLocal<AuthInfo> auth = new ThreadLocal<>();
 
   BackdoorWebServer(
     DatabaseConfig[] databaseConfigs,
     int port,
     int sslPort,
-    CommandLineUser[] commandLineUsers,
+    SourceCodeUser[] sourceCodeUsers,
     String secretKey,
     String backdoorDatabaseJdbcUrl
   ) {
@@ -90,11 +90,11 @@ public class BackdoorWebServer extends BackdoorCoreServer {
     this.secretKey = secretKey;
     this.backdoorDatabaseJdbcUrl = backdoorDatabaseJdbcUrl;
     if (backdoorDatabaseJdbcUrl != null) {
-      this.backdoorUserService = new BackdoorUserService(this.backdoorDatabaseJdbcUrl);
+      this.dynamicUserService = new DynamicUserService(this.backdoorDatabaseJdbcUrl);
     }
 
-    if (commandLineUsers != null) {
-      for (CommandLineUser user : commandLineUsers) {
+    if (sourceCodeUsers != null) {
+      for (SourceCodeUser user : sourceCodeUsers) {
         if (user.username().isBlank()) {
           throw new IllegalArgumentException("Username cannot be empty");
         }
@@ -103,9 +103,9 @@ public class BackdoorWebServer extends BackdoorCoreServer {
         }
       }
 
-      this.commandLineUsers = commandLineUsers;
+      this.sourceCodeUsers = sourceCodeUsers;
     } else {
-      this.commandLineUsers = new CommandLineUser[0];
+      this.sourceCodeUsers = new SourceCodeUser[0];
     }
   }
 
@@ -122,8 +122,8 @@ public class BackdoorWebServer extends BackdoorCoreServer {
   }
 
   public static String makeAuthCookieValueForUser(
-    BackdoorUser backdoorUser,
-    CommandLineUser commandLineUser,
+    DynamicUser dynamicUser,
+    SourceCodeUser sourceCodeUser,
     DatabaseUser[] databaseUsers,
     DatabaseConfig[] adHocDatabaseConfigs,
     String secretKey,
@@ -131,8 +131,8 @@ public class BackdoorWebServer extends BackdoorCoreServer {
   ) throws Exception {
     return EncryptionHelper.encryptText(
       new AuthCookie(
-        backdoorUser == null ? null : backdoorUser.id(),
-        commandLineUser == null ? null : commandLineUser.username(),
+        dynamicUser == null ? null : dynamicUser.id(),
+        sourceCodeUser == null ? null : sourceCodeUser.username(),
         databaseUsers,
         adHocDatabaseConfigs,
         expires
@@ -142,14 +142,14 @@ public class BackdoorWebServer extends BackdoorCoreServer {
   }
 
   public static String makeAuthCookie(
-    BackdoorUser backdoorUser,
-    CommandLineUser commandLineUser,
+    DynamicUser dynamicUser,
+    SourceCodeUser sourceCodeUser,
     DatabaseUser[] databaseUsers,
     DatabaseConfig[] adHocDatabaseConfigs,
     String secretKey,
     Instant expires
   ) throws Exception {
-    return AUTH_COOKIE_KEY + "=" + makeAuthCookieValueForUser(backdoorUser, commandLineUser, databaseUsers, adHocDatabaseConfigs, secretKey, expires);
+    return AUTH_COOKIE_KEY + "=" + makeAuthCookieValueForUser(dynamicUser, sourceCodeUser, databaseUsers, adHocDatabaseConfigs, secretKey, expires);
   }
 
   private String extractOrMakeCsrfCookieValue(IRequest request, boolean makeIfMissing) {
@@ -183,14 +183,14 @@ public class BackdoorWebServer extends BackdoorCoreServer {
     }
   }
 
-  private static String makeAuthSetCookieLine(BackdoorUser backdoorUser, CommandLineUser commandLineUser, DatabaseUser[] databaseUsers, DatabaseConfig[] adHocDatabaseConfigs, String secretKey, Instant expires, boolean isSecure) throws Exception {
+  private static String makeAuthSetCookieLine(DynamicUser dynamicUser, SourceCodeUser sourceCodeUser, DatabaseUser[] databaseUsers, DatabaseConfig[] adHocDatabaseConfigs, String secretKey, Instant expires, boolean isSecure) throws Exception {
     var securePortion = isSecure ? " Secure;" : "";
-    return makeAuthCookie(backdoorUser, commandLineUser, databaseUsers, adHocDatabaseConfigs, secretKey, expires) + "; Max-Age=86400; Path=/;" + securePortion + " HttpOnly";
+    return makeAuthCookie(dynamicUser, sourceCodeUser, databaseUsers, adHocDatabaseConfigs, secretKey, expires) + "; Max-Age=86400; Path=/;" + securePortion + " HttpOnly";
   }
 
   public record AuthenticatedUser(
-    BackdoorUser backdoorUser,
-    CommandLineUser commandLineUser,
+    DynamicUser dynamicUser,
+    SourceCodeUser sourceCodeUser,
     DatabaseUser databaseUser
   ) {
   }
@@ -215,8 +215,8 @@ public class BackdoorWebServer extends BackdoorCoreServer {
   }
 
   private AuthenticatedUser authenticateUser(String username, String password) throws Exception {
-    if (backdoorUserService != null) {
-      var user = backdoorUserService.getByUsername(username);
+    if (dynamicUserService != null) {
+      var user = dynamicUserService.getByUsername(username);
 
       if (user != null) {
         if (PasswordHasher.verifyPassword(password, user.hashedPassword())) {
@@ -228,8 +228,8 @@ public class BackdoorWebServer extends BackdoorCoreServer {
     }
 
 
-    if (commandLineUsers != null) {
-      var found = Arrays.stream(commandLineUsers)
+    if (sourceCodeUsers != null) {
+      var found = Arrays.stream(sourceCodeUsers)
         .filter(u -> u.username().equals(username) && u.password().equals(password))
         .findFirst()
         .orElse(null);
@@ -292,8 +292,8 @@ public class BackdoorWebServer extends BackdoorCoreServer {
       throw new AuthFailureException();
     }
 
-    var backdoorUser = authCookie.backdoorUserId() == null ? null : backdoorUserService.getById(authCookie.backdoorUserId());
-    var commandLineUser = authCookie.commandLineUserUsername() == null ? null : Arrays.stream(commandLineUsers).filter(u -> u.username().equals(authCookie.commandLineUserUsername())).findFirst().orElse(null);
+    var backdoorUser = authCookie.backdoorUserId() == null ? null : dynamicUserService.getById(authCookie.backdoorUserId());
+    var commandLineUser = authCookie.commandLineUserUsername() == null ? null : Arrays.stream(sourceCodeUsers).filter(u -> u.username().equals(authCookie.commandLineUserUsername())).findFirst().orElse(null);
 
     var auth = new AuthInfo(
       backdoorUser,
@@ -309,11 +309,11 @@ public class BackdoorWebServer extends BackdoorCoreServer {
     }
 
     var valid = false;
-    if (auth.backdoorUser() != null) {
+    if (auth.dynamicUser() != null) {
       valid = true;
     }
 
-    if (auth.commandLineUser() != null) {
+    if (auth.sourceCodeUser() != null) {
       valid = true;
     }
 
@@ -332,8 +332,8 @@ public class BackdoorWebServer extends BackdoorCoreServer {
       // Force set a permanent password if the user has a temporary password.
       if (
         req.getRequestLine().getMethod() == RequestLine.Method.GET &&
-          auth.backdoorUser() != null &&
-          auth.backdoorUser().passwordExpiredAt() != null
+          auth.dynamicUser() != null &&
+          auth.dynamicUser().passwordExpiredAt() != null
       ) {
         var csrfToken = extractOrMakeCsrfCookieValue(req, true);
         var isLocalHost = req.getHeaders().valueByKey("Host").stream().findFirst().orElse("").startsWith("localhost");
@@ -501,8 +501,8 @@ public class BackdoorWebServer extends BackdoorCoreServer {
             Map.of(
               "Content-Type", "application/json",
               "Set-Cookie", makeAuthSetCookieLine(
-                authenticatedUser.backdoorUser,
-                authenticatedUser.commandLineUser,
+                authenticatedUser.dynamicUser,
+                authenticatedUser.sourceCodeUser,
                 authenticatedUser.databaseUser != null ? new DatabaseUser[]{authenticatedUser.databaseUser} : null,
                 new DatabaseConfig[0],
                 secretKey,
@@ -561,8 +561,8 @@ public class BackdoorWebServer extends BackdoorCoreServer {
             Map.of(
               "Content-Type", "application/json",
               "Set-Cookie", makeAuthSetCookieLine(
-                auth.get().backdoorUser(),
-                auth.get().commandLineUser(),
+                auth.get().dynamicUser(),
+                auth.get().sourceCodeUser(),
                 users.toArray(new DatabaseUser[0]),
                 auth.get().adHocDatabaseConfigs(),
                 secretKey,
@@ -625,7 +625,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
         POST,
         "admin/user/load",
         req -> {
-          var users = backdoorUserService.getAll();
+          var users = dynamicUserService.getAll();
           var usersJson = Json.array();
           for (var user : users) {
             usersJson.add(user.toJson());
@@ -671,7 +671,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
           }
 
           try {
-            backdoorUserService.create(username, tempPassword);
+            dynamicUserService.create(username, tempPassword);
           } catch (PSQLException e) {
             if (e.getMessage().contains("backdoor_user_username_key")) {
               throw new EarlyExitException(Response.buildResponse(
@@ -686,7 +686,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
               throw e;
             }
           }
-          var user = backdoorUserService.getByUsername(username);
+          var user = dynamicUserService.getByUsername(username);
 
           return Response.buildResponse(
             StatusLine.StatusCode.CODE_200_OK,
@@ -708,7 +708,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
           var username = json.asObject().get("username").asString();
 
           try {
-            backdoorUserService.updateUsername(id, username);
+            dynamicUserService.updateUsername(id, username);
           } catch (PSQLException e) {
             if (e.getMessage().contains("backdoor_user_username_key")) {
               throw new EarlyExitException(Response.buildResponse(
@@ -723,7 +723,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
               throw e;
             }
           }
-          var user = backdoorUserService.getById(id);
+          var user = dynamicUserService.getById(id);
 
           return Response.buildResponse(
             StatusLine.StatusCode.CODE_200_OK,
@@ -755,8 +755,8 @@ public class BackdoorWebServer extends BackdoorCoreServer {
             ));
           }
 
-          backdoorUserService.setPassword(id, tempPassword, Instant.now().plus(24, ChronoUnit.HOURS));
-          var user = backdoorUserService.getById(id);
+          dynamicUserService.setPassword(id, tempPassword, Instant.now().plus(24, ChronoUnit.HOURS));
+          var user = dynamicUserService.getById(id);
 
           return Response.buildResponse(
             StatusLine.StatusCode.CODE_200_OK,
@@ -776,7 +776,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
           var json = Json.parse(req.getBody().asString());
           var id = json.asObject().get("id").asString();
 
-          backdoorUserService.delete(id);
+          dynamicUserService.delete(id);
 
           return Response.buildResponse(
             StatusLine.StatusCode.CODE_200_OK,
@@ -818,7 +818,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
             ));
           }
 
-          backdoorUserService.setPassword(auth.get().backdoorUser().id(), password, null);
+          dynamicUserService.setPassword(auth.get().dynamicUser().id(), password, null);
 
           return Response.buildResponse(
             StatusLine.StatusCode.CODE_200_OK,
@@ -848,8 +848,8 @@ public class BackdoorWebServer extends BackdoorCoreServer {
       Map.of(
         "Content-Type", "application/json",
         "Set-Cookie", makeAuthSetCookieLine(
-          auth.get().backdoorUser(),
-          auth.get().commandLineUser(),
+          auth.get().dynamicUser(),
+          auth.get().sourceCodeUser(),
           auth.get().databaseUsers(),
           adHocDatabaseConfigs,
           secretKey,
