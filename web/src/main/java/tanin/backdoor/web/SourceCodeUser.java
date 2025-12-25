@@ -3,7 +3,7 @@ package tanin.backdoor.web;
 import com.eclipsesource.json.Json;
 import com.eclipsesource.json.JsonValue;
 
-public record CommandLineUser(String username, String password) {
+public record SourceCodeUser(String username, String password) {
   public JsonValue toJson() {
     return Json
       .object()
@@ -11,10 +11,10 @@ public record CommandLineUser(String username, String password) {
       .add("password", password);
   }
 
-  public static CommandLineUser fromJson(JsonValue json) {
+  public static SourceCodeUser fromJson(JsonValue json) {
     var obj = json.asObject();
 
-    return new CommandLineUser(
+    return new SourceCodeUser(
       obj.get("username").asString(),
       obj.get("password").asString()
     );

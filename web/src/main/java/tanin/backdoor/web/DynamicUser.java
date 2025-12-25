@@ -5,7 +5,7 @@ import com.eclipsesource.json.JsonValue;
 
 import java.time.Instant;
 
-public record BackdoorUser(String id, String username, String hashedPassword, Instant passwordExpiredAt) {
+public record DynamicUser(String id, String username, String hashedPassword, Instant passwordExpiredAt) {
   public JsonValue toJson() {
     var obj = Json
       .object()
@@ -20,11 +20,11 @@ public record BackdoorUser(String id, String username, String hashedPassword, In
     return obj;
   }
 
-  public static BackdoorUser fromJson(JsonValue json) {
+  public static DynamicUser fromJson(JsonValue json) {
     var obj = json.asObject();
     var passwordExpiredAt = obj.get("passwordExpiredAt");
 
-    return new BackdoorUser(
+    return new DynamicUser(
       obj.get("id").asString(),
       obj.get("username").asString(),
       obj.get("hashedPassword").asString(),

@@ -81,7 +81,7 @@ public class LoginTest extends Base {
       new DatabaseConfig("postgres", POSTGRES_DATABASE_URL, null, null),
       new DatabaseConfig("clickhouse", CLICKHOUSE_DATABASE_URL, null, null),
     };
-    server.commandLineUsers = new CommandLineUser[0];
+    server.sourceCodeUsers = new SourceCodeUser[0];
 
     go("/");
     waitUntil(() -> assertEquals("/login", getCurrentPath()));
@@ -114,7 +114,7 @@ public class LoginTest extends Base {
       new DatabaseConfig("postgres", POSTGRES_DATABASE_URL, "backdoor_test_user", "test"),
       new DatabaseConfig("clickhouse", CLICKHOUSE_DATABASE_URL, null, null),
     };
-    server.commandLineUsers = new CommandLineUser[0];
+    server.sourceCodeUsers = new SourceCodeUser[0];
 
     go("/");
     waitUntil(() -> assertEquals("/login", getCurrentPath()));
@@ -160,7 +160,7 @@ public class LoginTest extends Base {
       new DatabaseConfig("postgres", POSTGRES_DATABASE_URL, null, null),
       new DatabaseConfig("clickhouse", CLICKHOUSE_DATABASE_URL, "backdoor", "test_ch"),
     };
-    server.commandLineUsers = new CommandLineUser[0];
+    server.sourceCodeUsers = new SourceCodeUser[0];
 
     go("/");
     waitUntil(() -> assertEquals("/login", getCurrentPath()));
@@ -203,7 +203,7 @@ public class LoginTest extends Base {
   @Test
   void incorrectPassthroughUser() throws InterruptedException, SQLException, NoSuchAlgorithmException, KeyManagementException {
     server.databaseConfigs = new DatabaseConfig[]{new DatabaseConfig("test_db", POSTGRES_DATABASE_URL, null, null)};
-    server.commandLineUsers = new CommandLineUser[0];
+    server.sourceCodeUsers = new SourceCodeUser[0];
 
     go("/");
 

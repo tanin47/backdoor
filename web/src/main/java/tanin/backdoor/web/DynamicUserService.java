@@ -13,26 +13,26 @@ import java.util.concurrent.atomic.AtomicReference;
 import static tanin.backdoor.core.BackdoorCoreServer.makeSqlLiteral;
 import static tanin.backdoor.core.BackdoorCoreServer.makeSqlName;
 
-public class BackdoorUserService {
+public class DynamicUserService {
   private final String TABLE = "backdoor_user";
   private final DatabaseConfig dbConfig;
   private final EngineProvider engineProvider;
 
-  public BackdoorUserService(String databaseUrl) {
+  public DynamicUserService(String databaseUrl) {
     this.dbConfig = new DatabaseConfig("backdoor-admin-user", databaseUrl, null, null);
     this.engineProvider = new EngineProvider() {
     };
   }
 
-  public BackdoorUser[] getAll() throws Exception {
-    var users = new ArrayList<BackdoorUser>();
+  public DynamicUser[] getAll() throws Exception {
+    var users = new ArrayList<DynamicUser>();
     try (var engine = engineProvider.createEngine(dbConfig, null)) {
       engine.executeQuery(
         "SELECT id, username, hashed_password, password_expired_at FROM " + makeSqlName(TABLE) + " ORDER BY username ASC",
         rs -> {
           while (rs.next()) {
             var passwordExpiredAt = rs.getTimestamp("password_expired_at");
-            users.add(new BackdoorUser(
+            users.add(new DynamicUser(
               rs.getString("id"),
               rs.getString("username"),
               rs.getString("hashed_password"),
@@ -43,7 +43,7 @@ public class BackdoorUserService {
       );
     }
 
-    return users.toArray(new BackdoorUser[0]);
+    return users.toArray(new DynamicUser[0]);
   }
 
   public void create(String username, String tempPassword) throws Exception {
@@ -63,15 +63,15 @@ public class BackdoorUserService {
     }
   }
 
-  public BackdoorUser getByUsername(String username) throws Exception {
-    AtomicReference<BackdoorUser> user = new AtomicReference<>();
+  public DynamicUser getByUsername(String username) throws Exception {
+    AtomicReference<DynamicUser> user = new AtomicReference<>();
     try (var engine = engineProvider.createEngine(dbConfig, null)) {
       engine.executeQuery(
         "SELECT id, username, hashed_password, password_expired_at FROM " + makeSqlName(TABLE) + " WHERE username = " + makeSqlLiteral(username),
         rs -> {
           while (rs.next()) {
             var passwordExpiredAt = rs.getTimestamp("password_expired_at");
-            user.set(new BackdoorUser(
+            user.set(new DynamicUser(
               rs.getString("id"),
               rs.getString("username"),
               rs.getString("hashed_password"),
@@ -106,15 +106,15 @@ public class BackdoorUserService {
   }
 
 
-  public BackdoorUser getById(String id) throws Exception {
-    AtomicReference<BackdoorUser> user = new AtomicReference<>();
+  public DynamicUser getById(String id) throws Exception {
+    AtomicReference<DynamicUser> user = new AtomicReference<>();
     try (var engine = engineProvider.createEngine(dbConfig, null)) {
       engine.executeQuery(
         "SELECT id, username, hashed_password, password_expired_at FROM " + makeSqlName(TABLE) + " WHERE id = " + makeSqlLiteral(id),
         rs -> {
           while (rs.next()) {
             var passwordExpiredAt = rs.getTimestamp("password_expired_at");
-            user.set(new BackdoorUser(
+            user.set(new DynamicUser(
               rs.getString("id"),
               rs.getString("username"),
               rs.getString("hashed_password"),

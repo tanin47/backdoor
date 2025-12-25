@@ -1,7 +1,6 @@
 package tanin.backdoor.web;
 
 import tanin.backdoor.core.DatabaseConfig;
-import tanin.backdoor.core.DatabaseUser;
 
 import java.util.ArrayList;
 
@@ -12,7 +11,7 @@ public class BackdoorWebServerBuilder {
   ArrayList<DatabaseConfig> databaseConfigs = new ArrayList<>();
   int port = 0;
   int sslPort = 0;
-  ArrayList<CommandLineUser> users = new ArrayList<>();
+  ArrayList<SourceCodeUser> users = new ArrayList<>();
   String secretKey = generateRandomString(32);
   String backdoorDatabaseJdbcUrl = null;
 
@@ -37,7 +36,7 @@ public class BackdoorWebServerBuilder {
   }
 
   public BackdoorWebServerBuilder addUser(String username, String password) {
-    this.users.add(new CommandLineUser(username, password));
+    this.users.add(new SourceCodeUser(username, password));
     return this;
   }
 
@@ -51,7 +50,7 @@ public class BackdoorWebServerBuilder {
       databaseConfigs.toArray(new DatabaseConfig[0]),
       port,
       sslPort,
-      users.toArray(new CommandLineUser[0]),
+      users.toArray(new SourceCodeUser[0]),
       secretKey,
       backdoorDatabaseJdbcUrl
     );
