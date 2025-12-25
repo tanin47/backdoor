@@ -5,14 +5,16 @@ import com.eclipsesource.json.ParseException;
 import com.renomad.minum.web.*;
 import org.altcha.altcha.Altcha;
 import org.postgresql.util.PSQLException;
-import tanin.backdoor.core.*;
+import tanin.backdoor.core.BackdoorCoreServer;
+import tanin.backdoor.core.DatabaseConfig;
+import tanin.backdoor.core.DatabaseUser;
+import tanin.backdoor.core.EncryptionHelper;
 import tanin.backdoor.core.engine.Engine;
 import tanin.migratedb.MigrateDb;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.security.InvalidKeyException;
 import java.sql.SQLException;
 import java.time.Instant;
@@ -67,7 +69,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
   public String secretKey;
   public String backdoorDatabaseJdbcUrl;
   private BackdoorUserService backdoorUserService;
-  ThreadLocal<AuthCookie> auth = new ThreadLocal<>();
+  ThreadLocal<AuthInfo> auth = new ThreadLocal<>();
 
   BackdoorWebServer(
     DatabaseConfig[] databaseConfigs,
@@ -128,7 +130,13 @@ public class BackdoorWebServer extends BackdoorCoreServer {
     Instant expires
   ) throws Exception {
     return EncryptionHelper.encryptText(
-      new AuthCookie(backdoorUser, commandLineUser, databaseUsers, adHocDatabaseConfigs, expires).toJson().toString(),
+      new AuthCookie(
+        backdoorUser == null ? null : backdoorUser.id(),
+        commandLineUser == null ? null : commandLineUser.username(),
+        databaseUsers,
+        adHocDatabaseConfigs,
+        expires
+      ).toJson().toString(),
       secretKey
     );
   }
@@ -278,11 +286,22 @@ public class BackdoorWebServer extends BackdoorCoreServer {
 
     // TODO: Auth that we use in the server and the auth stored in the cookie don't need to be identical.
     // The auth stored in the cookie should simply store ID and we fetch it from the backend for full info.
-    var auth = extractAuthFromCookie(cookieHeaders);
+    var authCookie = extractAuthFromCookie(cookieHeaders);
 
-    if (auth == null) {
+    if (authCookie == null) {
       throw new AuthFailureException();
     }
+
+    var backdoorUser = authCookie.backdoorUserId() == null ? null : backdoorUserService.getById(authCookie.backdoorUserId());
+    var commandLineUser = authCookie.commandLineUserUsername() == null ? null : Arrays.stream(commandLineUsers).filter(u -> u.username().equals(authCookie.commandLineUserUsername())).findFirst().orElse(null);
+
+    var auth = new AuthInfo(
+      backdoorUser,
+      commandLineUser,
+      authCookie.databaseUsers(),
+      authCookie.adHocDatabaseConfigs(),
+      authCookie.expires()
+    );
 
     if (auth.expires().isBefore(Instant.now())) {
       // The encrypted credential expires. Requires another login.
@@ -291,34 +310,11 @@ public class BackdoorWebServer extends BackdoorCoreServer {
 
     var valid = false;
     if (auth.backdoorUser() != null) {
-      var fetched = backdoorUserService.getById(auth.backdoorUser().id());
-      if (fetched != null) {
-        auth = new AuthCookie(
-          fetched,
-          auth.commandLineUser(),
-          auth.databaseUsers(),
-          auth.adHocDatabaseConfigs(),
-          auth.expires()
-        );
-        valid = true;
-      }
+      valid = true;
     }
 
-    if (!valid) {
-      if (auth.commandLineUser() != null) {
-        AuthCookie finalAuth = auth;
-        var fetched = Arrays.stream(commandLineUsers).filter(u -> u.username().equals(finalAuth.commandLineUser().username())).findFirst().orElse(null);
-        if (fetched != null) {
-          auth = new AuthCookie(
-            auth.backdoorUser(),
-            fetched,
-            auth.databaseUsers(),
-            auth.adHocDatabaseConfigs(),
-            auth.expires()
-          );
-          valid = true;
-        }
-      }
+    if (auth.commandLineUser() != null) {
+      valid = true;
     }
 
     if (!valid) {

@@ -5,13 +5,14 @@ import com.eclipsesource.json.JsonValue;
 import org.apache.hc.core5.reactor.Command;
 import tanin.backdoor.core.DatabaseConfig;
 import tanin.backdoor.core.DatabaseUser;
+import tanin.backdoor.core.Helpers;
 
 import java.time.Instant;
 import java.util.ArrayList;
 
 public record AuthCookie(
-  BackdoorUser backdoorUser,
-  CommandLineUser commandLineUser,
+  String backdoorUserId,
+  String commandLineUserUsername,
   DatabaseUser[] databaseUsers,
   DatabaseConfig[] adHocDatabaseConfigs,
   Instant expires
@@ -20,12 +21,12 @@ public record AuthCookie(
     var json = Json.object();
     json.add("expires", expires.toEpochMilli());
 
-    if (backdoorUser != null) {
-      json.add("backdoorUser", backdoorUser.toJson());
+    if (backdoorUserId != null) {
+      json.add("backdoorUserId", backdoorUserId);
     }
 
-    if (commandLineUser != null) {
-      json.add("commandLineUser", commandLineUser.toJson());
+    if (commandLineUserUsername != null) {
+      json.add("commandLineUserUsername", commandLineUserUsername);
     }
 
     var databaseUsersJson = Json.array();
@@ -51,15 +52,8 @@ public record AuthCookie(
     var obj = json.asObject();
     var expires = Instant.ofEpochMilli(obj.get("expires").asLong());
 
-    BackdoorUser backdoorUser = null;
-    if (obj.get("backdoorUser") != null && !obj.get("backdoorUser").isNull()) {
-      backdoorUser = BackdoorUser.fromJson(obj.get("backdoorUser"));
-    }
-
-    CommandLineUser commandLineUser = null;
-    if (obj.get("commandLineUser") != null && !obj.get("commandLineUser").isNull()) {
-      commandLineUser = CommandLineUser.fromJson(obj.get("commandLineUser"));
-    }
+    String backdoorUserId = Helpers.getString(obj, "backdoorUserId");
+    String commandLineUserUsername = Helpers.getString(obj, "commandLineUserUsername");
 
     var databaseUsers = new ArrayList<DatabaseUser>();
     if (obj.get("databaseUsers") != null && !obj.get("databaseUsers").isNull()) {
@@ -76,8 +70,8 @@ public record AuthCookie(
     }
 
     return new AuthCookie(
-      backdoorUser,
-      commandLineUser,
+      backdoorUserId,
+      commandLineUserUsername,
       databaseUsers.toArray(new DatabaseUser[0]),
       adHocDatabaseConfigs.toArray(new DatabaseConfig[0]),
       expires
