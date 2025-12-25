@@ -6,6 +6,7 @@ import com.eclipsesource.json.JsonObject;
 import com.eclipsesource.json.JsonValue;
 import com.renomad.minum.templating.TemplateProcessor;
 import com.renomad.minum.web.*;
+import com.sun.tools.javac.Main;
 import io.sentry.Sentry;
 import tanin.backdoor.core.engine.Engine;
 import tanin.backdoor.core.engine.EngineProvider;
@@ -13,14 +14,13 @@ import tanin.ejwf.MinumBuilder;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.logging.LogManager;
 import java.util.logging.Logger;
 import java.util.prefs.BackingStoreException;
 import java.util.stream.Collectors;
@@ -113,7 +113,7 @@ public abstract class BackdoorCoreServer {
     this.sentryRelease = sentryRelease;
   }
 
-  protected abstract User getUserByDatabaseConfig(DatabaseConfig databaseConfig);
+  protected abstract DatabaseUser getUserByDatabaseConfig(DatabaseConfig databaseConfig);
 
   public static String makeSqlLiteral(String sql) {
     return "'" + sql.replace("'", "''") + "'";
@@ -184,7 +184,7 @@ public abstract class BackdoorCoreServer {
     return this.engineProvider.createEngine(databaseConfig, user);
   }
 
-  public FullSystem start() throws SQLException, NoSuchAlgorithmException, KeyManagementException {
+  public FullSystem start() throws Exception {
     minum = MinumBuilder.start(this.port, this.sslPort, this.keyStore);
     var wf = minum.getWebFramework();
 

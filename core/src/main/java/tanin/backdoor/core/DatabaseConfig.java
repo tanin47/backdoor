@@ -28,7 +28,7 @@ public class DatabaseConfig {
     this.isAdHoc = isAdHoc;
   }
 
-  public static DatabaseConfig parse(JsonValue json) {
+  public static DatabaseConfig fromJson(JsonValue json, boolean isAdhoc) {
     if (json == null || json.isNull()) {
       return null;
     }
@@ -40,7 +40,7 @@ public class DatabaseConfig {
       Helpers.getString(obj, "jdbcUrl"),
       Helpers.getString(obj, "username"),
       Helpers.getString(obj, "password"),
-      Helpers.getBoolean(obj, "isAdHoc", false)
+      Helpers.getBoolean(obj, "isAdHoc", isAdhoc)
     );
   }
 

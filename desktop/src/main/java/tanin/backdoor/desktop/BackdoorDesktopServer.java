@@ -5,7 +5,7 @@ import com.eclipsesource.json.JsonValue;
 import com.renomad.minum.web.*;
 import tanin.backdoor.core.BackdoorCoreServer;
 import tanin.backdoor.core.DatabaseConfig;
-import tanin.backdoor.core.User;
+import tanin.backdoor.core.DatabaseUser;
 import tanin.backdoor.desktop.engine.EngineProvider;
 import tanin.ejwf.MinumBuilder;
 
@@ -71,7 +71,7 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
     this.engineProvider = new EngineProvider();
   }
 
-  public User getUserByDatabaseConfig(DatabaseConfig databaseConfig) {
+  public DatabaseUser getUserByDatabaseConfig(DatabaseConfig databaseConfig) {
     return null;
   }
 
@@ -79,7 +79,7 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
 
   private Browser.OnFileSelected onFileSelected = null;
 
-  public FullSystem start() throws SQLException, NoSuchAlgorithmException, KeyManagementException {
+  public FullSystem start() throws Exception {
     var minum = super.start();
 
     var wf = minum.getWebFramework();
@@ -175,7 +175,7 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
         var json = Json.parse(req.getBody().asString());
         boolean isSaved = json.asObject().get("isSaved").asBoolean();
         onFileSelected = filePath -> {
-          System.out.println("Opening file: " + filePath);
+          logger.info("Opening file: " + filePath);
 
           browser.eval("window.triggerFileSelected(" + Json.object().add("filePath", filePath).toString() + ")");
         };
@@ -208,7 +208,7 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
     var configs = new ArrayList<DatabaseConfig>();
 
     json.asArray().forEach(c -> {
-      var config = DatabaseConfig.parse(c);
+      var config = DatabaseConfig.fromJson(c, true);
       if (config != null) {
         configs.add(config);
       }

@@ -2,7 +2,6 @@ package tanin.backdoor.web;
 
 import org.junit.jupiter.api.Test;
 import tanin.backdoor.core.DatabaseConfig;
-import tanin.backdoor.core.User;
 
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
@@ -82,7 +81,7 @@ public class LoginTest extends Base {
       new DatabaseConfig("postgres", POSTGRES_DATABASE_URL, null, null),
       new DatabaseConfig("clickhouse", CLICKHOUSE_DATABASE_URL, null, null),
     };
-    server.users = new User[0];
+    server.commandLineUsers = new CommandLineUser[0];
 
     go("/");
     waitUntil(() -> assertEquals("/login", getCurrentPath()));
@@ -100,7 +99,7 @@ public class LoginTest extends Base {
     click(tid("database-item", "postgres"));
     waitUntil(() -> assertEquals("loaded", elem(tid("database-item", "postgres")).getDomAttribute("data-database-status")));
     assertEquals(
-      List.of("user"),
+      List.of("backdoor_user", "migrate_db_already_migrated_script", "migrate_db_lock", "user"),
       elems(tid("menu-items", "postgres", null, "menu-item-table")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()
     );
 
@@ -115,7 +114,7 @@ public class LoginTest extends Base {
       new DatabaseConfig("postgres", POSTGRES_DATABASE_URL, "backdoor_test_user", "test"),
       new DatabaseConfig("clickhouse", CLICKHOUSE_DATABASE_URL, null, null),
     };
-    server.users = new User[0];
+    server.commandLineUsers = new CommandLineUser[0];
 
     go("/");
     waitUntil(() -> assertEquals("/login", getCurrentPath()));
@@ -144,7 +143,7 @@ public class LoginTest extends Base {
     click(tid("database-item", "postgres"));
     waitUntil(() -> assertEquals("loaded", elem(tid("database-item", "postgres")).getDomAttribute("data-database-status")));
     assertEquals(
-      List.of("user"),
+      List.of("backdoor_user", "migrate_db_already_migrated_script", "migrate_db_lock", "user"),
       elems(tid("menu-items", "postgres", null, "menu-item-table")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()
     );
     click(tid("database-item", "clickhouse"));
@@ -161,7 +160,7 @@ public class LoginTest extends Base {
       new DatabaseConfig("postgres", POSTGRES_DATABASE_URL, null, null),
       new DatabaseConfig("clickhouse", CLICKHOUSE_DATABASE_URL, "backdoor", "test_ch"),
     };
-    server.users = new User[0];
+    server.commandLineUsers = new CommandLineUser[0];
 
     go("/");
     waitUntil(() -> assertEquals("/login", getCurrentPath()));
@@ -190,7 +189,7 @@ public class LoginTest extends Base {
     click(tid("database-item", "postgres"));
     waitUntil(() -> assertEquals("loaded", elem(tid("database-item", "postgres")).getDomAttribute("data-database-status")));
     assertEquals(
-      List.of("user"),
+      List.of("backdoor_user", "migrate_db_already_migrated_script", "migrate_db_lock", "user"),
       elems(tid("menu-items", "postgres", null, "menu-item-table")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()
     );
     click(tid("database-item", "clickhouse"));
@@ -204,7 +203,7 @@ public class LoginTest extends Base {
   @Test
   void incorrectPassthroughUser() throws InterruptedException, SQLException, NoSuchAlgorithmException, KeyManagementException {
     server.databaseConfigs = new DatabaseConfig[]{new DatabaseConfig("test_db", POSTGRES_DATABASE_URL, null, null)};
-    server.users = new User[0];
+    server.commandLineUsers = new CommandLineUser[0];
 
     go("/");
 

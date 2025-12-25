@@ -264,6 +264,14 @@ export async function runSql(database: string, sql: string): Promise<void> {
       </div>
       {#if PARADIGM === 'WEB'}
         <a
+          href="/admin/user"
+          class="flex flex-row items-center p-2 gap-2 text-accent text-sm"
+          data-test-id="admin-user-link-button"
+        >
+          <i class="ph ph-gear"></i>
+          <span>User Settings</span>
+        </a>
+        <a
           href="/logout"
           class="flex flex-row items-center p-2 gap-2 bg-base-300  text-gray-400 text-sm"
           data-test-id="logout-button"

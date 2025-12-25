@@ -4,28 +4,40 @@ import com.eclipsesource.json.Json;
 import com.eclipsesource.json.ParseException;
 import com.renomad.minum.web.*;
 import org.altcha.altcha.Altcha;
+import org.postgresql.util.PSQLException;
 import tanin.backdoor.core.*;
 import tanin.backdoor.core.engine.Engine;
+import tanin.migratedb.MigrateDb;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.security.InvalidKeyException;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
+import java.util.logging.LogManager;
 import java.util.logging.Logger;
 
 import static com.renomad.minum.web.RequestLine.Method.*;
 
 public class BackdoorWebServer extends BackdoorCoreServer {
+  private static final Logger logger = Logger.getLogger(BackdoorWebServer.class.getName());
+
+  static {
+    try (var configFile = BackdoorWebServer.class.getResourceAsStream("/logging.properties")) {
+      LogManager.getLogManager().readConfiguration(configFile);
+      logger.info("The log config (logging.properties) has been loaded.");
+    } catch (IOException e) {
+      logger.warning("Could not load the log config file (logging.properties): " + e.getMessage());
+    }
+  }
 
   static final String CSRF_COOKIE_KEY = "Csrf";
-  private static final Logger logger = Logger.getLogger(BackdoorWebServer.class.getName());
   private static final String AUTH_COOKIE_KEY = "backdoor";
   private static final Set<RequestLine.Method> CSRF_READ_METHODS = new HashSet<>(List.of(GET, HEAD, OPTIONS));
   private static final String VERSION;
@@ -51,16 +63,19 @@ public class BackdoorWebServer extends BackdoorCoreServer {
   }
 
 
-  public User[] users;
+  public CommandLineUser[] commandLineUsers;
   public String secretKey;
+  public String backdoorDatabaseJdbcUrl;
+  private BackdoorUserService backdoorUserService;
   ThreadLocal<AuthCookie> auth = new ThreadLocal<>();
 
   BackdoorWebServer(
     DatabaseConfig[] databaseConfigs,
     int port,
     int sslPort,
-    User[] users,
-    String secretKey
+    CommandLineUser[] commandLineUsers,
+    String secretKey,
+    String backdoorDatabaseJdbcUrl
   ) {
     super(
       databaseConfigs,
@@ -71,9 +86,13 @@ public class BackdoorWebServer extends BackdoorCoreServer {
       SENTRY_PROPERTIES.getProperty("release")
     );
     this.secretKey = secretKey;
+    this.backdoorDatabaseJdbcUrl = backdoorDatabaseJdbcUrl;
+    if (backdoorDatabaseJdbcUrl != null) {
+      this.backdoorUserService = new BackdoorUserService(this.backdoorDatabaseJdbcUrl);
+    }
 
-    if (users != null) {
-      for (User user : users) {
+    if (commandLineUsers != null) {
+      for (CommandLineUser user : commandLineUsers) {
         if (user.username().isBlank()) {
           throw new IllegalArgumentException("Username cannot be empty");
         }
@@ -82,14 +101,14 @@ public class BackdoorWebServer extends BackdoorCoreServer {
         }
       }
 
-      this.users = users;
+      this.commandLineUsers = commandLineUsers;
     } else {
-      this.users = new User[0];
+      this.commandLineUsers = new CommandLineUser[0];
     }
   }
 
-  public User getUserByDatabaseConfig(DatabaseConfig databaseConfig) {
-    return Arrays.stream(this.auth.get().users())
+  public DatabaseUser getUserByDatabaseConfig(DatabaseConfig databaseConfig) {
+    return Arrays.stream(this.auth.get().databaseUsers())
       .filter(u -> u.databaseNickname() != null && u.databaseNickname().equals(databaseConfig.nickname))
       .findFirst()
       .orElse(null);
@@ -100,15 +119,29 @@ public class BackdoorWebServer extends BackdoorCoreServer {
     return CSRF_COOKIE_KEY + "=" + csrfToken + "; Max-Age=86400; Path=/;" + securePortion + " HttpOnly";
   }
 
-  public static String makeAuthCookieValueForUser(User[] users, DatabaseConfig[] adHocDatabaseConfigs, String secretKey, Instant expires) throws Exception {
+  public static String makeAuthCookieValueForUser(
+    BackdoorUser backdoorUser,
+    CommandLineUser commandLineUser,
+    DatabaseUser[] databaseUsers,
+    DatabaseConfig[] adHocDatabaseConfigs,
+    String secretKey,
+    Instant expires
+  ) throws Exception {
     return EncryptionHelper.encryptText(
-      new AuthCookie(users, adHocDatabaseConfigs, expires).toJson().toString(),
+      new AuthCookie(backdoorUser, commandLineUser, databaseUsers, adHocDatabaseConfigs, expires).toJson().toString(),
       secretKey
     );
   }
 
-  public static String makeAuthCookie(User[] users, DatabaseConfig[] adHocDatabaseConfigs, String secretKey, Instant expires) throws Exception {
-    return AUTH_COOKIE_KEY + "=" + makeAuthCookieValueForUser(users, adHocDatabaseConfigs, secretKey, expires);
+  public static String makeAuthCookie(
+    BackdoorUser backdoorUser,
+    CommandLineUser commandLineUser,
+    DatabaseUser[] databaseUsers,
+    DatabaseConfig[] adHocDatabaseConfigs,
+    String secretKey,
+    Instant expires
+  ) throws Exception {
+    return AUTH_COOKIE_KEY + "=" + makeAuthCookieValueForUser(backdoorUser, commandLineUser, databaseUsers, adHocDatabaseConfigs, secretKey, expires);
   }
 
   private String extractOrMakeCsrfCookieValue(IRequest request, boolean makeIfMissing) {
@@ -142,48 +175,70 @@ public class BackdoorWebServer extends BackdoorCoreServer {
     }
   }
 
-  private static String makeAuthSetCookieLine(User[] users, DatabaseConfig[] adHocDatabaseConfigs, String secretKey, Instant expires, boolean isSecure) throws Exception {
+  private static String makeAuthSetCookieLine(BackdoorUser backdoorUser, CommandLineUser commandLineUser, DatabaseUser[] databaseUsers, DatabaseConfig[] adHocDatabaseConfigs, String secretKey, Instant expires, boolean isSecure) throws Exception {
     var securePortion = isSecure ? " Secure;" : "";
-    return makeAuthCookie(users, adHocDatabaseConfigs, secretKey, expires) + "; Max-Age=86400; Path=/;" + securePortion + " HttpOnly";
+    return makeAuthCookie(backdoorUser, commandLineUser, databaseUsers, adHocDatabaseConfigs, secretKey, expires) + "; Max-Age=86400; Path=/;" + securePortion + " HttpOnly";
   }
 
-  private User getUser(String username, String password) throws Exception {
-    User found = null;
+  public record AuthenticatedUser(
+    BackdoorUser backdoorUser,
+    CommandLineUser commandLineUser,
+    DatabaseUser databaseUser
+  ) {
+  }
 
-    if (users != null) {
-      found = Arrays.stream(users)
-        .filter(u -> u.username().equals(username) && u.password().equals(password))
-        .findFirst()
-        .orElse(null);
-    }
-
-    if (found == null) {
-      for (var databaseConfig : databaseConfigs) {
-        var potentialDatabaseUser = new User(username, password, databaseConfig.nickname);
-        AtomicBoolean isValid = new AtomicBoolean(false);
-        try (var engine = engineProvider.createEngine(databaseConfig, potentialDatabaseUser)) {
-          engine.executeQuery(
-            "SELECT 123",
-            rs -> {
-              rs.next();
-              if (rs.getInt(1) == 123) {
-                isValid.set(true);
-              }
-            }
-          );
-
-          if (isValid.get()) {
-            return potentialDatabaseUser;
+  private boolean authenticateDatabaseUser(DatabaseConfig databaseConfig, DatabaseUser potentialDatabaseUser) throws Exception {
+    var isValid = new AtomicBoolean(false);
+    // TODO: We need to first test whether the database config is valid in itself. If it is, we skip it.
+    try (var engine = engineProvider.createEngine(databaseConfig, potentialDatabaseUser)) {
+      engine.executeQuery(
+        "SELECT 123",
+        rs -> {
+          rs.next();
+          if (rs.getInt(1) == 123) {
+            isValid.set(true);
           }
-        } catch (Engine.InvalidCredentialsException |
-                 Engine.OverwritingUserAndCredentialedJdbcConflictedException ignored) {
-        } catch (Exception e) {
-          throw e;
+        }
+      );
+    } catch (Engine.InvalidCredentialsException |
+             Engine.OverwritingUserAndCredentialedJdbcConflictedException ignored) {
+    }
+    return isValid.get();
+  }
+
+  private AuthenticatedUser authenticateUser(String username, String password) throws Exception {
+    if (backdoorUserService != null) {
+      var user = backdoorUserService.getByUsername(username);
+
+      if (user != null) {
+        if (PasswordHasher.verifyPassword(password, user.hashedPassword())) {
+          return new AuthenticatedUser(user, null, null);
+        } else {
+          return null;
         }
       }
     }
 
-    return found;
+
+    if (commandLineUsers != null) {
+      var found = Arrays.stream(commandLineUsers)
+        .filter(u -> u.username().equals(username) && u.password().equals(password))
+        .findFirst()
+        .orElse(null);
+
+      if (found != null) {
+        return new AuthenticatedUser(null, found, null);
+      }
+    }
+
+    for (var databaseConfig : databaseConfigs) {
+      var potentialDatabaseUser = new DatabaseUser(username, password, databaseConfig.nickname);
+      if (authenticateDatabaseUser(databaseConfig, potentialDatabaseUser)) {
+        return new AuthenticatedUser(null, null, potentialDatabaseUser);
+      }
+    }
+
+    return null;
   }
 
   private static final IResponse REDIRECT_AUTH_RESP = Response.buildResponse(
@@ -209,7 +264,8 @@ public class BackdoorWebServer extends BackdoorCoreServer {
         path.equals("altcha") ||
         path.equals("healthcheck") ||
         path.startsWith("assets/") ||
-        path.equals("logout")
+        path.equals("logout") ||
+        path.equals("__webpack_hmr")
     ) {
       // These paths don't need authentication.
       return;
@@ -220,6 +276,8 @@ public class BackdoorWebServer extends BackdoorCoreServer {
       throw new AuthFailureException();
     }
 
+    // TODO: Auth that we use in the server and the auth stored in the cookie don't need to be identical.
+    // The auth stored in the cookie should simply store ID and we fetch it from the backend for full info.
     var auth = extractAuthFromCookie(cookieHeaders);
 
     if (auth == null) {
@@ -231,14 +289,68 @@ public class BackdoorWebServer extends BackdoorCoreServer {
       throw new AuthFailureException();
     }
 
-    for (var user : auth.users()) {
-      if (getUser(user.username(), user.password()) != null) {
-        this.auth.set(auth);
-        return;
+    var valid = false;
+    if (auth.backdoorUser() != null) {
+      var fetched = backdoorUserService.getById(auth.backdoorUser().id());
+      if (fetched != null) {
+        auth = new AuthCookie(
+          fetched,
+          auth.commandLineUser(),
+          auth.databaseUsers(),
+          auth.adHocDatabaseConfigs(),
+          auth.expires()
+        );
+        valid = true;
       }
     }
 
-    throw new AuthFailureException();
+    if (!valid) {
+      if (auth.commandLineUser() != null) {
+        AuthCookie finalAuth = auth;
+        var fetched = Arrays.stream(commandLineUsers).filter(u -> u.username().equals(finalAuth.commandLineUser().username())).findFirst().orElse(null);
+        if (fetched != null) {
+          auth = new AuthCookie(
+            auth.backdoorUser(),
+            fetched,
+            auth.databaseUsers(),
+            auth.adHocDatabaseConfigs(),
+            auth.expires()
+          );
+          valid = true;
+        }
+      }
+    }
+
+    if (!valid) {
+      for (var databaseUser : auth.databaseUsers()) {
+        if (authenticateUser(databaseUser.username(), databaseUser.password()) != null) {
+          valid = true;
+          break;
+        }
+      }
+    }
+
+    if (valid) {
+      this.auth.set(auth);
+
+      // Force set a permanent password if the user has a temporary password.
+      if (
+        req.getRequestLine().getMethod() == RequestLine.Method.GET &&
+          auth.backdoorUser() != null &&
+          auth.backdoorUser().passwordExpiredAt() != null
+      ) {
+        var csrfToken = extractOrMakeCsrfCookieValue(req, true);
+        var isLocalHost = req.getHeaders().valueByKey("Host").stream().findFirst().orElse("").startsWith("localhost");
+        throw new EarlyExitException(
+          Response.htmlOk(
+            makeHtml("resetPassword.html", csrfToken, Paradigm.WEB, VERSION),
+            Map.of("Set-Cookie", makeCsrfTokenSetCookieLine(csrfToken, !isLocalHost))
+          )
+        );
+      }
+    } else {
+      throw new AuthFailureException();
+    }
   }
 
   private void checkAltcha(String altcha) {
@@ -262,7 +374,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
     }
   }
 
-  public FullSystem start() throws SQLException, NoSuchAlgorithmException, KeyManagementException {
+  public FullSystem start() throws Exception {
     var minum = super.start();
 
     var wf = minum.getWebFramework();
@@ -278,6 +390,9 @@ public class BackdoorWebServer extends BackdoorCoreServer {
         } else {
           return POST_AUTH_RESP;
         }
+      } catch (EarlyExitException e) {
+        logger.log(Level.WARNING, request.getRequestLine().getMethod() + " " + request.getRequestLine().getPathDetails().getIsolatedPath() + " raised an error.", e);
+        return e.response;
       }
 
       var method = request.getRequestLine().getMethod();
@@ -305,7 +420,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
               .toString()
           );
         } catch (EarlyExitException e) {
-          logger.log(Level.SEVERE, request.getRequestLine().getMethod() + " " + request.getRequestLine().getPathDetails().getIsolatedPath() + " raised an error.", e);
+          logger.log(Level.WARNING, request.getRequestLine().getMethod() + " " + request.getRequestLine().getPathDetails().getIsolatedPath() + " raised an error.", e);
           return e.response;
         }
       } else {
@@ -382,14 +497,22 @@ public class BackdoorWebServer extends BackdoorCoreServer {
         var altcha = json.asObject().get("altcha").asString();
         var isLocalHost = req.getHeaders().valueByKey("Host").stream().findFirst().orElse("").startsWith("localhost");
         checkAltcha(altcha);
-        var user = getUser(username, password);
+        var authenticatedUser = authenticateUser(username, password);
 
-        if (user != null) {
+        if (authenticatedUser != null) {
           return Response.buildResponse(
             StatusLine.StatusCode.CODE_200_OK,
             Map.of(
               "Content-Type", "application/json",
-              "Set-Cookie", makeAuthSetCookieLine(new User[]{user}, new DatabaseConfig[0], secretKey, Instant.now().plus(1, ChronoUnit.DAYS), !isLocalHost)
+              "Set-Cookie", makeAuthSetCookieLine(
+                authenticatedUser.backdoorUser,
+                authenticatedUser.commandLineUser,
+                authenticatedUser.databaseUser != null ? new DatabaseUser[]{authenticatedUser.databaseUser} : null,
+                new DatabaseConfig[0],
+                secretKey,
+                Instant.now().plus(1, ChronoUnit.DAYS),
+                !isLocalHost
+              )
             ),
             Json.object().toString()
           );
@@ -406,7 +529,6 @@ public class BackdoorWebServer extends BackdoorCoreServer {
       }
     );
 
-
     wf.registerPath(
       POST,
       "api/login-additional",
@@ -420,17 +542,37 @@ public class BackdoorWebServer extends BackdoorCoreServer {
         checkAltcha(altcha);
 
         var databaseConfig = Arrays.stream(databaseConfigs).filter(d -> d.nickname.equals(database)).findFirst().orElse(null);
-        var potentialUser = new User(username, password, database);
+
+        if (databaseConfig == null) {
+          return Response.buildResponse(
+            StatusLine.StatusCode.CODE_400_BAD_REQUEST,
+            Map.of("Content-Type", "application/json"),
+            Json
+              .object()
+              .add("errors", Json.array().add("The database name is invalid. Please reload the page and try again."))
+              .toString()
+          );
+        }
+
+        var potentialUser = new DatabaseUser(username, password, database);
 
         try (var ignored = engineProvider.createEngine(databaseConfig, potentialUser)) {
-          var users = new ArrayList<>(List.of(auth.get().users()));
+          var users = new ArrayList<>(List.of(auth.get().databaseUsers()));
           users.add(potentialUser);
 
           return Response.buildResponse(
             StatusLine.StatusCode.CODE_200_OK,
             Map.of(
               "Content-Type", "application/json",
-              "Set-Cookie", makeAuthSetCookieLine(users.toArray(new User[0]), auth.get().adHocDatabaseConfigs(), secretKey, Instant.now().plus(1, ChronoUnit.DAYS), !isLocalHost)
+              "Set-Cookie", makeAuthSetCookieLine(
+                auth.get().backdoorUser(),
+                auth.get().commandLineUser(),
+                users.toArray(new DatabaseUser[0]),
+                auth.get().adHocDatabaseConfigs(),
+                secretKey,
+                Instant.now().plus(1, ChronoUnit.DAYS),
+                !isLocalHost
+              )
             ),
             Json.object().toString()
           );
@@ -455,7 +597,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
         return Response.buildResponse(
           StatusLine.StatusCode.CODE_302_FOUND,
           Map.of(
-            "Set-Cookie", makeAuthSetCookieLine(new User[0], new DatabaseConfig[0], "dontcare", Instant.now(), isSecure),
+            "Set-Cookie", makeAuthSetCookieLine(null, null, new DatabaseUser[0], new DatabaseConfig[0], "dontcare", Instant.now(), isSecure),
             // We need double-logout to clear both secure and non-secure cookie.
             "Location", isSecure ? "/" : "/logout?secure=true"
           ),
@@ -463,6 +605,235 @@ public class BackdoorWebServer extends BackdoorCoreServer {
         );
       }
     );
+
+
+    if (backdoorDatabaseJdbcUrl != null) {
+      try (var migrateDb = new MigrateDb(backdoorDatabaseJdbcUrl, new MigrateDb.MigrateScriptDir(BackdoorWebServer.class, "/sql"))) {
+        migrateDb.migrate();
+      }
+
+      wf.registerPath(
+        GET,
+        "admin/user",
+        req -> {
+          var isLocalHost = req.getHeaders().valueByKey("Host").stream().findFirst().orElse("").startsWith("localhost");
+          var csrfToken = extractOrMakeCsrfCookieValue(req, true);
+          return Response.htmlOk(
+            makeHtml("admin/user/index.html", csrfToken, Paradigm.WEB, VERSION),
+            Map.of("Set-Cookie", makeCsrfTokenSetCookieLine(csrfToken, !isLocalHost))
+          );
+        }
+      );
+
+      wf.registerPath(
+        POST,
+        "admin/user/load",
+        req -> {
+          var users = backdoorUserService.getAll();
+          var usersJson = Json.array();
+          for (var user : users) {
+            usersJson.add(user.toJson());
+          }
+
+          return Response.buildResponse(
+            StatusLine.StatusCode.CODE_200_OK,
+            Map.of("Content-Type", "application/json"),
+            Json
+              .object()
+              .add("users", usersJson)
+              .toString()
+          );
+        }
+      );
+
+      wf.registerPath(
+        POST,
+        "admin/user/create",
+        req -> {
+          var json = Json.parse(req.getBody().asString());
+          var username = json.asObject().get("username").asString().trim();
+          var tempPassword = json.asObject().get("tempPassword").asString();
+
+          if (username.isEmpty()) {
+            throw new EarlyExitException(Response.buildResponse(
+              StatusLine.StatusCode.CODE_400_BAD_REQUEST,
+              Map.of("Content-Type", "application/json"),
+              Json
+                .object()
+                .add("errors", Json.array().add("The username must not be empty."))
+                .toString()
+            ));
+          } else if (tempPassword.length() < 6) {
+            throw new EarlyExitException(Response.buildResponse(
+              StatusLine.StatusCode.CODE_400_BAD_REQUEST,
+              Map.of("Content-Type", "application/json"),
+              Json
+                .object()
+                .add("errors", Json.array().add("The password must be at least 6 characters long."))
+                .toString()
+            ));
+          }
+
+          try {
+            backdoorUserService.create(username, tempPassword);
+          } catch (PSQLException e) {
+            if (e.getMessage().contains("backdoor_user_username_key")) {
+              throw new EarlyExitException(Response.buildResponse(
+                StatusLine.StatusCode.CODE_400_BAD_REQUEST,
+                Map.of("Content-Type", "application/json"),
+                Json
+                  .object()
+                  .add("errors", Json.array().add("The username is already used by another user. Please choose a different username."))
+                  .toString()
+              ));
+            } else {
+              throw e;
+            }
+          }
+          var user = backdoorUserService.getByUsername(username);
+
+          return Response.buildResponse(
+            StatusLine.StatusCode.CODE_200_OK,
+            Map.of("Content-Type", "application/json"),
+            Json
+              .object()
+              .add("user", user.toJson())
+              .toString()
+          );
+        }
+      );
+
+      wf.registerPath(
+        POST,
+        "admin/user/update",
+        req -> {
+          var json = Json.parse(req.getBody().asString());
+          var id = json.asObject().get("id").asString();
+          var username = json.asObject().get("username").asString();
+
+          try {
+            backdoorUserService.updateUsername(id, username);
+          } catch (PSQLException e) {
+            if (e.getMessage().contains("backdoor_user_username_key")) {
+              throw new EarlyExitException(Response.buildResponse(
+                StatusLine.StatusCode.CODE_400_BAD_REQUEST,
+                Map.of("Content-Type", "application/json"),
+                Json
+                  .object()
+                  .add("errors", Json.array().add("The username is already used by another user. Please choose a different username."))
+                  .toString()
+              ));
+            } else {
+              throw e;
+            }
+          }
+          var user = backdoorUserService.getById(id);
+
+          return Response.buildResponse(
+            StatusLine.StatusCode.CODE_200_OK,
+            Map.of("Content-Type", "application/json"),
+            Json
+              .object()
+              .add("user", user.toJson())
+              .toString()
+          );
+        }
+      );
+
+      wf.registerPath(
+        POST,
+        "admin/user/set-temp-password",
+        req -> {
+          var json = Json.parse(req.getBody().asString());
+          var id = json.asObject().get("id").asString();
+          var tempPassword = json.asObject().get("tempPassword").asString();
+
+          if (tempPassword.length() < 6) {
+            throw new EarlyExitException(Response.buildResponse(
+              StatusLine.StatusCode.CODE_400_BAD_REQUEST,
+              Map.of("Content-Type", "application/json"),
+              Json
+                .object()
+                .add("errors", Json.array().add("The password must be at least 6 characters long."))
+                .toString()
+            ));
+          }
+
+          backdoorUserService.setPassword(id, tempPassword, Instant.now().plus(24, ChronoUnit.HOURS));
+          var user = backdoorUserService.getById(id);
+
+          return Response.buildResponse(
+            StatusLine.StatusCode.CODE_200_OK,
+            Map.of("Content-Type", "application/json"),
+            Json
+              .object()
+              .add("user", user.toJson())
+              .toString()
+          );
+        }
+      );
+
+      wf.registerPath(
+        POST,
+        "admin/user/delete",
+        req -> {
+          var json = Json.parse(req.getBody().asString());
+          var id = json.asObject().get("id").asString();
+
+          backdoorUserService.delete(id);
+
+          return Response.buildResponse(
+            StatusLine.StatusCode.CODE_200_OK,
+            Map.of("Content-Type", "application/json"),
+            Json
+              .object()
+              .toString()
+          );
+        }
+      );
+
+      wf.registerPath(
+        POST,
+        "set-password",
+        req -> {
+          var json = Json.parse(req.getBody().asString());
+          var password = json.asObject().get("password").asString();
+          var confirmPassword = json.asObject().get("confirmPassword").asString();
+
+          if (password.length() < 6) {
+            throw new EarlyExitException(Response.buildResponse(
+              StatusLine.StatusCode.CODE_400_BAD_REQUEST,
+              Map.of("Content-Type", "application/json"),
+              Json
+                .object()
+                .add("errors", Json.array().add("The password must be at least 6 characters long."))
+                .toString()
+            ));
+          }
+
+          if (!password.equals(confirmPassword)) {
+            throw new EarlyExitException(Response.buildResponse(
+              StatusLine.StatusCode.CODE_400_BAD_REQUEST,
+              Map.of("Content-Type", "application/json"),
+              Json
+                .object()
+                .add("errors", Json.array().add("The password doesn't match the confirmed password."))
+                .toString()
+            ));
+          }
+
+          backdoorUserService.setPassword(auth.get().backdoorUser().id(), password, null);
+
+          return Response.buildResponse(
+            StatusLine.StatusCode.CODE_200_OK,
+            Map.of("Content-Type", "application/json"),
+            Json
+              .object()
+              .toString()
+          );
+        }
+      );
+    }
 
     return minum;
   }
@@ -480,7 +851,15 @@ public class BackdoorWebServer extends BackdoorCoreServer {
       StatusLine.StatusCode.CODE_200_OK,
       Map.of(
         "Content-Type", "application/json",
-        "Set-Cookie", makeAuthSetCookieLine(this.auth.get().users(), adHocDatabaseConfigs, this.secretKey, Instant.now().plus(1, ChronoUnit.DAYS), !isLocalHost)
+        "Set-Cookie", makeAuthSetCookieLine(
+          auth.get().backdoorUser(),
+          auth.get().commandLineUser(),
+          auth.get().databaseUsers(),
+          adHocDatabaseConfigs,
+          secretKey,
+          Instant.now().plus(1, ChronoUnit.DAYS),
+          !isLocalHost
+        )
       ),
       Json.object().toString()
     );

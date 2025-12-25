@@ -16,7 +16,7 @@ import org.openqa.selenium.logging.LoggingPreferences;
 import org.openqa.selenium.support.ui.Select;
 import tanin.backdoor.core.BackdoorCoreServer;
 import tanin.backdoor.core.DatabaseConfig;
-import tanin.backdoor.core.User;
+import tanin.backdoor.core.DatabaseUser;
 import tanin.ejwf.MinumBuilder;
 
 import java.io.File;
@@ -195,7 +195,7 @@ public class Base {
       null
     ) {
       @Override
-      protected User getUserByDatabaseConfig(DatabaseConfig databaseConfig) {
+      protected DatabaseUser getUserByDatabaseConfig(DatabaseConfig databaseConfig) {
         return null;
       }
 

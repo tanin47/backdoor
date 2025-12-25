@@ -1,6 +1,6 @@
 <script lang="ts">
 
-import {Sheet} from "./common/models"
+import {type Column, Sheet} from "./common/models"
 import {type FetchError, post} from "./common/form"
 import Button from './common/_button.svelte'
 import ErrorPanel from "./common/form/_error_panel.svelte"
@@ -72,7 +72,7 @@ async function submit() {
   }
 }
 
-function determinePlaceholder(value: Value): string {
+function determinePlaceholder(value: Value, column: Column): string {
   if (value.isNull) {
     return 'Will set to null'
   }
@@ -81,7 +81,7 @@ function determinePlaceholder(value: Value): string {
     return 'Will use the default value'
   }
 
-  return value.value
+  return column.rawType
 }
 
 </script>
@@ -121,7 +121,7 @@ function determinePlaceholder(value: Value): string {
             {#if column.type === 'STRING'}
               <textarea
                 class="textarea textarea-sm w-full min-h-[34px] h-[34px] whitespace-nowrap overflow-auto"
-                placeholder={determinePlaceholder(form[column.name])}
+                placeholder={determinePlaceholder(form[column.name], column)}
                 bind:value={form[column.name].value}
                 disabled={form[column.name].isNull || form[column.name].useDefaultValue}
                 data-test-id="insert-field"
@@ -131,7 +131,7 @@ function determinePlaceholder(value: Value): string {
               <input
                 type="text"
                 class="input input-sm w-full"
-                placeholder={determinePlaceholder(form[column.name])}
+                placeholder={determinePlaceholder(form[column.name], column)}
                 bind:value={form[column.name].value}
                 disabled={form[column.name].isNull || form[column.name].useDefaultValue}
                 data-test-id="insert-field"

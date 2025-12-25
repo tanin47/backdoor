@@ -35,12 +35,12 @@ public class ClickHouseEngine extends Engine {
     }
   }
 
-  ClickHouseEngine(DatabaseConfig config, User overwritingUser) throws SQLException, InvalidCredentialsException, OverwritingUserAndCredentialedJdbcConflictedException, URISyntaxException, UnreachableServerException, InvalidDatabaseNameProbablyException, GenericConnectionException {
+  ClickHouseEngine(DatabaseConfig config, DatabaseUser overwritingUser) throws SQLException, InvalidCredentialsException, OverwritingUserAndCredentialedJdbcConflictedException, URISyntaxException, UnreachableServerException, InvalidDatabaseNameProbablyException, GenericConnectionException {
     super(config, overwritingUser);
   }
 
   @Override
-  protected void connect(DatabaseConfig config, User overwritingUser) throws SQLException, InvalidCredentialsException {
+  protected void connect(DatabaseConfig config, DatabaseUser overwritingUser) throws SQLException, InvalidCredentialsException {
     var props = new Properties();
 
     if (overwritingUser != null) {

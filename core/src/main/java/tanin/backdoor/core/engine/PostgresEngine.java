@@ -33,12 +33,12 @@ public class PostgresEngine extends Engine {
     }
   }
 
-  PostgresEngine(DatabaseConfig config, User overwritingUser) throws SQLException, URISyntaxException, InvalidCredentialsException, OverwritingUserAndCredentialedJdbcConflictedException, UnreachableServerException, InvalidDatabaseNameProbablyException, GenericConnectionException {
+  PostgresEngine(DatabaseConfig config, DatabaseUser overwritingUser) throws SQLException, URISyntaxException, InvalidCredentialsException, OverwritingUserAndCredentialedJdbcConflictedException, UnreachableServerException, InvalidDatabaseNameProbablyException, GenericConnectionException {
     super(config, overwritingUser);
   }
 
   @Override
-  protected void connect(DatabaseConfig config, User overwritingUser) throws SQLException, InvalidCredentialsException, URISyntaxException, UnreachableServerException, InvalidDatabaseNameProbablyException {
+  protected void connect(DatabaseConfig config, DatabaseUser overwritingUser) throws SQLException, InvalidCredentialsException, URISyntaxException, UnreachableServerException, InvalidDatabaseNameProbablyException {
 
     var url = config.jdbcUrl;
     var props = new Properties();

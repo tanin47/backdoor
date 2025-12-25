@@ -89,7 +89,7 @@ public class Browser {
       thread.start();
     } else if (Base.CURRENT_OS == Base.OperatingSystem.MAC) {
       onFileSelected = filePath -> {
-        System.out.println("Opening file: " + filePath);
+        logger.info("Opening file: " + filePath);
 
         MacOsApi.N.startAccessingSecurityScopedResource(filePath);
         try {
