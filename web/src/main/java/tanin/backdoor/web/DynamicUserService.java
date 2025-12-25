@@ -14,7 +14,7 @@ import static tanin.backdoor.core.BackdoorCoreServer.makeSqlLiteral;
 import static tanin.backdoor.core.BackdoorCoreServer.makeSqlName;
 
 public class DynamicUserService {
-  private final String TABLE = "backdoor_user";
+  private final String TABLE = "backdoor_dynamic_user";
   private final DatabaseConfig dbConfig;
   private final EngineProvider engineProvider;
 
@@ -46,12 +46,12 @@ public class DynamicUserService {
     return users.toArray(new DynamicUser[0]);
   }
 
-  public void create(String username, String tempPassword) throws Exception {
+  public void create(String username, String password, Instant passwordExpiredAt) throws Exception {
     try (var engine = engineProvider.createEngine(dbConfig, null)) {
       var pairs = new String[][]{
         new String[]{"username", username},
-        new String[]{"hashed_password", PasswordHasher.generateHash(tempPassword)},
-        new String[]{"password_expired_at", new Timestamp(Instant.now().plus(24, ChronoUnit.HOURS).toEpochMilli()).toString()},
+        new String[]{"hashed_password", PasswordHasher.generateHash(password)},
+        new String[]{"password_expired_at", passwordExpiredAt != null ? new Timestamp(passwordExpiredAt.toEpochMilli()).toString() : null},
       };
       engine.execute(
         "INSERT INTO " + makeSqlName(TABLE) +

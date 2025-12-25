@@ -4,14 +4,14 @@ import {type FetchError, post} from "../../common/form"
 import {trackEvent} from "../../common/tracker";
 import ErrorPanel from "../../common/form/_error_panel.svelte";
 import Button from "../../common/_button.svelte";
-import type {DbUser} from "../../common/models";
+import type {DynamicUser} from "../../common/models";
 
 export let onUpdated: () => Promise<void>
 
 let modal: HTMLDialogElement;
 let textInput: HTMLInputElement | null
 
-let dbUser_: DbUser | null = null
+let dbUser_: DynamicUser | null = null
 let form = {
   username: ''
 }
@@ -19,7 +19,7 @@ let form = {
 let isLoading = false
 let errors: string[] = []
 
-export function open(user: DbUser): void {
+export function open(user: DynamicUser): void {
   isLoading = false
   errors = []
 

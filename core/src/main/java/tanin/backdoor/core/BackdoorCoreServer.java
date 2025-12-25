@@ -116,6 +116,9 @@ public abstract class BackdoorCoreServer {
   protected abstract DatabaseUser getUserByDatabaseConfig(DatabaseConfig databaseConfig);
 
   public static String makeSqlLiteral(String sql) {
+    if (sql == null) {
+      return "NULL";
+    }
     return "'" + sql.replace("'", "''") + "'";
   }
 
@@ -123,8 +126,14 @@ public abstract class BackdoorCoreServer {
     return '"' + sql.replace("\"", "").replace(";", "") + '"';
   }
 
-  public String makeHtml(String path, String csrfToken, Paradigm paradigm, String appVersion) throws IOException {
-    return makeHtml(path, csrfToken, paradigm, appVersion, null);
+  public String makeHtml(
+    String path,
+    String csrfToken,
+    Paradigm paradigm,
+    String appVersion,
+    LoggedInUser loggedInUser
+  ) throws IOException {
+    return makeHtml(path, csrfToken, paradigm, appVersion, loggedInUser, null);
   }
 
   public String makeHtml(
@@ -132,6 +141,7 @@ public abstract class BackdoorCoreServer {
     String csrfToken,
     Paradigm paradigm,
     String appVersion,
+    LoggedInUser loggedInUser,
     JsonObject props
   ) throws IOException {
     var layout = TemplateProcessor.buildProcessor(new String(BackdoorCoreServer.class.getResourceAsStream("/html/layout.html").readAllBytes()));
@@ -151,7 +161,8 @@ public abstract class BackdoorCoreServer {
         "APP_VERSION", Json.value(appVersion).toString(),
         "PARADIGM", Json.value(paradigm.toString()).toString(),
         "SENTRY_DSN", Json.value(sentryWebviewDsn).toString(),
-        "SENTRY_RELEASE", Json.value(sentryRelease).toString()
+        "SENTRY_RELEASE", Json.value(sentryRelease).toString(),
+        "LOGGED_IN_USER", loggedInUser == null ? Json.NULL.toString() : loggedInUser.toJson().toString()
       )
     );
   }
@@ -805,7 +816,7 @@ public abstract class BackdoorCoreServer {
 
   protected IResponse processIndexPage(IRequest req) throws Exception {
     return Response.htmlOk(
-      makeHtml("index.html", null, Paradigm.CORE, "core")
+      makeHtml("index.html", null, Paradigm.CORE, "core", null)
     );
   }
 

@@ -1,6 +1,6 @@
 # --- !Ups
 
-CREATE TABLE "backdoor_user"
+CREATE TABLE "backdoor_dynamic_user"
 (
     id TEXT PRIMARY KEY DEFAULT ('user-' || gen_random_uuid()),
     username TEXT NOT NULL UNIQUE,
@@ -10,4 +10,4 @@ CREATE TABLE "backdoor_user"
 
 # --- !Downs
 
-DROP TABLE "backdoor_user";
+DROP TABLE "backdoor_dynamic_user";

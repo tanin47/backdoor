@@ -328,24 +328,35 @@ public class BackdoorWebServer extends BackdoorCoreServer {
 
     if (valid) {
       this.auth.set(auth);
-
-      // Force set a permanent password if the user has a temporary password.
-      if (
-        req.getRequestLine().getMethod() == RequestLine.Method.GET &&
-          auth.dynamicUser() != null &&
-          auth.dynamicUser().passwordExpiredAt() != null
-      ) {
-        var csrfToken = extractOrMakeCsrfCookieValue(req, true);
-        var isLocalHost = req.getHeaders().valueByKey("Host").stream().findFirst().orElse("").startsWith("localhost");
-        throw new EarlyExitException(
-          Response.htmlOk(
-            makeHtml("resetPassword.html", csrfToken, Paradigm.WEB, VERSION),
-            Map.of("Set-Cookie", makeCsrfTokenSetCookieLine(csrfToken, !isLocalHost))
-          )
-        );
-      }
     } else {
       throw new AuthFailureException();
+    }
+
+    // Force set a permanent password if the user has a temporary password.
+    if (
+      req.getRequestLine().getMethod() == RequestLine.Method.GET &&
+        auth.dynamicUser() != null &&
+        auth.dynamicUser().passwordExpiredAt() != null
+    ) {
+      var csrfToken = extractOrMakeCsrfCookieValue(req, true);
+      var isLocalHost = req.getHeaders().valueByKey("Host").stream().findFirst().orElse("").startsWith("localhost");
+      throw new EarlyExitException(
+        Response.htmlOk(
+          makeHtml("resetPassword.html", csrfToken, Paradigm.WEB, VERSION, this.auth.get() != null ? this.auth.get().toLoggedInUser() : null),
+          Map.of("Set-Cookie", makeCsrfTokenSetCookieLine(csrfToken, !isLocalHost))
+        )
+      );
+    }
+
+    if (req.getRequestLine().getPathDetails().getIsolatedPath().startsWith("admin/user")) {
+      var loggedInUser = auth.toLoggedInUser();
+      if (loggedInUser == null || !loggedInUser.canManageDynamicUsers()) {
+        throw new EarlyExitException(Response.buildResponse(
+          StatusLine.StatusCode.CODE_401_UNAUTHORIZED,
+          Map.of("Content-Type", "text/plain"),
+          "You are not allowed to manage dynamic users."
+        ));
+      }
     }
   }
 
@@ -390,6 +401,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
         logger.log(Level.WARNING, request.getRequestLine().getMethod() + " " + request.getRequestLine().getPathDetails().getIsolatedPath() + " raised an error.", e);
         return e.response;
       }
+
 
       var method = request.getRequestLine().getMethod();
       var csrfTokenHeaders = request.getHeaders().valueByKey("Csrf-Token");
@@ -477,7 +489,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
         var isLocalHost = req.getHeaders().valueByKey("Host").stream().findFirst().orElse("").startsWith("localhost");
         var csrfToken = extractOrMakeCsrfCookieValue(req, true);
         return Response.htmlOk(
-          makeHtml("login.html", csrfToken, Paradigm.WEB, VERSION),
+          makeHtml("login.html", csrfToken, Paradigm.WEB, VERSION, auth.get() != null ? auth.get().toLoggedInUser() : null),
           Map.of("Set-Cookie", makeCsrfTokenSetCookieLine(csrfToken, !isLocalHost))
         );
       }
@@ -496,6 +508,21 @@ public class BackdoorWebServer extends BackdoorCoreServer {
         var authenticatedUser = authenticateUser(username, password);
 
         if (authenticatedUser != null) {
+          if (
+            authenticatedUser.dynamicUser != null &&
+              authenticatedUser.dynamicUser.passwordExpiredAt() != null &&
+              authenticatedUser.dynamicUser.passwordExpiredAt().isBefore(Instant.now())
+          ) {
+            return Response.buildResponse(
+              StatusLine.StatusCode.CODE_400_BAD_REQUEST,
+              Map.of("Content-Type", "application/json"),
+              Json
+                .object()
+                .add("errors", Json.array().add("Your temporary password has expired. Please contact your administrator to issue a new temporary password."))
+                .toString()
+            );
+          }
+
           return Response.buildResponse(
             StatusLine.StatusCode.CODE_200_OK,
             Map.of(
@@ -615,7 +642,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
           var isLocalHost = req.getHeaders().valueByKey("Host").stream().findFirst().orElse("").startsWith("localhost");
           var csrfToken = extractOrMakeCsrfCookieValue(req, true);
           return Response.htmlOk(
-            makeHtml("admin/user/index.html", csrfToken, Paradigm.WEB, VERSION),
+            makeHtml("admin/user/index.html", csrfToken, Paradigm.WEB, VERSION, auth.get() != null ? auth.get().toLoggedInUser() : null),
             Map.of("Set-Cookie", makeCsrfTokenSetCookieLine(csrfToken, !isLocalHost))
           );
         }
@@ -671,9 +698,9 @@ public class BackdoorWebServer extends BackdoorCoreServer {
           }
 
           try {
-            dynamicUserService.create(username, tempPassword);
+            dynamicUserService.create(username, tempPassword, Instant.now().plus(1, ChronoUnit.DAYS));
           } catch (PSQLException e) {
-            if (e.getMessage().contains("backdoor_user_username_key")) {
+            if (e.getMessage().contains("backdoor_dynamic_user_username_key")) {
               throw new EarlyExitException(Response.buildResponse(
                 StatusLine.StatusCode.CODE_400_BAD_REQUEST,
                 Map.of("Content-Type", "application/json"),
@@ -710,7 +737,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
           try {
             dynamicUserService.updateUsername(id, username);
           } catch (PSQLException e) {
-            if (e.getMessage().contains("backdoor_user_username_key")) {
+            if (e.getMessage().contains("backdoor_dynamic_user_username_key")) {
               throw new EarlyExitException(Response.buildResponse(
                 StatusLine.StatusCode.CODE_400_BAD_REQUEST,
                 Map.of("Content-Type", "application/json"),
@@ -865,7 +892,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
     var isLocalHost = req.getHeaders().valueByKey("Host").stream().findFirst().orElse("").startsWith("localhost");
     var csrfToken = extractOrMakeCsrfCookieValue(req, true);
     return Response.htmlOk(
-      makeHtml("index.html", csrfToken, Paradigm.WEB, VERSION),
+      makeHtml("index.html", csrfToken, Paradigm.WEB, VERSION, auth.get() != null ? auth.get().toLoggedInUser() : null),
       Map.of("Set-Cookie", makeCsrfTokenSetCookieLine(csrfToken, !isLocalHost))
     );
   }

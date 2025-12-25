@@ -7,6 +7,8 @@ export const APP_VERSION: boolean = window.APP_VERSION;
 export type Paradigm = 'CORE' | 'WEB' | 'DESKTOP';
 // @ts-expect-error defined globally
 export const PARADIGM: string = window.PARADIGM;
+// @ts-expect-error defined globally
+export const LOGGED_IN_USER: LoggedInUser = window.LOGGED_IN_USER;
 
 const NAMES = [
   "acacia",

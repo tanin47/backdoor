@@ -6,6 +6,8 @@ import tanin.backdoor.core.DatabaseConfig;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -30,7 +32,7 @@ public class LoginTest extends Base {
   }
 
   @Test
-  void useCustomUserAndLogout() throws InterruptedException {
+  void useSourceCodeUserAndLogout() throws InterruptedException {
     go("/");
     waitUntil(() -> assertEquals("/login", getCurrentPath()));
 
@@ -60,7 +62,7 @@ public class LoginTest extends Base {
   }
 
   @Test
-  void incorrectCustomUser() throws InterruptedException {
+  void incorrectSourceCodeUser() throws InterruptedException {
     go("/");
     waitUntil(() -> assertEquals("/login", getCurrentPath()));
 
@@ -76,7 +78,7 @@ public class LoginTest extends Base {
   }
 
   @Test
-  void usePassthroughUser() throws InterruptedException, SQLException, NoSuchAlgorithmException, KeyManagementException {
+  void useDatabaseUser() throws InterruptedException, SQLException, NoSuchAlgorithmException, KeyManagementException {
     server.databaseConfigs = new DatabaseConfig[]{
       new DatabaseConfig("postgres", POSTGRES_DATABASE_URL, null, null),
       new DatabaseConfig("clickhouse", CLICKHOUSE_DATABASE_URL, null, null),
@@ -99,7 +101,7 @@ public class LoginTest extends Base {
     click(tid("database-item", "postgres"));
     waitUntil(() -> assertEquals("loaded", elem(tid("database-item", "postgres")).getDomAttribute("data-database-status")));
     assertEquals(
-      List.of("backdoor_user", "migrate_db_already_migrated_script", "migrate_db_lock", "user"),
+      List.of("backdoor_dynamic_user", "migrate_db_already_migrated_script", "migrate_db_lock", "user"),
       elems(tid("menu-items", "postgres", null, "menu-item-table")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()
     );
 
@@ -143,7 +145,7 @@ public class LoginTest extends Base {
     click(tid("database-item", "postgres"));
     waitUntil(() -> assertEquals("loaded", elem(tid("database-item", "postgres")).getDomAttribute("data-database-status")));
     assertEquals(
-      List.of("backdoor_user", "migrate_db_already_migrated_script", "migrate_db_lock", "user"),
+      List.of("backdoor_dynamic_user", "migrate_db_already_migrated_script", "migrate_db_lock", "user"),
       elems(tid("menu-items", "postgres", null, "menu-item-table")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()
     );
     click(tid("database-item", "clickhouse"));
@@ -189,7 +191,7 @@ public class LoginTest extends Base {
     click(tid("database-item", "postgres"));
     waitUntil(() -> assertEquals("loaded", elem(tid("database-item", "postgres")).getDomAttribute("data-database-status")));
     assertEquals(
-      List.of("backdoor_user", "migrate_db_already_migrated_script", "migrate_db_lock", "user"),
+      List.of("backdoor_dynamic_user", "migrate_db_already_migrated_script", "migrate_db_lock", "user"),
       elems(tid("menu-items", "postgres", null, "menu-item-table")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()
     );
     click(tid("database-item", "clickhouse"));
@@ -201,7 +203,7 @@ public class LoginTest extends Base {
   }
 
   @Test
-  void incorrectPassthroughUser() throws InterruptedException, SQLException, NoSuchAlgorithmException, KeyManagementException {
+  void incorrectDatabaseUser() throws InterruptedException, SQLException, NoSuchAlgorithmException, KeyManagementException {
     server.databaseConfigs = new DatabaseConfig[]{new DatabaseConfig("test_db", POSTGRES_DATABASE_URL, null, null)};
     server.sourceCodeUsers = new SourceCodeUser[0];
 
@@ -216,5 +218,70 @@ public class LoginTest extends Base {
     click(tid("submit-button"));
     checkErrorPanel("The username or password is invalid.");
     assertEquals("false", elem(".altcha-checkbox input[type='checkbox']").getDomProperty("checked"));
+  }
+
+  @Test
+  void dynamicUserWithTempPasswordLogin() throws Exception {
+    dynamicUserService.create("test-backdoor-user", "abcdefg", Instant.now().plus(1, ChronoUnit.DAYS));
+    go("/");
+
+    fill(tid("username"), "test-backdoor-user");
+    fill(tid("password"), "abcdefg");
+    click(".altcha-checkbox input[type='checkbox']");
+    waitUntil(15000, () -> {
+      assertEquals("true", elem(".altcha-checkbox input[type='checkbox']").getDomProperty("checked"));
+    });
+    click(tid("submit-button"));
+
+    waitUntil(() -> assertTrue(hasElem(tid("submit-set-password-button"))));
+  }
+
+  @Test
+  void dynamicUserWithPermanentPasswordLogin() throws Exception {
+    dynamicUserService.create("test-backdoor-user", "abcdefg", null);
+    go("/");
+
+    fill(tid("username"), "test-backdoor-user");
+    fill(tid("password"), "abcdefg");
+    click(".altcha-checkbox input[type='checkbox']");
+    waitUntil(15000, () -> {
+      assertEquals("true", elem(".altcha-checkbox input[type='checkbox']").getDomProperty("checked"));
+    });
+    click(tid("submit-button"));
+
+    waitUntil(() -> assertEquals("/", getCurrentPath()));
+    click(tid("database-item"));
+    waitUntil(() -> assertEquals("loaded", elem(tid("database-item")).getDomAttribute("data-database-status")));
+  }
+
+  @Test
+  void dynamicUserIncorrectPassword() throws Exception {
+    dynamicUserService.create("test-backdoor-user", "abcdefg", Instant.now().plus(1, ChronoUnit.DAYS));
+    go("/");
+
+    fill(tid("username"), "test-backdoor-user");
+    fill(tid("password"), "123");
+    click(".altcha-checkbox input[type='checkbox']");
+    waitUntil(15000, () -> {
+      assertEquals("true", elem(".altcha-checkbox input[type='checkbox']").getDomProperty("checked"));
+    });
+    click(tid("submit-button"));
+    checkErrorPanel("The username or password is invalid.");
+  }
+
+
+  @Test
+  void dynamicUserExpiredPassword() throws Exception {
+    dynamicUserService.create("test-backdoor-user", "abcdefg", Instant.now().minus(1, ChronoUnit.DAYS));
+    go("/");
+
+    fill(tid("username"), "test-backdoor-user");
+    fill(tid("password"), "abcdefg");
+    click(".altcha-checkbox input[type='checkbox']");
+    waitUntil(15000, () -> {
+      assertEquals("true", elem(".altcha-checkbox input[type='checkbox']").getDomProperty("checked"));
+    });
+    click(tid("submit-button"));
+    checkErrorPanel("Your temporary password has expired. Please contact your administrator to issue a new temporary password.");
   }
 }

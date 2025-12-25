@@ -150,8 +150,13 @@ export class Sheet implements BaseSheet {
   }
 }
 
-export interface DbUser {
+export interface DynamicUser {
   id: string;
   username: string;
   passwordExpiredAt: number | null;
+}
+
+export interface LoggedInUser {
+  username: string;
+  canManageDynamicUsers: boolean;
 }

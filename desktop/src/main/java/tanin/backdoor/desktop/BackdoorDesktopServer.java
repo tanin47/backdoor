@@ -9,8 +9,6 @@ import tanin.backdoor.core.DatabaseUser;
 import tanin.backdoor.desktop.engine.EngineProvider;
 import tanin.ejwf.MinumBuilder;
 
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Map;
@@ -239,7 +237,7 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
 
   protected IResponse processIndexPage(IRequest req) throws Exception {
     return Response.htmlOk(
-      makeHtml("index.html", null, Paradigm.DESKTOP, VERSION),
+      makeHtml("index.html", null, Paradigm.DESKTOP, VERSION, null),
       Map.of(
         "Set-Cookie", AUTH_KEY_COOKIE_KEY + "=" + this.authKey + "; Max-Age=86400; Path=/; Secure; HttpOnly"
       )

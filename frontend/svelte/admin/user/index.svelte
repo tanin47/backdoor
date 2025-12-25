@@ -4,7 +4,7 @@ import EditUserModal from "./_edit_user_modal.svelte";
 import DeleteUserModal from "./_delete_user_modal.svelte";
 import ResetPasswordModal from "./_reset_password_modal.svelte";
 import {onMount} from "svelte";
-import type {DbUser} from "../../common/models";
+import type {DynamicUser} from "../../common/models";
 import {type FetchError, post} from "../../common/form";
 import {trackEvent} from "../../common/tracker";
 
@@ -15,7 +15,7 @@ let resetPasswordModal: ResetPasswordModal;
 
 let isLoading: boolean = false;
 let errors: string[] = [];
-let users: DbUser[] = [];
+let users: DynamicUser[] = [];
 
 async function load(): Promise<void> {
   isLoading = true
