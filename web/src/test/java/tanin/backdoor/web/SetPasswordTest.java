@@ -17,7 +17,7 @@ public class SetPasswordTest extends Base {
 
   @BeforeEach
   void beforeEach() throws Exception {
-    dynamicUserService.create("test-backdoor-user", "abcdefg");
+    dynamicUserService.create("test-backdoor-user", "abcdefg", Instant.now().plus(1, ChronoUnit.DAYS));
     var user = dynamicUserService.getByUsername("test-backdoor-user");
     webDriver.manage().addCookie(new Cookie(
       "backdoor",

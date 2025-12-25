@@ -1,10 +1,63 @@
 package tanin.backdoor.web;
 
 import org.junit.jupiter.api.Test;
+import org.openqa.selenium.Cookie;
+import tanin.backdoor.core.DatabaseConfig;
+
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class AdminUserTest extends Base {
+  @Test
+  void dynamicUserNotAllowed() throws Exception {
+    dynamicUserService.create("test-backdoor-user", "abcdefg", null);
+    var user = dynamicUserService.getByUsername("test-backdoor-user");
+    webDriver.manage().addCookie(new Cookie(
+      "backdoor",
+      BackdoorWebServer.makeAuthCookieValueForUser(
+        user,
+        null,
+        null,
+        new DatabaseConfig[0],
+        server.secretKey,
+        Instant.now().plus(1, ChronoUnit.DAYS)
+      )
+    ));
+    go("/admin/user");
+    waitUntil(() -> {
+      assertContains(elem("body").getText(), "You are not allowed to manage dynamic users.");
+    });
+  }
+
+  @Test
+  void dynamicUserNotSeeingAdminUserButton() throws Exception {
+    dynamicUserService.create("test-backdoor-user", "abcdefg", null);
+    var user = dynamicUserService.getByUsername("test-backdoor-user");
+    webDriver.manage().addCookie(new Cookie(
+      "backdoor",
+      BackdoorWebServer.makeAuthCookieValueForUser(
+        user,
+        null,
+        null,
+        new DatabaseConfig[0],
+        server.secretKey,
+        Instant.now().plus(1, ChronoUnit.DAYS)
+      )
+    ));
+    go("/");
+    waitUntil(() -> hasElem(tid("logout-button")));
+    assertFalse(hasElem(tid("admin-user-link-button")));
+  }
+
+  @Test
+  void sourceCodeUserSeeAdminUserButton() throws Exception {
+    go("/");
+    waitUntil(() -> hasElem(tid("logout-button")));
+    assertTrue(hasElem(tid("admin-user-link-button")));
+  }
+
   @Test
   void addUser() throws Exception {
     var password = "abcdefg";
@@ -33,7 +86,7 @@ public class AdminUserTest extends Base {
     click(tid("submit-button"));
     checkErrorPanel("The password must be at least 6 characters long.");
 
-    dynamicUserService.create("test-added-user", "sjfslkjljf");
+    dynamicUserService.create("test-added-user", "sjfslkjljf", Instant.now().plus(1, ChronoUnit.DAYS));
 
     fill(tid("username"), "test-added-user");
     fill(tid("password"), "123456");
@@ -43,7 +96,7 @@ public class AdminUserTest extends Base {
 
   @Test
   void editUser() throws Exception {
-    dynamicUserService.create("test-user", "sjfslkjljf");
+    dynamicUserService.create("test-user", "sjfslkjljf", Instant.now().plus(1, ChronoUnit.DAYS));
     var user = dynamicUserService.getByUsername("test-user");
     go("/admin/user");
     click(tid("edit-button"));
@@ -57,7 +110,7 @@ public class AdminUserTest extends Base {
 
   @Test
   void deleteUser() throws Exception {
-    dynamicUserService.create("test-user", "sjfslkjljf");
+    dynamicUserService.create("test-user", "sjfslkjljf", Instant.now().plus(1, ChronoUnit.DAYS));
     var user = dynamicUserService.getByUsername("test-user");
     go("/admin/user");
     click(tid("delete-button"));
@@ -69,7 +122,7 @@ public class AdminUserTest extends Base {
 
   @Test
   void resetPassword() throws Exception {
-    dynamicUserService.create("test-user", "sjfslkjljf");
+    dynamicUserService.create("test-user", "sjfslkjljf", Instant.now().plus(1, ChronoUnit.DAYS));
     var user = dynamicUserService.getByUsername("test-user");
     dynamicUserService.setPassword(user.id(), "123456", null);
     user = dynamicUserService.getByUsername("test-user");
@@ -89,7 +142,7 @@ public class AdminUserTest extends Base {
 
   @Test
   void validateResetPassword() throws Exception {
-    dynamicUserService.create("test-user", "sjfslkjljf");
+    dynamicUserService.create("test-user", "sjfslkjljf", Instant.now().plus(1, ChronoUnit.DAYS));
     var user = dynamicUserService.getByUsername("test-user");
     dynamicUserService.setPassword(user.id(), "123456", null);
     user = dynamicUserService.getByUsername("test-user");
