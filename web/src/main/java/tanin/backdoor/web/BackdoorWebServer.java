@@ -5,10 +5,7 @@ import com.eclipsesource.json.ParseException;
 import com.renomad.minum.web.*;
 import org.altcha.altcha.Altcha;
 import org.postgresql.util.PSQLException;
-import tanin.backdoor.core.BackdoorCoreServer;
-import tanin.backdoor.core.DatabaseConfig;
-import tanin.backdoor.core.DatabaseUser;
-import tanin.backdoor.core.EncryptionHelper;
+import tanin.backdoor.core.*;
 import tanin.backdoor.core.engine.Engine;
 import tanin.migratedb.MigrateDb;
 
@@ -43,7 +40,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
   private static final String AUTH_COOKIE_KEY = "backdoor";
   private static final Set<RequestLine.Method> CSRF_READ_METHODS = new HashSet<>(List.of(GET, HEAD, OPTIONS));
   private static final String VERSION;
-  public static Properties SENTRY_PROPERTIES = null;
+  public static Properties SENTRY_PROPERTIES;
 
   static {
     var properties = new Properties();
@@ -69,6 +66,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
   public String secretKey;
   public String backdoorDatabaseJdbcUrl;
   private DynamicUserService dynamicUserService;
+  private GlobalSettings globalSettings;
   ThreadLocal<AuthInfo> auth = new ThreadLocal<>();
 
   BackdoorWebServer(
@@ -92,6 +90,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
     if (backdoorDatabaseJdbcUrl != null) {
       this.dynamicUserService = new DynamicUserService(this.backdoorDatabaseJdbcUrl);
     }
+    this.globalSettings = new GlobalSettings(backdoorDatabaseJdbcUrl != null);
 
     if (sourceCodeUsers != null) {
       for (SourceCodeUser user : sourceCodeUsers) {
@@ -342,7 +341,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
       var isLocalHost = req.getHeaders().valueByKey("Host").stream().findFirst().orElse("").startsWith("localhost");
       throw new EarlyExitException(
         Response.htmlOk(
-          makeHtml("resetPassword.html", csrfToken, Paradigm.WEB, VERSION, this.auth.get() != null ? this.auth.get().toLoggedInUser() : null),
+          makeHtml("resetPassword.html", csrfToken, Paradigm.WEB, VERSION, this.auth.get() != null ? this.auth.get().toLoggedInUser() : null, globalSettings),
           Map.of("Set-Cookie", makeCsrfTokenSetCookieLine(csrfToken, !isLocalHost))
         )
       );
@@ -489,7 +488,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
         var isLocalHost = req.getHeaders().valueByKey("Host").stream().findFirst().orElse("").startsWith("localhost");
         var csrfToken = extractOrMakeCsrfCookieValue(req, true);
         return Response.htmlOk(
-          makeHtml("login.html", csrfToken, Paradigm.WEB, VERSION, auth.get() != null ? auth.get().toLoggedInUser() : null),
+          makeHtml("login.html", csrfToken, Paradigm.WEB, VERSION, auth.get() != null ? auth.get().toLoggedInUser() : null, globalSettings),
           Map.of("Set-Cookie", makeCsrfTokenSetCookieLine(csrfToken, !isLocalHost))
         );
       }
@@ -642,7 +641,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
           var isLocalHost = req.getHeaders().valueByKey("Host").stream().findFirst().orElse("").startsWith("localhost");
           var csrfToken = extractOrMakeCsrfCookieValue(req, true);
           return Response.htmlOk(
-            makeHtml("admin/user/index.html", csrfToken, Paradigm.WEB, VERSION, auth.get() != null ? auth.get().toLoggedInUser() : null),
+            makeHtml("admin/user/index.html", csrfToken, Paradigm.WEB, VERSION, auth.get() != null ? auth.get().toLoggedInUser() : null, globalSettings),
             Map.of("Set-Cookie", makeCsrfTokenSetCookieLine(csrfToken, !isLocalHost))
           );
         }
@@ -892,7 +891,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
     var isLocalHost = req.getHeaders().valueByKey("Host").stream().findFirst().orElse("").startsWith("localhost");
     var csrfToken = extractOrMakeCsrfCookieValue(req, true);
     return Response.htmlOk(
-      makeHtml("index.html", csrfToken, Paradigm.WEB, VERSION, auth.get() != null ? auth.get().toLoggedInUser() : null),
+      makeHtml("index.html", csrfToken, Paradigm.WEB, VERSION, auth.get() != null ? auth.get().toLoggedInUser() : null, globalSettings),
       Map.of("Set-Cookie", makeCsrfTokenSetCookieLine(csrfToken, !isLocalHost))
     );
   }
