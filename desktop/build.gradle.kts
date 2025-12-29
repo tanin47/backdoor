@@ -550,6 +550,7 @@ tasks.register("bareJpackage") {
                 "--icon", layout.projectDirectory.dir("win-resources").file("Backdoor.ico").asFile.absolutePath,
                 "--type", "msi",
                 "--win-menu",
+                "--win-menu-group", "Backdoor",
                 "--win-shortcut"
             )
         } else {
