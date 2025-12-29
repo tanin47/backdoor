@@ -10,6 +10,13 @@ export const PARADIGM: string = window.PARADIGM;
 // @ts-expect-error defined globally
 export const LOGGED_IN_USER: LoggedInUser = window.LOGGED_IN_USER;
 
+export interface GlobalSettings {
+  dynamicUserEnabled: boolean;
+}
+
+// @ts-expect-error defined globally
+export const GLOBAL_SETTINGS: GlobalSettings = window.GLOBAL_SETTINGS;
+
 const NAMES = [
   "acacia",
   "alder",

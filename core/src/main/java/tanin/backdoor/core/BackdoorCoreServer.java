@@ -131,9 +131,10 @@ public abstract class BackdoorCoreServer {
     String csrfToken,
     Paradigm paradigm,
     String appVersion,
-    LoggedInUser loggedInUser
+    LoggedInUser loggedInUser,
+    GlobalSettings globalSettings
   ) throws IOException {
-    return makeHtml(path, csrfToken, paradigm, appVersion, loggedInUser, null);
+    return makeHtml(path, csrfToken, paradigm, appVersion, loggedInUser, globalSettings, null);
   }
 
   public String makeHtml(
@@ -142,6 +143,7 @@ public abstract class BackdoorCoreServer {
     Paradigm paradigm,
     String appVersion,
     LoggedInUser loggedInUser,
+    GlobalSettings globalSettings,
     JsonObject props
   ) throws IOException {
     var layout = TemplateProcessor.buildProcessor(new String(BackdoorCoreServer.class.getResourceAsStream("/html/layout.html").readAllBytes()));
@@ -162,7 +164,8 @@ public abstract class BackdoorCoreServer {
         "PARADIGM", Json.value(paradigm.toString()).toString(),
         "SENTRY_DSN", Json.value(sentryWebviewDsn).toString(),
         "SENTRY_RELEASE", Json.value(sentryRelease).toString(),
-        "LOGGED_IN_USER", loggedInUser == null ? Json.NULL.toString() : loggedInUser.toJson().toString()
+        "LOGGED_IN_USER", loggedInUser == null ? Json.NULL.toString() : loggedInUser.toJson().toString(),
+        "GLOBAL_SETTINGS", globalSettings.toJson().toString()
       )
     );
   }
@@ -816,7 +819,7 @@ public abstract class BackdoorCoreServer {
 
   protected IResponse processIndexPage(IRequest req) throws Exception {
     return Response.htmlOk(
-      makeHtml("index.html", null, Paradigm.CORE, "core", null)
+      makeHtml("index.html", null, Paradigm.CORE, "core", null, new GlobalSettings(false))
     );
   }
 

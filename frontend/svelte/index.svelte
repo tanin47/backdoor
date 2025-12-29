@@ -5,7 +5,7 @@ import {FetchError, post} from "./common/form";
 import {onMount} from "svelte";
 import EditorPanel from "./_editor_panel.svelte";
 import {type Database, type Query, Sheet} from "./common/models";
-import {generateName, LOGGED_IN_USER, MODE, PARADIGM} from "./common/globals";
+import {generateName, GLOBAL_SETTINGS, LOGGED_IN_USER, MODE, PARADIGM} from "./common/globals";
 import ErrorModal from "./common/_error_modal.svelte"
 import NewDataSourceModal from "./_new_data_source_modal.svelte"
 import EditDataSourceModal from "./_edit_data_source_modal.svelte"
@@ -263,7 +263,7 @@ export async function runSql(database: string, sql: string): Promise<void> {
         {/each}
       </div>
       {#if PARADIGM === 'WEB'}
-        {#if LOGGED_IN_USER?.canManageDynamicUsers}
+        {#if LOGGED_IN_USER?.canManageDynamicUsers && GLOBAL_SETTINGS.dynamicUserEnabled}
           <a
             href="/admin/user"
             class="flex flex-row items-center p-2 gap-2 text-accent text-sm"

@@ -59,6 +59,31 @@ public class AdminUserTest extends Base {
   }
 
   @Test
+  void backdoorJdbcUrlIsNotConfigured() throws Exception {
+    server.stop();
+    server = new BackdoorWebServerBuilder()
+      .withPort(PORT)
+      .addUser(loggedInUser.username(), loggedInUser.password())
+      .withBackdoorDatabaseJdbcUrl(null)
+      .build();
+    server.start();
+    webDriver.manage().addCookie(new Cookie(
+      "backdoor",
+      BackdoorWebServer.makeAuthCookieValueForUser(
+        null,
+        loggedInUser,
+        null,
+        new DatabaseConfig[0],
+        server.secretKey,
+        Instant.now().plus(1, ChronoUnit.DAYS)
+      )
+    ));
+    go("/");
+    waitUntil(() -> hasElem(tid("logout-button")));
+    assertFalse(hasElem(tid("admin-user-link-button")));
+  }
+
+  @Test
   void addUser() throws Exception {
     var password = "abcdefg";
     go("/admin/user");
