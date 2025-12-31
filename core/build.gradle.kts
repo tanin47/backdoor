@@ -50,7 +50,7 @@ tasks.jacocoTestReport {
 
 
 dependencies {
-    api("com.renomad:minum:8.3.1")
+    api("com.renomad:minum:8.3.2")
     api("org.postgresql:postgresql:42.7.8")
     api("com.clickhouse:jdbc-v2:0.9.3")
     api("org.xerial:sqlite-jdbc:3.51.0.0")
