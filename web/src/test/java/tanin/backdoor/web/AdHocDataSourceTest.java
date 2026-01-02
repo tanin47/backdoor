@@ -26,7 +26,7 @@ public class AdHocDataSourceTest extends Base {
     );
 
     assertEquals(
-      List.of("backdoor_dynamic_user", "migrate_db_already_migrated_script", "migrate_db_lock", "user"),
+      List.of("backdoor_dynamic_user", "jmigrate_already_migrated_script", "jmigrate_lock", "user"),
       elems(tid("menu-items", "adhoc-test", null, "menu-item-table")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()
     );
 
@@ -42,7 +42,7 @@ public class AdHocDataSourceTest extends Base {
     );
 
     assertEquals(
-      List.of("backdoor_dynamic_user", "migrate_db_already_migrated_script", "migrate_db_lock", "user"),
+      List.of("backdoor_dynamic_user", "jmigrate_already_migrated_script", "jmigrate_lock", "user"),
       elems(tid("menu-items", "adhoc-test-updated", null, "menu-item-table")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()
     );
 

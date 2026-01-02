@@ -7,7 +7,7 @@ import org.altcha.altcha.Altcha;
 import org.postgresql.util.PSQLException;
 import tanin.backdoor.core.*;
 import tanin.backdoor.core.engine.Engine;
-import tanin.migratedb.MigrateDb;
+import tanin.jmigrate.JMigrate;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
@@ -630,9 +630,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
 
 
     if (backdoorDatabaseJdbcUrl != null) {
-      try (var migrateDb = new MigrateDb(backdoorDatabaseJdbcUrl, new MigrateDb.MigrateScriptDir(BackdoorWebServer.class, "/sql"))) {
-        migrateDb.migrate();
-      }
+      JMigrate.migrate(backdoorDatabaseJdbcUrl, BackdoorWebServer.class, "/sql");
 
       wf.registerPath(
         GET,

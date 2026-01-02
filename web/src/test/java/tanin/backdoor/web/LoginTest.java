@@ -101,7 +101,7 @@ public class LoginTest extends Base {
     click(tid("database-item", "postgres"));
     waitUntil(() -> assertEquals("loaded", elem(tid("database-item", "postgres")).getDomAttribute("data-database-status")));
     assertEquals(
-      List.of("backdoor_dynamic_user", "migrate_db_already_migrated_script", "migrate_db_lock", "user"),
+      List.of("backdoor_dynamic_user", "jmigrate_already_migrated_script", "jmigrate_lock", "user"),
       elems(tid("menu-items", "postgres", null, "menu-item-table")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()
     );
 
@@ -145,7 +145,7 @@ public class LoginTest extends Base {
     click(tid("database-item", "postgres"));
     waitUntil(() -> assertEquals("loaded", elem(tid("database-item", "postgres")).getDomAttribute("data-database-status")));
     assertEquals(
-      List.of("backdoor_dynamic_user", "migrate_db_already_migrated_script", "migrate_db_lock", "user"),
+      List.of("backdoor_dynamic_user", "jmigrate_already_migrated_script", "jmigrate_lock", "user"),
       elems(tid("menu-items", "postgres", null, "menu-item-table")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()
     );
     click(tid("database-item", "clickhouse"));
@@ -191,7 +191,7 @@ public class LoginTest extends Base {
     click(tid("database-item", "postgres"));
     waitUntil(() -> assertEquals("loaded", elem(tid("database-item", "postgres")).getDomAttribute("data-database-status")));
     assertEquals(
-      List.of("backdoor_dynamic_user", "migrate_db_already_migrated_script", "migrate_db_lock", "user"),
+      List.of("backdoor_dynamic_user", "jmigrate_already_migrated_script", "jmigrate_lock", "user"),
       elems(tid("menu-items", "postgres", null, "menu-item-table")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()
     );
     click(tid("database-item", "clickhouse"));
