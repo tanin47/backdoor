@@ -14,7 +14,7 @@ import org.openqa.selenium.logging.LoggingPreferences;
 import org.openqa.selenium.support.ui.Select;
 import tanin.backdoor.core.DatabaseConfig;
 import tanin.ejwf.MinumBuilder;
-import tanin.migratedb.MigrateDb;
+import tanin.jmigrate.JMigrate;
 
 import java.io.File;
 import java.net.URISyntaxException;
@@ -182,9 +182,7 @@ public class Base {
       }
     }
 
-    try (var migrateDb = new MigrateDb(BACKDOOR_POSTGRES_DATABASE_URL, new MigrateDb.MigrateScriptDir(BackdoorWebServer.class, "/sql"))) {
-      migrateDb.migrate();
-    }
+    JMigrate.migrate(BACKDOOR_POSTGRES_DATABASE_URL, BackdoorWebServer.class, "/sql");
   }
 
   @BeforeEach

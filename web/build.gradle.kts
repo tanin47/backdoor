@@ -73,6 +73,7 @@ tasks.jacocoTestReport {
 
 dependencies {
     implementation(project(":core"))
+    implementation("io.github.tanin47:jmigrate:0.3.0")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.7.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
