@@ -29,7 +29,7 @@ export function close(): void {
       and <span class="underline">ask a question</span> if you find anything confusing.
     </p>
     <p class="pt-3 leading-relaxed">
-      Please don't hesitate to email us at <code class="underline">backdoor@nanakorn.com</code>.
+      Please don't hesitate to email us at <code class="underline">support@backdooradmin.app</code>.
     </p>
     <p class="pt-3 leading-relaxed">
       Thank you for using Backdoor, and we hope we can make Backdoor better for you!

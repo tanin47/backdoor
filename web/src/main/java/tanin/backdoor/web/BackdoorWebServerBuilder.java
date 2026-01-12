@@ -14,6 +14,7 @@ public class BackdoorWebServerBuilder {
   ArrayList<SourceCodeUser> users = new ArrayList<>();
   String secretKey = generateRandomString(32);
   String backdoorDatabaseJdbcUrl = null;
+  String analyticsName = null;
 
   public BackdoorWebServerBuilder withPort(int port) {
     this.port = port;
@@ -35,6 +36,11 @@ public class BackdoorWebServerBuilder {
     return this;
   }
 
+  public BackdoorWebServerBuilder withAnalyticsName(String analyticsName) {
+    this.analyticsName = analyticsName;
+    return this;
+  }
+
   public BackdoorWebServerBuilder addUser(String username, String password) {
     this.users.add(new SourceCodeUser(username, password));
     return this;
@@ -52,7 +58,8 @@ public class BackdoorWebServerBuilder {
       sslPort,
       users.toArray(new SourceCodeUser[0]),
       secretKey,
-      backdoorDatabaseJdbcUrl
+      backdoorDatabaseJdbcUrl,
+      analyticsName
     );
   }
 }
