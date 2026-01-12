@@ -819,7 +819,7 @@ public abstract class BackdoorCoreServer {
 
   protected IResponse processIndexPage(IRequest req) throws Exception {
     return Response.htmlOk(
-      makeHtml("index.html", null, Paradigm.CORE, "core", null, new GlobalSettings(false))
+      makeHtml("index.html", null, Paradigm.CORE, "core", null, new GlobalSettings(false, null))
     );
   }
 

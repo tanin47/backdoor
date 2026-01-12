@@ -238,7 +238,7 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
 
   protected IResponse processIndexPage(IRequest req) throws Exception {
     return Response.htmlOk(
-      makeHtml("index.html", null, Paradigm.DESKTOP, VERSION, null, new GlobalSettings(false)),
+      makeHtml("index.html", null, Paradigm.DESKTOP, VERSION, null, new GlobalSettings(false, null)),
       Map.of(
         "Set-Cookie", AUTH_KEY_COOKIE_KEY + "=" + this.authKey + "; Max-Age=86400; Path=/; Secure; HttpOnly"
       )

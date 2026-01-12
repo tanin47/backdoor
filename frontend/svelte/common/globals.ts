@@ -12,6 +12,7 @@ export const LOGGED_IN_USER: LoggedInUser = window.LOGGED_IN_USER;
 
 export interface GlobalSettings {
   dynamicUserEnabled: boolean;
+  analyticsName: string | null;
 }
 
 // @ts-expect-error defined globally

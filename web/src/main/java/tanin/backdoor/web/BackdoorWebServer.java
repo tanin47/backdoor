@@ -66,7 +66,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
   public String secretKey;
   public String backdoorDatabaseJdbcUrl;
   private DynamicUserService dynamicUserService;
-  private GlobalSettings globalSettings;
+  private final GlobalSettings globalSettings;
   ThreadLocal<AuthInfo> auth = new ThreadLocal<>();
 
   BackdoorWebServer(
@@ -75,7 +75,8 @@ public class BackdoorWebServer extends BackdoorCoreServer {
     int sslPort,
     SourceCodeUser[] sourceCodeUsers,
     String secretKey,
-    String backdoorDatabaseJdbcUrl
+    String backdoorDatabaseJdbcUrl,
+    String analyticsName
   ) {
     super(
       databaseConfigs,
@@ -90,7 +91,7 @@ public class BackdoorWebServer extends BackdoorCoreServer {
     if (backdoorDatabaseJdbcUrl != null) {
       this.dynamicUserService = new DynamicUserService(this.backdoorDatabaseJdbcUrl);
     }
-    this.globalSettings = new GlobalSettings(backdoorDatabaseJdbcUrl != null);
+    this.globalSettings = new GlobalSettings(backdoorDatabaseJdbcUrl != null, analyticsName);
 
     if (sourceCodeUsers != null) {
       for (SourceCodeUser user : sourceCodeUsers) {
