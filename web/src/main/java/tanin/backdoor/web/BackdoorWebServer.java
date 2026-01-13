@@ -7,6 +7,7 @@ import org.altcha.altcha.Altcha;
 import org.postgresql.util.PSQLException;
 import tanin.backdoor.core.*;
 import tanin.backdoor.core.engine.Engine;
+import tanin.backdoor.core.engine.PostgresEngine;
 import tanin.jmigrate.JMigrate;
 
 import javax.crypto.BadPaddingException;
@@ -631,6 +632,8 @@ public class BackdoorWebServer extends BackdoorCoreServer {
 
 
     if (backdoorDatabaseJdbcUrl != null) {
+      // Need to register the postgres driver explicitly because JMigrate uses it but doesn't include it.
+      PostgresEngine.registerDriver();
       JMigrate.migrate(backdoorDatabaseJdbcUrl, BackdoorWebServer.class, "/sql");
 
       wf.registerPath(
