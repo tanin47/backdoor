@@ -1,7 +1,7 @@
 Backdoor: Database Querying and Editing Tool
 ==============================================================
 
-[![Sonatype Central](https://maven-badges.sml.io/sonatype-central/io.github.tanin47/backdoor/badge.png?version=2.8.0-rc2)](https://central.sonatype.com/artifact/io.github.tanin47/backdoor)
+[![Sonatype Central](https://maven-badges.sml.io/sonatype-central/io.github.tanin47/backdoor/badge.png)](https://central.sonatype.com/artifact/io.github.tanin47/backdoor)
 [![Github Actions](https://github.com/tanin47/backdoor/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/tanin47/backdoor/actions/workflows/ci.yml?query=branch%3Amain)
 [![codecov](https://codecov.io/gh/tanin47/backdoor/graph/badge.svg?token=SODPQLLTDM)](https://codecov.io/gh/tanin47/backdoor)
 
@@ -20,6 +20,8 @@ Backdoor is a database querying and editing tool for you and your team.
   are implemented e.g. encrypted cookies with AES-256 and proof-of-work captcha.
 * ✨ __<ins>Modern UI:</ins>__ -- Exploring and investigating large data is a breeze and enjoyable. Offers modern UI with
   infinitely scrollable table.
+
+Try the live demo at: [backdooradmin.app](https://backdooradmin.app)
 
 | ![View and write SQL](readme/view-write.png)        | ![Filter data](readme/filter-data.png)              | ![New data source](readme/new-data-source.png) |
 |-----------------------------------------------------|-----------------------------------------------------|------------------------------------------------|
