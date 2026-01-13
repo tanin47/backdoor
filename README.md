@@ -72,8 +72,10 @@ The docker image is here: https://hub.docker.com/repository/docker/tanin47/backd
 
 ```
 docker run -p 9999:9999 \
+           --entrypoint "" \
            --pull always \
            tanin47/backdoor:web-latest \
+           java -jar backdoor.jar \
            -port 9999 \
            -url "postgres://127.0.0.1:5432/backdoor_test,jdbc:ch://localhost:8123?user=backdoor&password=test_ch" \
            -secret-key SbZlbmJIXh \
