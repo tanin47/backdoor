@@ -24,6 +24,10 @@ public class PostgresEngine extends Engine {
   private static final Logger logger = Logger.getLogger(PostgresEngine.class.getName());
 
   static {
+    registerDriver();
+  }
+
+  public static void registerDriver() {
     try {
       DriverManager.registerDriver(new Driver());
       logger.info("Registered the Postgres driver");
