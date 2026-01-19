@@ -8,7 +8,7 @@ Backdoor: Database Querying and Editing Tool
 _Explore, edit, and investigate data faster and more securely with a better database tool_
 
 Get
-started: [<ins>Self-hostable version (great for teams)</ins>](#self-hostable-version-great-for-teams) | [<ins>Desktop app version (great for personal use)</ins>](#desktop-app-version-great-for-personal-use)
+started: [<ins>Self-hostable version (great for teams)</ins>](#self-hostable-version-great-for-teams) | [<ins>Desktop app version (great for personal use)</ins>](#desktop-app-version-great-for-personal-use) | [Website](https://backdooradmin.app)
 
 Backdoor is a database querying and editing tool for you and your team.
 
