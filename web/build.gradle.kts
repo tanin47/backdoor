@@ -27,7 +27,7 @@ val sentryDsn = getSecret("SENTRY_DSN", "../secret/SENTRY_DSN")
 val sentryWebviewDsn = getSecret("SENTRY_WEBVIEW_DSN", "../secret/SENTRY_WEBVIEW_DSN")
 
 group = "tanin.backdoor"
-version = "2.8.0"
+version = "2.9.0-rc1"
 
 description = "Backdoor: Database Querying and Editing Tool"
 
