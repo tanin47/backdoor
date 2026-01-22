@@ -280,6 +280,15 @@ function handleResize(event: MouseEvent) {
         {#if sheet.type === 'table'}
           <Button class="btn btn-xs btn-ghost text-success p-0" onClick={async () => {insertModal.open()}} dataTestId="insert-row-button">Insert Row</Button>
         {/if}
+        <Button
+          class="btn btn-xs btn-ghost text-info p-0"
+          onClick={async () => {
+            if (sheet) {
+              void loadDataWithNewSorts(sheet.sorts)
+            }
+          }}
+          dataTestId="refresh-button"
+        >Refresh</Button>
       </div>
       <div class="flex gap-4 items-baseline">
         <div>[{sheet.database}]</div>

@@ -30,7 +30,7 @@ public class AdHocDataSourceTest extends Base {
       elems(tid("menu-items", "adhoc-test", null, "menu-item-table")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()
     );
 
-    click(tid("more-option-data-source-button"));
+    click(tid("database-item", "adhoc-test", null, "more-option-data-source-button"));
     click(tid("edit-data-source-button"));
     fill(tid("nickname"), "adhoc-test-updated");
     click(tid("submit-button"));
@@ -47,7 +47,7 @@ public class AdHocDataSourceTest extends Base {
     );
 
 
-    click(tid("more-option-data-source-button"));
+    click(tid("database-item", "adhoc-test-updated", null, "more-option-data-source-button"));
     click(tid("delete-data-source-button"));
     click(tid("submit-button"));
     waitUntil(() -> assertFalse(hasElem(tid("submit-button"))));
@@ -80,7 +80,7 @@ public class AdHocDataSourceTest extends Base {
       elems(tid("menu-items", "adhoc-test", null, "menu-item-table")).stream().map(e -> e.getDomAttribute("data-test-value")).toList()
     );
 
-    click(tid("more-option-data-source-button"));
+    click(tid("database-item", "adhoc-test", null, "more-option-data-source-button"));
     click(tid("edit-data-source-button"));
     fill(tid("url"), "jdbc:ch://127.0.0.1:8123/backdoor_test2");
     click(tid("submit-button"));

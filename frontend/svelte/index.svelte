@@ -222,7 +222,7 @@ export async function runSql(database: string, sql: string): Promise<void> {
         </div>
       </div>
       <div class="grow-1 overflow-y-auto">
-        {#each databases as database, index (index)}
+        {#each databases as database, index (database.nickname)}
           <TableMenuList
             {database}
             {queries}

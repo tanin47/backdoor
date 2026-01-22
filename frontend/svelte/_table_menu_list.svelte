@@ -24,23 +24,21 @@ let expanded = true
 
 let moreOptionTooltip: Instance;
 
-onMount(() => {
-  if (database.isAdHoc) {
-    moreOptionTooltip = tippy(moreButton, {
-      content: tooltip,
-      allowHTML: true,
-      interactive: true,
-      trigger: 'click',
-      duration: 0,
-      offset: [0, 0],
-      placement: 'bottom'
-    });
-    tooltip.style.display = "block";
-  }
-})
+$: if (moreButton && tooltip && !moreOptionTooltip) {
+  moreOptionTooltip = tippy(moreButton, {
+    content: tooltip,
+    allowHTML: true,
+    interactive: true,
+    trigger: 'click',
+    duration: 0,
+    offset: [0, 0],
+    placement: 'bottom'
+  });
+  tooltip.style.display = "block";
+}
 </script>
 
-{#if database.isAdHoc}
+<div>
   <div class="hidden" bind:this={tooltip}>
     <ul
       class="menu flex flex-col gap-0 border border-gray-500 rounded-lg bg-accent-content p-0"
@@ -58,36 +56,36 @@ onMount(() => {
           <span class="text-xs">Refresh</span>
         </div>
       </li>
-      <li>
-        <div
-          class="flex items-center gap-1 px-2 py-1 cursor-pointer"
-          data-test-id="edit-data-source-button"
-          onclick={() => {
-            moreOptionTooltip.hide()
-            onEditing()
-          }}
-        >
-          <i class="ph ph-pencil-simple text-xs"></i>
-          <span class="text-xs">Edit</span>
-        </div>
-      </li>
-      <li>
-        <div
-          class="flex items-center gap-1 px-2 py-1 cursor-pointer"
-          data-test-id="delete-data-source-button"
-          onclick={() => {
-            moreOptionTooltip.hide()
-            onDeleting()
-          }}
-        >
-          <i class="ph ph-trash text-xs"></i>
-          <span class="text-xs">Remove</span>
-        </div>
-      </li>
+      {#if database.isAdHoc}
+        <li>
+          <div
+            class="flex items-center gap-1 px-2 py-1 cursor-pointer"
+            data-test-id="edit-data-source-button"
+            onclick={() => {
+              moreOptionTooltip.hide()
+              onEditing()
+            }}
+          >
+            <i class="ph ph-pencil-simple text-xs"></i>
+            <span class="text-xs">Edit</span>
+          </div>
+        </li>
+        <li>
+          <div
+            class="flex items-center gap-1 px-2 py-1 cursor-pointer"
+            data-test-id="delete-data-source-button"
+            onclick={() => {
+              moreOptionTooltip.hide()
+              onDeleting()
+            }}
+          >
+            <i class="ph ph-trash text-xs"></i>
+            <span class="text-xs">Remove</span>
+          </div>
+        </li>
+      {/if}
     </ul>
   </div>
-{/if}
-<div>
   <div
     class="flex items-center gap-2 justify-between {isLoading ? 'cursor-progress' : 'cursor-pointer'}"
     class:opacity-50={isLoading}
@@ -118,17 +116,15 @@ onMount(() => {
       <span
         class="overflow-hidden text-ellipsis font-mono text-xs whitespace-nowrap underline">{database.nickname}</span>
     </div>
-    {#if database.isAdHoc}
-      <i
-        bind:this={moreButton}
-        class="ph ph-dots-three-vertical text-sm z-10 px-1 py-2 cursor-pointer"
-        data-test-id="more-option-data-source-button"
-        onclick={(ev) => {
-          ev.stopPropagation()
-          moreOptionTooltip.show()
-        }}
-      ></i>
-    {/if}
+    <i
+      bind:this={moreButton}
+      class="ph ph-dots-three-vertical text-sm z-10 px-1 py-2 cursor-pointer"
+      data-test-id="more-option-data-source-button"
+      onclick={(ev) => {
+        ev.stopPropagation()
+        moreOptionTooltip.show()
+      }}
+    ></i>
   </div>
   {#if database.status === 'loaded'}
     <ul
