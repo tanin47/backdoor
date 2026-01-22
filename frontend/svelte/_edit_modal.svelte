@@ -144,14 +144,27 @@ async function submit() {
       {#if setToNull}
         <span class="text-xs text-accent">The value below will not be used because the value will be set to null.</span>
       {/if}
-      <textarea
-        data-test-id="new-value"
-        bind:this={textarea}
-        class="textarea resize w-[480px]"
-        disabled={isLoading || setToNull}
-        bind:value={currentValue}
-        autocorrect="off"
-      ></textarea>
+      <div class="relative">
+        {#if setToNull}
+          <div
+            class="absolute left-0 top-0 bottom-0 right-0 z-50"
+            data-test-id="disabled-new-value-overlay"
+            onclick={() => {
+              if (setToNull) {
+                setToNull = false
+              }
+            }}
+          ></div>
+        {/if}
+        <textarea
+          data-test-id="new-value"
+          bind:this={textarea}
+          class="textarea resize w-[480px]"
+          disabled={isLoading || setToNull}
+          bind:value={currentValue}
+          autocorrect="off"
+        ></textarea>
+      </div>
       <ErrorPanel {errors}/>
       <div class="flex items-center justify-between mt-2">
         <Button {isLoading} class="btn btn-secondary" onClick={async () => {submit()}} dataTestId="submit-button">

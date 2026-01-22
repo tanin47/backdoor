@@ -112,7 +112,7 @@ public class Base {
           CREATE TABLE "user" (
             id INT PRIMARY KEY,
             username VARCHAR(255) NOT NULL UNIQUE,
-            password VARCHAR(255) NOT NULL
+            password VARCHAR(255)
           )
           """
       );
