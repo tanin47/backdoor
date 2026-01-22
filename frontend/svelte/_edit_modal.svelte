@@ -125,7 +125,7 @@ async function submit() {
       </div>
     {:else}
       {#if currentColumn}
-        <span class="text-lg">{currentColumn.name}</span>
+        <span class="text-lg">{currentColumn.name} ({currentColumn.type})</span>
       {/if}
       {#if currentColumn && currentColumn.isNullable}
         <div class="flex gap-2 items-center text-sm">
@@ -165,6 +165,16 @@ async function submit() {
           autocorrect="off"
         ></textarea>
       </div>
+      {#if currentColumn && currentColumn.type === 'TIMESTAMP' && !setToNull}
+        <div
+          class="text-xs underline cursor-pointer text-neutral-content"
+          data-test-id="timestamp-now-button"
+          onclick={() => {
+            currentValue = new Date().toISOString()
+          }}
+        >Use the current timestamp
+        </div>
+      {/if}
       <ErrorPanel {errors}/>
       <div class="flex items-center justify-between mt-2">
         <Button {isLoading} class="btn btn-secondary" onClick={async () => {submit()}} dataTestId="submit-button">
