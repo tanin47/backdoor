@@ -274,8 +274,9 @@ public abstract class BackdoorCoreServer {
         var primaryKeyFilters = json.asObject().get("primaryKeys").asArray().values().stream().map(s -> {
           var o = s.asObject();
           var value = o.get("value");
+          var operator = Filter.Operator.valueOf(o.get("operator").asString());
 
-          return new Filter(o.get("name").asString(), value.isNull() ? null : value.asString());
+          return new Filter(o.get("name").asString(), value.asString(), operator);
         }).toArray(Filter[]::new);
 
         try (var engine = makeEngine(database)) {
@@ -339,16 +340,17 @@ public abstract class BackdoorCoreServer {
         var primaryKeyFilters = json.asObject().get("primaryKeys").asArray().values().stream().map(s -> {
           var o = s.asObject();
           var value = o.get("value");
+          var operator = Filter.Operator.valueOf(o.get("operator").asString());
 
-          return new Filter(o.get("name").asString(), value.isNull() ? null : value.asString());
+          return new Filter(o.get("name").asString(), value.asString(), operator);
         }).toArray(Filter[]::new);
 
         try (var engine = makeEngine(database)) {
           var column = Arrays.stream(engine.getColumns(tableName)).filter(c -> c.name.equals(columnName)).findFirst().orElse(null);
-
-          var newSantiziedValue = setToNull ? null : newValue;
-          engine.update(tableName, column, newSantiziedValue, primaryKeyFilters);
           assert column != null;
+          var newSanitized = setToNull ? null : newValue;
+
+          engine.update(tableName, column, newSanitized, primaryKeyFilters);
           AtomicReference<JsonValue> newFetchedValue = new AtomicReference<>(Json.NULL);
           engine.select(
             tableName,
@@ -356,7 +358,7 @@ public abstract class BackdoorCoreServer {
             Arrays.stream(primaryKeyFilters)
               .peek(p -> {
                 if (p.name.equals(columnName)) {
-                  p.value = newSantiziedValue;
+                  p.value = newSanitized;
                 }
               })
               .toArray(Filter[]::new),
@@ -434,8 +436,9 @@ public abstract class BackdoorCoreServer {
         var filters = json.asObject().get("filters").asArray().values().stream().map(s -> {
           var o = s.asObject();
           var value = o.get("value");
+          var operator = Filter.Operator.valueOf(o.get("operator").asString());
 
-          return new Filter(o.get("name").asString(), value.isNull() ? null : value.asString());
+          return new Filter(o.get("name").asString(), value.asString(), operator);
         }).toArray(Filter[]::new);
         var sorts = json.asObject().get("sorts").asArray().values().stream().map(s -> {
           var o = s.asObject();
@@ -554,8 +557,9 @@ public abstract class BackdoorCoreServer {
         var filters = json.asObject().get("filters").asArray().values().stream().map(s -> {
           var o = s.asObject();
           var value = o.get("value");
+          var operator = Filter.Operator.valueOf(o.get("operator").asString());
 
-          return new Filter(o.get("name").asString(), value.isNull() ? null : value.asString());
+          return new Filter(o.get("name").asString(), value.asString(), operator);
         }).toArray(Filter[]::new);
         var sorts = json.asObject().get("sorts").asArray().values().stream().map(s -> {
           var o = s.asObject();

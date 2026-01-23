@@ -54,9 +54,12 @@ export interface Sort {
   direction: SortDirection;
 }
 
+export type FilterOperator = 'EQUAL' | 'IS_NULL' | 'IS_NOT_NULL'
+
 export interface Filter {
   name: string;
-  value: string | null;
+  operator: FilterOperator;
+  value: string;
 }
 
 interface BaseSheet {
