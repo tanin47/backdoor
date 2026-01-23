@@ -14,7 +14,8 @@ let textarea: HTMLTextAreaElement | null
 
 let specifiedValue: any
 let currentColumn: Column | null
-let mode: 'no_filter' | 'null' | 'specified_value' = 'specified_value'
+let mode: 'no_filter' | 'null' | 'not_null' | 'specified_value' = 'specified_value'
+let shouldTrim = true
 
 let isLoading = false
 let errors: string[] = []
@@ -36,12 +37,16 @@ export function open(column: Column): void {
     mode = 'no_filter'
     specifiedValue = ''
   } else {
-    specifiedValue = sheet.filters[foundIndex].value ?? ''
+    const filter = sheet.filters[foundIndex]
 
-    if (specifiedValue === null) {
+    if (filter.operator === 'IS_NULL') {
       mode = 'null'
-    } else {
+    } else if (filter.operator === 'IS_NOT_NULL') {
+      mode = 'not_null'
+    } else if (filter.operator === 'EQUAL') {
       mode = 'specified_value'
+    } else {
+      throw new Error(`Unrecognized column '${filter.operator}'`)
     }
   }
   currentColumn = column
@@ -82,9 +87,15 @@ async function submit() {
   if (mode === 'no_filter') {
     // do nothing
   } else if (mode === 'null') {
-    newFilters.push({name: currentColumn.name, value: null})
+    newFilters.push({name: currentColumn.name, value: '', operator: 'IS_NULL'})
+  } else if (mode === 'not_null') {
+    newFilters.push({name: currentColumn.name, value: '', operator: 'IS_NOT_NULL'})
   } else if (mode === 'specified_value') {
-    newFilters.push({name: currentColumn.name, value: specifiedValue})
+    newFilters.push({
+      name: currentColumn.name,
+      value: shouldTrim ? specifiedValue.trim() : specifiedValue,
+      operator: 'EQUAL'
+    })
   }
 
   try {
@@ -132,11 +143,25 @@ async function submit() {
           <input
             type="checkbox"
             class="checkbox checkbox-xs"
+            data-test-id="null-checkbox"
             checked={mode === 'null'}
             disabled={isLoading}
             onclick={() => {mode = 'null'}}
           />
           <span>Filter for <code>null</code></span>
+        </label>
+      </div>
+      <div class="flex gap-2 items-center text-sm">
+        <label class="flex gap-2 items-center cursor-pointer">
+          <input
+            type="checkbox"
+            class="checkbox checkbox-xs"
+            data-test-id="not-null-checkbox"
+            checked={mode === 'not_null'}
+            disabled={isLoading}
+            onclick={() => {mode = 'not_null'}}
+          />
+          <span>Filter for <code>not null</code></span>
         </label>
       </div>
     {/if}
@@ -153,14 +178,41 @@ async function submit() {
         <span>Use the specified value below:</span>
       </label>
     </div>
-    <textarea
-      data-test-id="specified-value-input"
-      bind:this={textarea}
-      class="textarea resize w-[480px]"
-      disabled={isLoading || mode !== 'specified_value'}
-      bind:value={specifiedValue}
-      autocorrect="off"
-    ></textarea>
+    <div class="relative">
+      {#if mode !== 'specified_value'}
+        <div
+          class="absolute left-0 top-0 bottom-0 right-0 z-50"
+          data-test-id="disabled-new-value-overlay"
+          onclick={() => {
+              if (mode !== 'specified_value') {
+                mode = 'specified_value'
+              }
+            }}
+        ></div>
+      {/if}
+      <textarea
+        data-test-id="specified-value-input"
+        bind:this={textarea}
+        class="textarea resize w-[480px]"
+        disabled={isLoading || mode !== 'specified_value'}
+        bind:value={specifiedValue}
+        autocorrect="off"
+      ></textarea>
+    </div>
+    {#if mode === 'specified_value' && currentColumn}
+      {#if currentColumn.type === 'STRING'}
+        <label class="flex gap-2 items-center cursor-pointer">
+          <input
+            data-test-id="trim-value"
+            type="checkbox"
+            class="checkbox checkbox-xs"
+            bind:checked={shouldTrim}
+            disabled={isLoading}
+          />
+          <span class="text-xs">Trim whitespaces</span>
+        </label>
+      {/if}
+    {/if}
     <ErrorPanel {errors}/>
     <div class="flex items-center justify-between mt-2">
       <Button {isLoading} class="btn btn-secondary" onClick={async () => {submit()}} dataTestId="submit-button">

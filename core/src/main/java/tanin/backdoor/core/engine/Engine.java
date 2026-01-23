@@ -154,10 +154,19 @@ public abstract class Engine implements AutoCloseable {
       var clauses = Arrays
         .stream(filters)
         .map(s -> {
-          var value = s.value == null ? "NULL" : makeSqlLiteral(s.value);
-          var op = s.value == null ? "IS" : "=";
+          String operatorAndValue;
 
-          return makeSqlName(s.name) + " " + op + " " + value;
+          if (s.operator == Filter.Operator.IS_NULL) {
+            operatorAndValue = " IS NULL";
+          } else if (s.operator == Filter.Operator.IS_NOT_NULL) {
+            operatorAndValue = " IS NOT NULL";
+          } else if (s.operator == Filter.Operator.EQUAL) {
+            operatorAndValue = " = " + makeSqlLiteral(s.value);
+          } else {
+            throw new RuntimeException("Unknown operator: " + s.operator);
+          }
+
+          return makeSqlName(s.name) + " " + operatorAndValue;
         })
         .toArray(String[]::new);
       whereClause = " WHERE " + String.join(" AND ", clauses);

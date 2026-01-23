@@ -17,6 +17,7 @@ let rowIndex_: number | null = null
 let currentValue: any
 let currentColumn: Column | null
 let setToNull: boolean = false
+let shouldTrim: boolean = true
 
 let isLoading = false
 let errors: string[] = []
@@ -45,7 +46,11 @@ export function open(value: any, column: Column, rowValues: any[], rowIndex: num
     .map((column, index) => {
       if (column.isPrimaryKey) {
         const value = rowValues[index];
-        return {name: column.name, value: value === null ? null : ('' + value)}
+        return {
+          name: column.name,
+          value: ('' + value),
+          operator: value === null ? 'IS NULL' : 'EQUAL'
+        }
       } else {
         return null
       }
@@ -86,7 +91,7 @@ async function submit() {
       table: sheet.name,
       primaryKeys,
       column: currentColumn!.name,
-      value: currentValue,
+      value: shouldTrim ? currentValue.trim() : currentValue,
       setToNull,
     })
 
@@ -165,15 +170,28 @@ async function submit() {
           autocorrect="off"
         ></textarea>
       </div>
-      {#if currentColumn && currentColumn.type === 'TIMESTAMP' && !setToNull}
-        <div
-          class="text-xs underline cursor-pointer text-neutral-content"
-          data-test-id="timestamp-now-button"
-          onclick={() => {
-            currentValue = new Date().toISOString()
-          }}
-        >Use the current timestamp
-        </div>
+      {#if !setToNull && currentColumn}
+        {#if currentColumn.type === 'TIMESTAMP'}
+          <div
+            class="text-xs underline cursor-pointer text-neutral-content"
+            data-test-id="timestamp-now-button"
+            onclick={() => {
+              currentValue = new Date().toISOString()
+            }}
+          >Use the current timestamp
+          </div>
+        {:else if currentColumn.type === 'STRING'}
+          <label class="flex gap-2 items-center cursor-pointer">
+            <input
+              data-test-id="trim-value-checkbox"
+              type="checkbox"
+              class="checkbox checkbox-xs"
+              bind:checked={shouldTrim}
+              disabled={isLoading}
+            />
+            <span class="text-xs">Trim whitespaces before updating</span>
+          </label>
+        {/if}
       {/if}
       <ErrorPanel {errors}/>
       <div class="flex items-center justify-between mt-2">

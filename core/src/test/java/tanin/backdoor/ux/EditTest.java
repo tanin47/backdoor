@@ -37,6 +37,26 @@ public class EditTest extends Base {
   }
 
   @Test
+  void trimValue() throws InterruptedException {
+    go("/");
+    click(tid("database-item"));
+    waitUntil(() -> assertEquals("loaded", elem(tid("database-item")).getDomAttribute("data-database-status")));
+
+    click(tid("menu-items", "postgres", null, "menu-item-table", "user"));
+
+    click(tid("sheet-column-value", "password", null, "edit-field-button"));
+    fill(tid("new-value"), "\n  \nnew-password\n   \n");
+    click(tid("trim-value-checkbox"));
+    click(tid("submit-button"));
+    waitUntil(() -> assertEquals(" \n  \nnew-password\n   ", elem(tid("sheet-column-value", "password")).getText()));
+
+    click(tid("sheet-column-value", "password", null, "edit-field-button"));
+    click(tid("trim-value-checkbox"));
+    click(tid("submit-button"));
+    waitUntil(() -> assertEquals(" new-password", elem(tid("sheet-column-value", "password")).getText()));
+  }
+
+  @Test
   void useNowTimestamp() throws Exception {
     try (var engine = server.engineProvider.createEngine(postgresConfig, null)) {
       engine.connection.createStatement().execute("""

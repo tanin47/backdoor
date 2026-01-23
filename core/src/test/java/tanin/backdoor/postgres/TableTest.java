@@ -305,7 +305,7 @@ public class TableTest extends Base {
   }
 
   @Test
-  void filterRow() throws InterruptedException {
+  void filterRowSpecificValue() throws InterruptedException {
     go("/");
     click(tid("database-item"));
     waitUntil(() -> assertEquals("loaded", elem(tid("database-item")).getDomAttribute("data-database-status")));
@@ -321,6 +321,43 @@ public class TableTest extends Base {
     click(tid("submit-button"));
 
     waitUntil(() -> assertColumnValues("username", "test_user_2"));
+  }
+
+  @Test
+  void filterRowNullAndNotNull() throws Exception {
+    try (var engine = server.engineProvider.createEngine(postgresConfig, null)) {
+      engine.connection.createStatement().execute(
+        """
+             INSERT INTO "user" (
+             id,
+             username,
+             password
+           ) VALUES (
+             '100',
+             'null-user',
+             NULL
+           )
+          """
+      );
+    }
+    go("/");
+    click(tid("database-item"));
+    waitUntil(() -> assertEquals("loaded", elem(tid("database-item")).getDomAttribute("data-database-status")));
+
+    click(tid("menu-items", "postgres", null, "menu-item-table", "user"));
+
+    waitUntil(() -> assertTrue(hasElem(tid("sheet-tab", "user"))));
+    waitUntil(() -> assertColumnValues("username", "test_user_1", "test_user_2", "test_user_3", "test_user_4", "null-user"));
+
+    click(tid("sheet-view-column-header", "password", null, "filter-button"));
+    click(tid("not-null-checkbox"));
+    click(tid("submit-button"));
+    waitUntil(() -> assertColumnValues("username", "test_user_1", "test_user_2", "test_user_3", "test_user_4"));
+
+    click(tid("sheet-view-column-header", "password", null, "filter-button"));
+    click(tid("null-checkbox"));
+    click(tid("submit-button"));
+    waitUntil(() -> assertColumnValues("username", "null-user"));
   }
 
   @Test
