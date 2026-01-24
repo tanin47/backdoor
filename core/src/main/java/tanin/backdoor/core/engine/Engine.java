@@ -3,6 +3,7 @@ package tanin.backdoor.core.engine;
 import com.eclipsesource.json.JsonValue;
 import tanin.backdoor.core.*;
 
+import java.io.IOException;
 import java.net.URISyntaxException;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -90,9 +91,9 @@ public abstract class Engine implements AutoCloseable {
 
   protected abstract void connect(DatabaseConfig config, DatabaseUser overwritingUser) throws SQLException, InvalidCredentialsException, URISyntaxException, UnreachableServerException, InvalidDatabaseNameProbablyException, GenericConnectionException;
 
-  public abstract Column[] getColumns(String table) throws SQLException;
+  public abstract Column[] getColumns(String table) throws SQLException, IOException;
 
-  public abstract String[] getTables() throws SQLException;
+  public abstract String[] getTables() throws SQLException, IOException;
 
   public abstract void insert(String table, Column[] columns, Engine.Value[] values) throws Exception;
 
@@ -102,7 +103,7 @@ public abstract class Engine implements AutoCloseable {
 
   public abstract void rename(String table, String newTableName) throws SQLException;
 
-  public abstract BackdoorCoreServer.SqlType getSqlType(String sql) throws SQLException;
+  public abstract BackdoorCoreServer.SqlType getSqlType(String sql) throws SQLException, IOException;
 
   public abstract Column.ColumnType convertRawType(String rawType);
 
@@ -111,7 +112,7 @@ public abstract class Engine implements AutoCloseable {
   public Stats getStats(
     String sql,
     Filter[] filters
-  ) throws SQLException {
+  ) throws SQLException, IOException {
     var whereClause = makeWhereClause(filters);
     var tableStats = new Stats(0);
     executeQuery(
@@ -130,7 +131,7 @@ public abstract class Engine implements AutoCloseable {
       " FROM " + makeSqlName(table);
   }
 
-  public void executeQueryWithParams(String sql, Filter[] filters, Sort[] sorts, int offset, int limit, ProcessResultSet processResultSet) throws SQLException {
+  public String makeQuerySql(String sql, Filter[] filters, Sort[] sorts, int offset, int limit) {
     var whereClause = makeWhereClause(filters);
 
     var orderByClause = "";
@@ -138,12 +139,18 @@ public abstract class Engine implements AutoCloseable {
       orderByClause = " ORDER BY " + String.join(", ", Arrays.stream(sorts).map(s -> makeSqlName(s.name) + " " + s.direction).toArray(String[]::new));
     }
 
+    var limitClause = limit == -1 ? "" : " LIMIT " + limit;
+
+    return "SELECT * FROM (" + sql + ") " +
+      whereClause +
+      orderByClause +
+      limitClause +
+      " OFFSET " + offset;
+  }
+
+  public void executeQueryWithParams(String sql, Filter[] filters, Sort[] sorts, int offset, int limit, ProcessResultSet processResultSet) throws SQLException, IOException {
     executeQuery(
-      "SELECT * FROM (" + sql + ") " +
-        whereClause +
-        orderByClause +
-        " LIMIT " + limit +
-        " OFFSET " + offset,
+      makeQuerySql(sql, filters, sorts, offset, limit),
       processResultSet
     );
   }
@@ -174,7 +181,7 @@ public abstract class Engine implements AutoCloseable {
     return whereClause;
   }
 
-  public void select(String tableName, Column column, Filter[] filters, ProcessResultSet processResultSet) throws SQLException {
+  public void select(String tableName, Column column, Filter[] filters, ProcessResultSet processResultSet) throws SQLException, IOException {
     var whereClause = makeWhereClause(filters);
     executeQuery(
       "SELECT " + makeSqlName(column.name) + " FROM " + makeSqlName(tableName) + whereClause,
@@ -188,13 +195,13 @@ public abstract class Engine implements AutoCloseable {
   }
 
   public interface ProcessResultSet {
-    void process(ResultSet rs) throws SQLException;
+    void process(ResultSet rs) throws SQLException, IOException;
   }
 
   public void executeQuery(
     String sql,
     ProcessResultSet processResultSet
-  ) throws SQLException {
+  ) throws SQLException, IOException {
     logger.info("Executing query: " + sql);
     try (var stmt = connection.createStatement()) {
       try (var rs = stmt.executeQuery(sql)) {
@@ -214,6 +221,29 @@ public abstract class Engine implements AutoCloseable {
     logger.info("Executing update: " + sql);
     try (var stmt = connection.createStatement()) {
       return stmt.executeUpdate(sql);
+    }
+  }
+
+  public void exportCsv(String path, String sql, Filter[] filters, Sort[] sorts) throws Exception {
+    try (var writer = new CsvWriter(path)) {
+      executeQuery(makeQuerySql(sql, filters, sorts, 0, -1), rs -> {
+        var meta = rs.getMetaData();
+        var columnCount = meta.getColumnCount();
+
+        for (int i = 1; i <= columnCount; i++) {
+          writer.addValue(meta.getColumnName(i));
+        }
+        writer.newLine();
+
+        while (rs.next()) {
+          for (int i = 1; i <= columnCount; i++) {
+            writer.addValue(rs.getString(i));
+          }
+          writer.newLine();
+        }
+
+        writer.flush();
+      });
     }
   }
 }

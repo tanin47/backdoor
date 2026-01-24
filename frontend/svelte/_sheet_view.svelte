@@ -9,6 +9,7 @@ import DropTableModal from './_drop_table_modal.svelte';
 import RenameTableModal from './_rename_table_modal.svelte';
 import DeleteQueryModal from './_delete_query_modal.svelte';
 import RenameQueryModal from './_rename_query_modal.svelte';
+import ExportModal from './_export_modal.svelte';
 import FilterModal from './_filter_modal.svelte';
 import Button from './common/_button.svelte'
 
@@ -22,6 +23,7 @@ import 'codemirror/addon/hint/sql-hint'
 import 'codemirror/addon/hint/anyword-hint'
 import 'codemirror/addon/comment/comment'
 import {post} from "./common/form";
+import {openFileDialog, PARADIGM} from "./common/globals";
 
 export let sheet: Sheet | null
 export let onTableDropped: (database: string, table: string) => void
@@ -144,6 +146,7 @@ let renameTableModal: RenameTableModal
 let deleteQueryModal: DeleteQueryModal
 let dropTableModal: DropTableModal
 let filterModal: FilterModal
+let exportModal: ExportModal
 let virtualListUpdate: number = 0
 
 let isLoading = false
@@ -195,7 +198,21 @@ async function loadDataWithNewSorts(newSorts: Sort[]): Promise<void> {
   } finally {
     isLoading = false
   }
+}
 
+async function exportCsv(): Promise<void> {
+  if (!sheet) { return }
+
+  try {
+    const resp = await openFileDialog(true)
+
+    if (!resp.filePath) {
+      return
+    }
+
+    exportModal.open(resp.filePath);
+  } catch (e) {
+  }
 }
 
 async function addSort(column: string, direction: SortDirection) {
@@ -278,7 +295,7 @@ function handleResize(event: MouseEvent) {
           {/if}
         </div>
         {#if sheet.type === 'table'}
-          <Button class="btn btn-xs btn-ghost text-success p-0" onClick={async () => {insertModal.open()}} dataTestId="insert-row-button">Insert Row</Button>
+          <Button class="btn btn-xs btn-ghost text-success p-0" onClick={async () => {insertModal.open()}} dataTestId="insert-row-button">Insert</Button>
         {/if}
         <Button
           class="btn btn-xs btn-ghost text-info p-0"
@@ -289,15 +306,26 @@ function handleResize(event: MouseEvent) {
           }}
           dataTestId="refresh-button"
         >Refresh</Button>
+        {#if PARADIGM === 'DESKTOP'}
+          <Button
+            class="btn btn-xs btn-ghost text-primary p-0"
+            onClick={async () => {
+              if (sheet) {
+                void exportCsv()
+              }
+            }}
+            dataTestId="export-button"
+          >Export</Button>
+        {/if}
       </div>
-      <div class="flex gap-4 items-baseline">
+      <div class="flex gap-2 items-baseline">
         <div>[{sheet.database}]</div>
         {#if sheet.type === 'table'}
-          <Button class="btn btn-xs btn-ghost text-warning p-0" onClick={async () => {renameTableModal.open()}} dataTestId="rename-table-button">Rename Table</Button>
-          <Button class="btn btn-xs btn-ghost text-error p-0" onClick={async () => {dropTableModal.open()}} dataTestId="drop-table-button">Drop Table</Button>
+          <Button class="btn btn-xs btn-ghost text-warning p-0" onClick={async () => {renameTableModal.open()}} dataTestId="rename-table-button">Rename</Button>
+          <Button class="btn btn-xs btn-ghost text-error p-0" onClick={async () => {dropTableModal.open()}} dataTestId="drop-table-button">Drop</Button>
         {:else if sheet.type === 'query'}
-          <Button class="btn btn-xs btn-ghost text-info p-0" onClick={async () => {renameQueryModal.open()}} dataTestId="rename-query-button">Rename Query</Button>
-          <Button class="btn btn-xs btn-ghost text-warning p-0" onClick={async () => {deleteQueryModal.open()}} dataTestId="delete-query-button">Delete Query</Button>
+          <Button class="btn btn-xs btn-ghost text-info p-0" onClick={async () => {renameQueryModal.open()}} dataTestId="rename-query-button">Rename</Button>
+          <Button class="btn btn-xs btn-ghost text-warning p-0" onClick={async () => {deleteQueryModal.open()}} dataTestId="delete-query-button">Delete</Button>
         {/if}
       </div>
     </div>
@@ -524,6 +552,10 @@ function handleResize(event: MouseEvent) {
       sheet = sheet
       virtualListUpdate++
     }}
+  />
+  <ExportModal
+    {sheet}
+    bind:this={exportModal}
   />
 {/if}
 

@@ -8,6 +8,7 @@ import tanin.backdoor.core.engine.Engine;
 import tanin.backdoor.desktop.nativeinterface.Base;
 import tanin.backdoor.desktop.nativeinterface.MacOsApi;
 
+import java.io.IOException;
 import java.net.URISyntaxException;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -59,7 +60,7 @@ public class SqliteEngine extends Engine {
   }
 
   @Override
-  public Column[] getColumns(String table) throws SQLException {
+  public Column[] getColumns(String table) throws SQLException, IOException {
     var columns = new ArrayList<Column>();
     executeQuery(
       "SELECT name, type, \"notnull\", pk, dflt_value FROM pragma_table_info('" + table + "')",
@@ -87,7 +88,7 @@ public class SqliteEngine extends Engine {
   }
 
   @Override
-  public String[] getTables() throws SQLException {
+  public String[] getTables() throws SQLException, IOException {
     var tables = new ArrayList<String>();
     executeQuery(
       "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'",
@@ -197,7 +198,7 @@ public class SqliteEngine extends Engine {
   }
 
   @Override
-  public BackdoorCoreServer.SqlType getSqlType(String sql) throws SQLException {
+  public BackdoorCoreServer.SqlType getSqlType(String sql) throws SQLException, IOException {
     var sanitized = sql.toLowerCase().trim();
     if (sanitized.startsWith("explain")) {
       return BackdoorCoreServer.SqlType.EXPLAIN;

@@ -3,10 +3,7 @@ package tanin.backdoor.desktop;
 import com.eclipsesource.json.Json;
 import com.eclipsesource.json.JsonValue;
 import com.renomad.minum.web.*;
-import tanin.backdoor.core.BackdoorCoreServer;
-import tanin.backdoor.core.DatabaseConfig;
-import tanin.backdoor.core.DatabaseUser;
-import tanin.backdoor.core.GlobalSettings;
+import tanin.backdoor.core.*;
 import tanin.backdoor.desktop.engine.EngineProvider;
 import tanin.ejwf.MinumBuilder;
 
@@ -15,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.prefs.Preferences;
@@ -162,6 +160,47 @@ public class BackdoorDesktopServer extends BackdoorCoreServer {
           Map.of("Content-Type", "application/json"),
           Json.object().add("entries", entriesJson).toString()
         );
+      }
+    );
+
+    wf.registerPath(
+      POST,
+      "api/export-file",
+      req -> {
+        var json = Json.parse(req.getBody().asString());
+        var path = json.asObject().get("path").asString();
+        var database = json.asObject().get("database").asString();
+        var sql = json.asObject().get("sql").asString().trim();
+        var filters = json.asObject().get("filters").asArray().values().stream().map(s -> {
+          var o = s.asObject();
+          var value = o.get("value");
+          var operator = Filter.Operator.valueOf(o.get("operator").asString());
+
+          return new Filter(o.get("name").asString(), value.asString(), operator);
+        }).toArray(Filter[]::new);
+        var sorts = json.asObject().get("sorts").asArray().values().stream().map(s -> {
+          var o = s.asObject();
+          var direction = o.get("direction").asString();
+
+          if (direction.equalsIgnoreCase("asc") || direction.equalsIgnoreCase("desc")) {
+            // good
+          } else {
+            throw new IllegalStateException("Invalid sort direction: " + direction);
+          }
+
+          return new Sort(o.get("name").asString(), o.get("direction").asString());
+        }).toArray(Sort[]::new);
+
+        try (var engine = makeEngine(database)) {
+          engine.exportCsv(path, sql, filters, sorts);
+
+          return Response.buildResponse(
+            StatusLine.StatusCode.CODE_200_OK,
+            Map.of("Content-Type", "application/json"),
+            Json.object().toString()
+          );
+        }
+
       }
     );
 

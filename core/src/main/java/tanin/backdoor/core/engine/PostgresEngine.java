@@ -6,6 +6,7 @@ import org.postgresql.Driver;
 import org.postgresql.util.PSQLException;
 import tanin.backdoor.core.*;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.DriverManager;
@@ -101,7 +102,7 @@ public class PostgresEngine extends Engine {
   }
 
   @Override
-  public Column[] getColumns(String table) throws SQLException {
+  public Column[] getColumns(String table) throws SQLException, IOException {
     var columns = new ArrayList<>(List.<Column>of());
     executeQuery(
       "SELECT c.column_name, c.data_type, c.is_nullable, " +
@@ -138,7 +139,7 @@ public class PostgresEngine extends Engine {
   }
 
   @Override
-  public String[] getTables() throws SQLException {
+  public String[] getTables() throws SQLException, IOException {
     var tables = new ArrayList<String>();
     executeQuery(
       "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' ORDER BY table_name ASC;",
@@ -245,7 +246,7 @@ public class PostgresEngine extends Engine {
   }
 
   @Override
-  public BackdoorCoreServer.SqlType getSqlType(String sql) throws SQLException {
+  public BackdoorCoreServer.SqlType getSqlType(String sql) throws SQLException, IOException {
     var sanitized = sql.toLowerCase().trim();
     if (sanitized.startsWith("explain")) {
       return BackdoorCoreServer.SqlType.EXPLAIN;
