@@ -1,6 +1,6 @@
 <script lang="ts">
 
-import {Sheet} from "./common/models"
+import {type Filter, type FilterOperator, Sheet} from "./common/models"
 import {type FetchError, post} from "./common/form"
 import Button from './common/_button.svelte'
 import ErrorPanel from "./common/form/_error_panel.svelte"
@@ -11,7 +11,7 @@ export let onDeleted: (rowIndex: number) => void
 
 let modal: HTMLDialogElement;
 
-let primaryKeys: Array<{ name: string, value: any }> = []
+let primaryKeys: Array<Filter> = []
 let rowIndex_: number | null = null
 
 let isLoading = false
@@ -26,7 +26,11 @@ export function open(rowValues: any[], rowIndex: number): void {
     .map((column, index) => {
       if (column.isPrimaryKey) {
         const value = rowValues[index];
-        return {name: column.name, value: value === null ? null : ('' + value)}
+        return {
+          name: column.name,
+          value: '' + value,
+          operator: (value === null ? 'IS_NULL' : 'EQUAL') as FilterOperator
+        }
       } else {
         return null
       }
@@ -93,7 +97,7 @@ async function submit(): Promise<void> {
         <span>Primary key:</span>
         {#each primaryKeys as pair (pair.name)}
           <code>
-            {pair.name} = {pair.value ?? 'NULL'}
+            {pair.name} = {pair.operator === 'IS_NULL' ? 'NULL' : pair.value}
           </code>
         {/each}
       </div>
