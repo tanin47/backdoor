@@ -68,7 +68,7 @@ jobs:
           fi
       - name: Install Node modules
         run: |
-          export PATH="${PATH}:/c/hostedtoolcache/windows/node/22.21.1/x64"
+          export PATH="${PATH}:/c/hostedtoolcache/windows/node/22.22.0/x64"
           npm install
       - name: Download CodeSignTool and extract
         run: |
@@ -88,7 +88,7 @@ jobs:
         shell: powershell
       - name: Build an MSI
         run: |
-          export PATH="${PATH}:$PWD/build-tools/wixtool:/c/hostedtoolcache/windows/node/22.21.1/x64"
+          export PATH="${PATH}:$PWD/build-tools/wixtool:/c/hostedtoolcache/windows/node/22.22.0/x64"
           export CODESIGN_TOOL_DIR="$PWD/build-tools/codesign"
           ./gradlew clean :desktop:jpackage
         env:
