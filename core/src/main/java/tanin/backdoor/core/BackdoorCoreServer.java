@@ -182,7 +182,7 @@ public abstract class BackdoorCoreServer {
       .orElse(null);
   }
 
-  Engine makeEngine(String databaseNickname) throws SQLException, URISyntaxException, Engine.InvalidCredentialsException, Engine.OverwritingUserAndCredentialedJdbcConflictedException, Engine.UnreachableServerException, Engine.InvalidDatabaseNameProbablyException, BackingStoreException, Engine.GenericConnectionException {
+  public Engine makeEngine(String databaseNickname) throws SQLException, URISyntaxException, Engine.InvalidCredentialsException, Engine.OverwritingUserAndCredentialedJdbcConflictedException, Engine.UnreachableServerException, Engine.InvalidDatabaseNameProbablyException, BackingStoreException, Engine.GenericConnectionException {
     var databaseConfig = Arrays.stream(getAllDatabaseConfigs()).filter(d -> d.nickname.equals(databaseNickname)).findFirst().orElse(null);
 
     if (databaseConfig == null) {
@@ -827,7 +827,7 @@ public abstract class BackdoorCoreServer {
     );
   }
 
-  private JsonValue[][] readRows(Engine engine, Column[] columns, ResultSet rs) throws SQLException {
+  public JsonValue[][] readRows(Engine engine, Column[] columns, ResultSet rs) throws SQLException {
     var rows = new ArrayList<JsonValue[]>();
     while (rs.next()) {
       var row = new JsonValue[columns.length];

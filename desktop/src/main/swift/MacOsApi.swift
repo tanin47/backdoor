@@ -106,6 +106,7 @@ public func saveFile(
         NSLog("Opening the save dialog")
         let savePanel = NSSavePanel()
         savePanel.canCreateDirectories = true
+        savePanel.nameFieldStringValue = "untitled.csv"
 
         savePanel.begin { response in
             if response == .OK {

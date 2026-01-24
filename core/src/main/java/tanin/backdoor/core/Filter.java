@@ -15,7 +15,7 @@ public class Filter {
   public String value;
   public Operator operator;
 
-  Filter(String name, String value, Operator operator) {
+  public Filter(String name, String value, Operator operator) {
     this.name = name;
     this.value = value;
     this.operator = operator;

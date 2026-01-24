@@ -8,7 +8,7 @@ public class Sort {
   public String name;
   public String direction;
 
-  Sort(String name, String direction) {
+  public Sort(String name, String direction) {
     this.name = name;
     this.direction = direction;
   }

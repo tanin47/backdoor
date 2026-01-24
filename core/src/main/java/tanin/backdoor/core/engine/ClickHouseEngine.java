@@ -6,6 +6,7 @@ import com.eclipsesource.json.JsonObject;
 import com.eclipsesource.json.JsonValue;
 import tanin.backdoor.core.*;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.URISyntaxException;
 import java.sql.DriverManager;
@@ -15,7 +16,10 @@ import java.sql.Time;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Properties;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 
@@ -71,7 +75,7 @@ public class ClickHouseEngine extends Engine {
   }
 
   @Override
-  public Column[] getColumns(String table) throws SQLException {
+  public Column[] getColumns(String table) throws SQLException, IOException {
     AtomicReference<String> databaseName = new AtomicReference<>();
     executeQuery(
       "SELECT currentDatabase();",
@@ -108,7 +112,7 @@ public class ClickHouseEngine extends Engine {
   }
 
   @Override
-  public String[] getTables() throws SQLException {
+  public String[] getTables() throws SQLException, IOException {
     var tables = new ArrayList<String>();
     executeQuery(
       "SHOW TABLES;",
@@ -303,6 +307,7 @@ public class ClickHouseEngine extends Engine {
       default -> Json.value(rs.getString(columnIndex));
     };
   }
+
 
   private JsonValue convertHashmapToJson(HashMap<Object, Object> value) {
     var json = new JsonObject();
