@@ -45,6 +45,7 @@ export function open(column: Column): void {
       mode = 'not_null'
     } else if (filter.operator === 'EQUAL') {
       mode = 'specified_value'
+      specifiedValue = filter.value
     } else {
       throw new Error(`Unrecognized column '${filter.operator}'`)
     }
@@ -218,7 +219,9 @@ async function submit() {
       <Button {isLoading} class="btn btn-secondary" onClick={async () => {submit()}} dataTestId="submit-button">
         Update Filter
       </Button>
-      <button type="button" class="btn btn-neutral" disabled={isLoading} onclick={close}>Cancel</button>
+      <button type="button" class="btn btn-neutral" disabled={isLoading} onclick={close} data-test-id="cancel-button">
+        Cancel
+      </button>
     </div>
   </div>
   <div class="modal-backdrop" onclick={close}>

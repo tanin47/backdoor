@@ -306,6 +306,18 @@ function handleResize(event: MouseEvent) {
           }}
           dataTestId="refresh-button"
         >Refresh</Button>
+        {#if sheet.filters.length > 0}
+          <Button
+            class="btn btn-xs btn-ghost text-warning p-0"
+            onClick={async () => {
+              if (sheet) {
+                sheet.filters = []
+                void loadDataWithNewSorts(sheet.sorts)
+              }
+            }}
+            dataTestId="clear-all-filters-button"
+          >Clear All Filters</Button>
+        {/if}
         {#if PARADIGM === 'DESKTOP'}
           <Button
             class="btn btn-xs btn-ghost text-primary p-0"
