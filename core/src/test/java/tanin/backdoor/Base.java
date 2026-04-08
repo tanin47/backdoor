@@ -298,7 +298,7 @@ public class Base {
       try {
         fn.invoke();
         return;
-      } catch (ElementNotInteractableException ex) {
+      } catch (ElementNotInteractableException | StaleElementReferenceException ex) {
         Thread.sleep(1000);
       }
     }

@@ -242,8 +242,9 @@ How to develop
 
 1. Run `npm install` to install all dependencies.
 2. Change the target database URL in `tanin.backdoor.BackdoorServier.main(..)`
-2. Run `./gradlew run` in order to run the web server.
+2. Run `./gradlew web:run` in order to run the web server.
 3. On a separate terminal, run `npm run hmr` in order to hot-reload the frontend code changes.
+4. Visit http://localhost:9090 and login with `masked_test` and `1234`
 
 How to run tests
 -----------------
@@ -256,9 +257,10 @@ How to run tests
 - The username is `backdoor_test`.
 - The password is `test_ch`
 
-1. Run `npm install` to install all dependencies.
-3. On a separate terminal, run `npm run hmr`.
-2. Run `./gradlew test` in order to run all the tests.
+3. Run `npm install` to install all dependencies.
+4. On a separate terminal, run `npm run hmr`.
+5. Start the ClickHouse server by running `clickhouse server`.
+6. Run `./gradlew test` in order to run all the tests.
 
 Publish JAR
 ------------

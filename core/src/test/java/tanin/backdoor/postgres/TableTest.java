@@ -305,7 +305,7 @@ public class TableTest extends Base {
   }
 
   @Test
-  void filterRowSpecificValue() throws InterruptedException {
+  void filterRowSpecificValueAndClearFilter() throws InterruptedException {
     go("/");
     click(tid("database-item"));
     waitUntil(() -> assertEquals("loaded", elem(tid("database-item")).getDomAttribute("data-database-status")));
@@ -321,6 +321,43 @@ public class TableTest extends Base {
     click(tid("submit-button"));
 
     waitUntil(() -> assertColumnValues("username", "test_user_2"));
+
+    click(tid("clear-all-filters-button"));
+    waitUntil(() -> assertColumnValues("username", "test_user_1", "test_user_2", "test_user_3", "test_user_4"));
+  }
+
+  @Test
+  void theCurrentFilterValueDoesNotSpillOver() throws InterruptedException {
+    go("/");
+    click(tid("database-item"));
+    waitUntil(() -> assertEquals("loaded", elem(tid("database-item")).getDomAttribute("data-database-status")));
+
+
+    click(tid("menu-items", "postgres", null, "menu-item-table", "user"));
+
+    waitUntil(() -> assertTrue(hasElem(tid("sheet-tab", "user"))));
+    click(tid("sheet-view-column-header", "username", null, "filter-button"));
+
+    click(tid("specified-value-checkbox"));
+    fill(tid("specified-value-input"), "test_user_2");
+    click(tid("submit-button"));
+
+    waitUntil(() -> assertColumnValues("username", "test_user_2"));
+
+    click(tid("sheet-view-column-header", "password", null, "filter-button"));
+
+    click(tid("specified-value-checkbox"));
+    fill(tid("specified-value-input"), "password2");
+    click(tid("submit-button"));
+
+    waitUntil(() -> assertColumnValues("username", "test_user_2"));
+
+    click(tid("sheet-view-column-header", "username", null, "filter-button"));
+    waitUntil(() -> assertEquals("test_user_2", elem(tid("specified-value-input")).getDomProperty("value")));
+    click(tid("cancel-button"));
+
+    click(tid("sheet-view-column-header", "password", null, "filter-button"));
+    waitUntil(() -> assertEquals("password2", elem(tid("specified-value-input")).getDomProperty("value")));
   }
 
   @Test
